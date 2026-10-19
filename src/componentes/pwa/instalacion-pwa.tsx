@@ -11,31 +11,38 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
+// El evento de Chrome es de un solo uso. Se conserva fuera del componente para
+// sobrevivir al cambio de pantalla de login a panel sin volver a solicitarlo.
+let eventoInstalacionPwa: BeforeInstallPromptEvent | null = null
+
 export const InstalacionPwa: React.FC = () => {
   const { t } = useTraduccion()
   const { cargando, estaAutenticado } = useAutenticacion()
   const [modalAbierto, setModalAbierto] = useState(false)
-  const promptRef = useRef<BeforeInstallPromptEvent | null>(null)
+  const promptRef = useRef<BeforeInstallPromptEvent | null>(eventoInstalacionPwa)
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoInstalacion>(() =>
-    obtenerEstadoDispositivo(null)
+    obtenerEstadoDispositivo(eventoInstalacionPwa)
   )
 
   useEffect(() => {
-    // Mantener este componente montado en la raíz evita perder el evento único de Chrome.
     const manejadorPrompt = (e: Event) => {
       e.preventDefault()
       const eventoPwa = e as BeforeInstallPromptEvent
+      eventoInstalacionPwa = eventoPwa
       promptRef.current = eventoPwa
       setEstadoDispositivo(obtenerEstadoDispositivo(eventoPwa))
     }
 
     const manejadorAppInstalada = () => {
+      eventoInstalacionPwa = null
       promptRef.current = null
       setEstadoDispositivo((prev) => ({ ...prev, estaInstalada: true, puedeInstalarDirecto: false }))
       setModalAbierto(false)
     }
 
-    setEstadoDispositivo(obtenerEstadoDispositivo(promptRef.current))
+    // Si el componente se monta tras iniciar sesión, recuperar el evento capturado en login.
+    promptRef.current = eventoInstalacionPwa
+    setEstadoDispositivo(obtenerEstadoDispositivo(eventoInstalacionPwa))
     window.addEventListener('beforeinstallprompt', manejadorPrompt)
     window.addEventListener('appinstalled', manejadorAppInstalada)
 
@@ -52,14 +59,14 @@ export const InstalacionPwa: React.FC = () => {
   const manejarConfirmarInstalacion = () => {
     const evento = promptRef.current
     if (!evento) {
-      // No hay evento nativo disponible: el modal ofrece instrucciones y no se
-      // debe simular una instalación ni intentar reutilizar un evento consumido.
+      // Sin evento nativo, dejar visible la guía para instalar desde el menú del navegador.
       setModalAbierto(false)
       return
     }
 
-    // beforeinstallprompt solo puede utilizarse una vez.
+    // El evento beforeinstallprompt se consume una sola vez.
     promptRef.current = null
+    eventoInstalacionPwa = null
     setEstadoDispositivo((prev) => ({ ...prev, puedeInstalarDirecto: false }))
     try {
       const promesaPrompt = evento.prompt()
@@ -93,18 +100,20 @@ export const InstalacionPwa: React.FC = () => {
           </Boton>
         </div>
       ) : (
-        <div className="w-full max-w-md mx-auto mt-5 p-4 rounded-2xl border border-slate-800 bg-[#0C121E]/95 text-center">
-          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+        <div className="w-full mt-6 pt-6 border-t border-slate-800/80 text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             <Smartphone className="w-4 h-4 text-sky-400" />
             <span>{t.pwa.tituloInstalar}</span>
           </div>
-          <p className="text-xs text-slate-400 mb-3.5 px-2">{t.pwa.subtituloInstalar}</p>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto mb-3.5 px-2">
+            {t.pwa.subtituloInstalar}
+          </p>
           <Boton
             type="button"
             variante="secundario"
             tamano="medio"
             onClick={manejarClickInstalar}
-            className="w-full border-slate-700 bg-slate-900/90 hover:bg-slate-800 text-sky-300 hover:text-white"
+            className="w-full sm:w-auto px-6 border-slate-700 bg-slate-900/90 hover:bg-slate-800 text-sky-300 hover:text-white"
             icono={<Download className="w-4 h-4 text-sky-400" />}
           >
             {t.pwa.botonInstalar}
