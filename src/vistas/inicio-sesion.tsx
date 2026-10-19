@@ -1,6 +1,7 @@
 import React from 'react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { FormularioLogin } from '@/componentes/autenticacion/formulario-login'
+import { InstalacionPwa } from '@/componentes/pwa/instalacion-pwa'
 
 export const VistaInicioSesion: React.FC = () => {
   return (
@@ -19,6 +20,8 @@ export const VistaInicioSesion: React.FC = () => {
         <Tarjeta className="border-slate-700/60 dark:border-slate-800 bg-white/95 dark:bg-[#0C121E]/95 shadow-2xl backdrop-blur-xl">
           <TarjetaContenido className="p-5 sm:p-7">
             <FormularioLogin />
+            {/* Sección de instalación restaurada a su ubicación original dentro de la tarjeta. */}
+            <InstalacionPwa />
           </TarjetaContenido>
         </Tarjeta>
 
