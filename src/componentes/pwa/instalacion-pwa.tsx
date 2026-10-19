@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Download, CheckCircle, Smartphone } from 'lucide-react'
+import { Download, Smartphone } from 'lucide-react'
 import { Boton } from '@/componentes/ui/boton'
 import { ModalInstalacion } from './modal-instalacion'
 import { obtenerEstadoDispositivo, type EstadoInstalacion } from '@/utilidades/deteccion-plataforma'
@@ -15,32 +15,26 @@ export const InstalacionPwa: React.FC = () => {
   const { t } = useTraduccion()
   const { cargando, estaAutenticado } = useAutenticacion()
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [promptEvento, setPromptEvento] = useState<BeforeInstallPromptEvent | null>(null)
   const promptRef = useRef<BeforeInstallPromptEvent | null>(null)
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoInstalacion>(() =>
     obtenerEstadoDispositivo(null)
   )
 
   useEffect(() => {
-    // Este componente se monta en la raíz y permanece activo al cambiar de sesión.
-    // Chrome emite beforeinstallprompt una sola vez; no se debe perder al entrar al panel.
+    // Mantener este componente montado en la raíz evita perder el evento único de Chrome.
     const manejadorPrompt = (e: Event) => {
       e.preventDefault()
       const eventoPwa = e as BeforeInstallPromptEvent
       promptRef.current = eventoPwa
-      setPromptEvento(eventoPwa)
       setEstadoDispositivo(obtenerEstadoDispositivo(eventoPwa))
     }
 
     const manejadorAppInstalada = () => {
       promptRef.current = null
-      setPromptEvento(null)
       setEstadoDispositivo((prev) => ({ ...prev, estaInstalada: true, puedeInstalarDirecto: false }))
       setModalAbierto(false)
     }
 
-    // También refrescar el estado si el componente se monta en un navegador que ya
-    // informa display-mode standalone.
     setEstadoDispositivo(obtenerEstadoDispositivo(promptRef.current))
     window.addEventListener('beforeinstallprompt', manejadorPrompt)
     window.addEventListener('appinstalled', manejadorAppInstalada)
@@ -58,16 +52,14 @@ export const InstalacionPwa: React.FC = () => {
   const manejarConfirmarInstalacion = () => {
     const evento = promptRef.current
     if (!evento) {
-      // Sin evento válido, no cerrar ni fingir que se inició la instalación.
-      // El modal ya muestra instrucciones manuales para este navegador.
+      // No hay evento nativo disponible: el modal ofrece instrucciones y no se
+      // debe simular una instalación ni intentar reutilizar un evento consumido.
       setModalAbierto(false)
       return
     }
 
-    // El evento solo se puede usar una vez. Limpiarlo antes de invocar prompt
-    // evita que los siguientes toques reutilicen un evento consumido.
+    // beforeinstallprompt solo puede utilizarse una vez.
     promptRef.current = null
-    setPromptEvento(null)
     setEstadoDispositivo((prev) => ({ ...prev, puedeInstalarDirecto: false }))
     try {
       const promesaPrompt = evento.prompt()
