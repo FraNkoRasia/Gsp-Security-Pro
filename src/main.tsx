@@ -12,14 +12,7 @@ const registrarServiceWorker = () => {
     }).catch((error) => {
       console.error('GSP Security Pro: no se pudo registrar el Service Worker.', error)
     })
-
-    let recargando = false
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (recargando) return
-      recargando = true
-      window.location.reload()
-    })
-  })
+  }, { once: true })
 }
 
 registrarServiceWorker()
