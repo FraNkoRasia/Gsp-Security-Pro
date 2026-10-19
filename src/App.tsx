@@ -57,13 +57,18 @@ const AplicacionConDatosOperativos: React.FC = () => {
   return <ContenidoAplicacion />
 }
 
-const AplicacionCompleta: React.FC = () => (
-  <>
-    <AplicacionConDatosOperativos />
-    {/* Permanece montado entre login y panel para conservar beforeinstallprompt. */}
-    <InstalacionPwa />
-  </>
-)
+const AplicacionCompleta: React.FC = () => {
+  const { estaAutenticado } = useAutenticacion()
+
+  return (
+    <>
+      <AplicacionConDatosOperativos />
+      {/* En login, el instalador se muestra dentro de la tarjeta original.
+          En sesión iniciada, queda disponible sin alterar esa ubicación. */}
+      {estaAutenticado && <InstalacionPwa />}
+    </>
+  )
+}
 
 export function App() {
   return (
