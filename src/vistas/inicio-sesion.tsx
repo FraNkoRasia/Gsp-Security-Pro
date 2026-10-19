@@ -1,14 +1,11 @@
 import React from 'react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { FormularioLogin } from '@/componentes/autenticacion/formulario-login'
-import { InstalacionPwa } from '@/componentes/pwa/instalacion-pwa'
 
 export const VistaInicioSesion: React.FC = () => {
   return (
     <div className="w-full flex-1 flex flex-col items-center justify-center py-4 sm:py-8 px-2 sm:px-4">
-      {/* Contenedor central con ancho controlado y márgenes móviles */}
       <div className="w-full max-w-md mx-auto space-y-6">
-        {/* Cabecera del Login: Únicamente el logoAPP oficial en tamaño destacado */}
         <div className="text-center pt-2 pb-1">
           <div className="relative inline-block mx-auto">
             <img
@@ -19,18 +16,12 @@ export const VistaInicioSesion: React.FC = () => {
           </div>
         </div>
 
-        {/* Tarjeta de Inicio de Sesión */}
         <Tarjeta className="border-slate-700/60 dark:border-slate-800 bg-white/95 dark:bg-[#0C121E]/95 shadow-2xl backdrop-blur-xl">
           <TarjetaContenido className="p-5 sm:p-7">
-            {/* Formulario de Login */}
             <FormularioLogin />
-
-            {/* Sección de Instalación PWA (Sección 15) */}
-            <InstalacionPwa />
           </TarjetaContenido>
         </Tarjeta>
 
-        {/* Mensaje de Asistencia Operativa */}
         <div className="text-center text-xs text-slate-500 dark:text-slate-400">
           <p>
             ¿Problemas para acceder a tu puesto? Contactá a tu supervisor o al centro de operaciones de tu empresa.

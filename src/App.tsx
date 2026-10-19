@@ -7,6 +7,7 @@ import { DisposicionPrincipal } from '@/componentes/layout/disposicion-principal
 import { VistaInicioSesion } from '@/vistas/inicio-sesion'
 import { VistaPanelControl } from '@/vistas/panel-control'
 import { CambioContrasenaObligatorio } from '@/componentes/autenticacion/cambio-contrasena-obligatorio'
+import { InstalacionPwa } from '@/componentes/pwa/instalacion-pwa'
 import './App.css'
 
 const ContenidoAplicacion: React.FC = () => {
@@ -29,7 +30,6 @@ const ContenidoAplicacion: React.FC = () => {
     )
   }
 
-  // El cambio obligatorio por DNI es exclusivo de los vigiladores.
   return (
     <DisposicionPrincipal>
       {estaAutenticado
@@ -43,8 +43,6 @@ const ContenidoAplicacion: React.FC = () => {
 
 const AplicacionConDatosOperativos: React.FC = () => {
   const { estaAutenticado, usuario } = useAutenticacion()
-
-  // No cargar datos operativos mientras un vigilador tenga pendiente el cambio obligatorio.
   const cambioPendienteDeVigilador =
     usuario?.rol === 'vigilador' && usuario.debe_cambiar_contrasena
 
@@ -59,12 +57,20 @@ const AplicacionConDatosOperativos: React.FC = () => {
   return <ContenidoAplicacion />
 }
 
+const AplicacionCompleta: React.FC = () => (
+  <>
+    <AplicacionConDatosOperativos />
+    {/* Permanece montado entre login y panel para conservar beforeinstallprompt. */}
+    <InstalacionPwa />
+  </>
+)
+
 export function App() {
   return (
     <ProveedorTema>
       <ProveedorIdioma>
         <ProveedorAutenticacion>
-          <AplicacionConDatosOperativos />
+          <AplicacionCompleta />
         </ProveedorAutenticacion>
       </ProveedorIdioma>
     </ProveedorTema>
