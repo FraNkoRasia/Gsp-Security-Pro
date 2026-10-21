@@ -6,6 +6,7 @@ type Body = {
   nombre: string
   cuit?: string
   direccion?: string
+  art_aseguradora?: string
 }
 
 const corsHeaders = {
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
       nombre: body.nombre.trim(),
       cuit: body.cuit?.trim() || null,
       direccion: body.direccion?.trim() || null,
+      art_aseguradora: body.art_aseguradora?.trim() || null,
     })
     .eq("id", body.empresa_id)
     .select("*")
