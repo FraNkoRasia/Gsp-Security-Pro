@@ -33,7 +33,7 @@ const ContenidoAplicacion: React.FC = () => {
   return (
     <DisposicionPrincipal>
       {estaAutenticado
-        ? usuario?.rol === 'vigilador' && usuario.debe_cambiar_contrasena
+        ? usuario?.debe_cambiar_contrasena
           ? <CambioContrasenaObligatorio />
           : <VistaPanelControl />
         : <VistaInicioSesion />}
@@ -43,10 +43,9 @@ const ContenidoAplicacion: React.FC = () => {
 
 const AplicacionConDatosOperativos: React.FC = () => {
   const { estaAutenticado, usuario } = useAutenticacion()
-  const cambioPendienteDeVigilador =
-    usuario?.rol === 'vigilador' && usuario.debe_cambiar_contrasena
+  const cambioObligatorioPendiente = Boolean(usuario?.debe_cambiar_contrasena)
 
-  if (estaAutenticado && usuario && !cambioPendienteDeVigilador) {
+  if (estaAutenticado && usuario && !cambioObligatorioPendiente) {
     return (
       <ProveedorOperativo>
         <ContenidoAplicacion />
