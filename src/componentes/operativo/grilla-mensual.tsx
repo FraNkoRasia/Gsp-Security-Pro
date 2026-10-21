@@ -99,6 +99,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   const soloLecturaEfectiva = soloLectura || mesSeleccionado < mesActual
   const [grillaCreada, setGrillaCreada] = useState(false)
+  const [grillasVigiladoresCreadas, setGrillasVigiladoresCreadas] = useState<string[]>([])
   const [cargandoEstadoGrilla, setCargandoEstadoGrilla] = useState(true)
   const [borradores, setBorradores] = useState<Record<string, OperacionGrilla>>({})
   const [modalPrimeraCreacion, setModalPrimeraCreacion] = useState(false)
@@ -112,15 +113,44 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     let cancelado = false
     setCargandoEstadoGrilla(true)
     setGrillaCreada(false)
-    if (soloLectura || !supabase || !objetivoSeleccionado) { setGrillaCreada(true); setCargandoEstadoGrilla(false); return }
-    supabase.from('grillas_mensuales').select('mes').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`).maybeSingle().then(({ data, error }) => {
-      if (cancelado) return
-      setGrillaCreada(error ? true : Boolean(data))
-      if (error) setErrorGuardado('No se pudo verificar el estado de esta grilla. Por seguridad, la edición de fechas bloqueadas queda deshabilitada.')
+    setGrillasVigiladoresCreadas([])
+    if (soloLectura || !supabase || !objetivoSeleccionado) {
+      setGrillaCreada(true)
       setCargandoEstadoGrilla(false)
-    })
+      return
+    }
+    const cargarEstado = async () => {
+      const [estadoObjetivo, estadoVigiladores] = await Promise.all([
+        supabase.from('grillas_mensuales').select('mes').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`).maybeSingle(),
+        supabase.from('grillas_mensuales_vigiladores').select('id_vigilador').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`)
+      ])
+      if (cancelado) return
+      setGrillaCreada(estadoObjetivo.error ? true : Boolean(estadoObjetivo.data))
+      if (estadoObjetivo.error || estadoVigiladores.error) {
+        setErrorGuardado('No se pudo verificar el estado de esta grilla. Por seguridad, las fechas históricas quedan bloqueadas.')
+        setGrillasVigiladoresCreadas(vigiladores.map(v => v.id))
+        setCargandoEstadoGrilla(false)
+        return
+      }
+      const idsDb = (estadoVigiladores.data || []).map(row => row.id_vigilador)
+      if (idsDb.length === 0) {
+        setGrillasVigiladoresCreadas([])
+        setCargandoEstadoGrilla(false)
+        return
+      }
+      const { data: vigiladoresDb, error: errorVigiladores } = await supabase.from('vigiladores').select('id,id_usuario').in('id', idsDb)
+      if (cancelado) return
+      if (errorVigiladores) {
+        setErrorGuardado('No se pudo verificar el estado de esta grilla. Por seguridad, las fechas históricas quedan bloqueadas.')
+        setGrillasVigiladoresCreadas(vigiladores.map(v => v.id))
+      } else {
+        setGrillasVigiladoresCreadas((vigiladoresDb || []).map(v => v.id_usuario || v.id))
+      }
+      setCargandoEstadoGrilla(false)
+    }
+    void cargarEstado()
     return () => { cancelado = true }
-  }, [objetivoSeleccionado, mesSeleccionado, soloLectura])
+  }, [objetivoSeleccionado, mesSeleccionado, soloLectura, vigiladores])
   useEffect(() => {
     const antesDeSalir = (evento: BeforeUnloadEvent) => { if (!hayCambiosPendientes) return; evento.preventDefault(); evento.returnValue = '' }
     window.addEventListener('beforeunload', antesDeSalir)
@@ -128,6 +158,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   }, [hayCambiosPendientes])
   const mostrarAvisoBloqueo = () => { setAvisoBloqueo('No se puede editar un día anterior o igual al día de hoy.'); window.setTimeout(() => setAvisoBloqueo(''), 1600) }
   const claveBorrador = (idVigilador: string, fecha: string) => `${idVigilador}:${fecha}`
+  const vigiladorTieneGrillaCreada = (idVigilador: string) => grillasVigiladoresCreadas.includes(idVigilador)
   const turnosVisibles = [
     ...turnos.filter(t => t.id_objetivo !== objetivoSeleccionado || !t.fecha.startsWith(mesSeleccionado) || !Object.prototype.hasOwnProperty.call(borradores, claveBorrador(t.id_vigilador, t.fecha))),
     ...Object.values(borradores).filter(op => op.codigo !== 'borrar').map(op => {
@@ -222,7 +253,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     const diaStr = dia < 10 ? `0${dia}` : `${dia}`
     const fecha = `${mesSeleccionado}-${diaStr}`
     if (soloLecturaEfectiva || cargandoEstadoGrilla) return
-    if (grillaCreada && fecha <= fechaHoyClave) { mostrarAvisoBloqueo(); return }
+    if (vigiladorTieneGrillaCreada(idVig) && fecha <= fechaHoyClave) { mostrarAvisoBloqueo(); return }
     const turnoActual = turnosVisibles.find(
       (t) => t.id_vigilador === idVig && t.id_objetivo === objetivoSeleccionado && t.fecha === fecha
     )
@@ -663,13 +694,13 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                         (t) => t.id_vigilador === vig.id && t.id_objetivo === objetivoSeleccionado && t.fecha === fecha
                       )
                       const fechaCelda = fecha
-                      const celdaBloqueada = soloLecturaEfectiva || cargandoEstadoGrilla || (grillaCreada && fechaCelda <= fechaHoyClave)
+                      const celdaBloqueada = soloLecturaEfectiva || cargandoEstadoGrilla || (vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave)
                       const feriadoCelda = nombreFeriadoEnFecha(fechaCelda)
 
                       return (
                         <td
                           key={dia}
-                          onClick={() => { if (celdaBloqueada) { if (!soloLectura && grillaCreada && fechaCelda <= fechaHoyClave) mostrarAvisoBloqueo(); return } abrirEditarCelda(vig.id, `${vig.nombre} ${vig.apellido}`, dia) }}
+                          onClick={() => { if (celdaBloqueada) { if (!soloLectura && vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave) mostrarAvisoBloqueo(); return } abrirEditarCelda(vig.id, `${vig.nombre} ${vig.apellido}`, dia) }}
                           className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 transition-colors select-none group ${feriadoCelda ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-white dark:bg-[#0C121E]'} ${celdaBloqueada ? '' : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-800/80'}`}
                           title={feriadoCelda ? `${feriadoCelda} · ${fechaCelda}` : celdaBloqueada ? 'Día bloqueado para edición' : 'Clic para modificar turno'}
                         >
