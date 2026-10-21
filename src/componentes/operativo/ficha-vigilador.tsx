@@ -136,7 +136,7 @@ export const FichaVigilador: React.FC<{
           <div className="min-w-0">
             <p className="font-bold text-slate-900 dark:text-white">{cabecera.nombre} {cabecera.apellido}</p>
             <p className="break-all text-xs text-slate-500">{cabecera.email || 'Sin correo de acceso'} · Legajo: {cabecera.legajo || 'Sin legajo cargado'}</p>
-            <p className="text-xs text-slate-500">{cabecera.telefono || 'Sin teléfono registrado'}</p>
+            <p className="text-xs text-slate-500">{cabecera.telefono ? `${idioma === 'en' ? 'Phone:' : 'Tel:'} ${cabecera.telefono}` : (idioma === 'en' ? 'No phone registered' : 'Sin teléfono registrado')}</p>
           </div>
         </div>
 
