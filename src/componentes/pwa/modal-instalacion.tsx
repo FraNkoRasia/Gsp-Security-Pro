@@ -10,13 +10,15 @@ interface PropiedadesModalInstalacion {
   alCerrar: () => void
   alConfirmar: () => void
   estadoDispositivo: EstadoInstalacion
+  mensajeEstado?: string | null
 }
 
 export const ModalInstalacion: React.FC<PropiedadesModalInstalacion> = ({
   abierto,
   alCerrar,
   alConfirmar,
-  estadoDispositivo
+  estadoDispositivo,
+  mensajeEstado
 }) => {
   const { t } = useTraduccion()
   const { dispositivo, esSafari, puedeInstalarDirecto } = estadoDispositivo
@@ -31,6 +33,15 @@ export const ModalInstalacion: React.FC<PropiedadesModalInstalacion> = ({
       tamano="medio"
     >
       <div className="space-y-5">
+        {mensajeEstado && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-xl border border-amber-700/60 bg-amber-950/40 p-4 text-sm leading-relaxed text-amber-100"
+          >
+            {mensajeEstado}
+          </div>
+        )}
         {/* Identidad visual oficial de GSP */}
         <div className="relative overflow-hidden rounded-2xl border border-sky-900/60 bg-gradient-to-br from-[#101e32] via-[#0b1422] to-[#080c14] p-4 sm:p-5">
           <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-sky-500/10 blur-2xl" />
