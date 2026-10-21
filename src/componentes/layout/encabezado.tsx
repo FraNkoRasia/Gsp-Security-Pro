@@ -26,9 +26,14 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
   const { temaActual, cambiarTema } = useTema()
 
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false)
-  const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacionPWA | null>(null)
+  const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacionPWA | null>(() =>
+    (typeof window !== 'undefined'
+      ? (window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt ?? null
+      : null)
+  )
   const [appInstalada, setAppInstalada] = useState(false)
   const [modalInstalacionAbierto, setModalInstalacionAbierto] = useState(false)
+  const [mensajeInstalacion, setMensajeInstalacion] = useState<string | null>(null)
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoInstalacion>(() => obtenerEstadoDispositivo(null))
 
   useEffect(() => {
@@ -41,12 +46,14 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
     const manejarBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
       const eventoPwa = event as EventoInstalacionPWA
+      ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = eventoPwa
       setEventoInstalacion(eventoPwa)
       setEstadoDispositivo(obtenerEstadoDispositivo(eventoPwa))
     }
 
     const manejarAppInstalled = () => {
       setEventoInstalacion(null)
+      ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
       setAppInstalada(true)
       setModalInstalacionAbierto(false)
     }
@@ -54,6 +61,13 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
     verificarInstalacion()
     setEstadoDispositivo(obtenerEstadoDispositivo(null))
     window.addEventListener('beforeinstallprompt', manejarBeforeInstallPrompt)
+    window.addEventListener('gsp:pwa-install-available', () => {
+      const eventoCompartido = (window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt
+      if (eventoCompartido) {
+        setEventoInstalacion(eventoCompartido)
+        setEstadoDispositivo(obtenerEstadoDispositivo(eventoCompartido))
+      }
+    })
     window.addEventListener('appinstalled', manejarAppInstalled)
 
     return () => {
@@ -64,23 +78,36 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
 
   const instalarAplicacion = async () => {
     if (!eventoInstalacion) {
+      setMensajeInstalacion(
+        'Chrome no habilitó la instalación automática. En el menú ⋮ del navegador, buscá “Instalar aplicación” o “Agregar a pantalla principal”. Si no aparece ninguna opción, Chrome todavía no reconoce esta página como instalable.'
+      )
       setModalInstalacionAbierto(true)
       return
     }
 
-    await eventoInstalacion.prompt()
-    const resultado = await eventoInstalacion.userChoice
+    setMensajeInstalacion(null)
 
-    // El evento de instalación solo puede utilizarse una vez.
-    // Si el usuario cancela, también debemos descartarlo para esperar
-    // un nuevo beforeinstallprompt en lugar de reutilizar un evento agotado.
-    setEventoInstalacion(null)
-    setEstadoDispositivo(obtenerEstadoDispositivo(null))
+    try {
+      // Invocar prompt directamente desde la acción del usuario.
+      await eventoInstalacion.prompt()
+      const resultado = await eventoInstalacion.userChoice
 
-    if (resultado.outcome === 'accepted') {
-      setAppInstalada(true)
+      // El evento solo puede utilizarse una vez, incluso si se cancela.
+      setEventoInstalacion(null)
+      ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
+      setEstadoDispositivo(obtenerEstadoDispositivo(null))
+
+      if (resultado.outcome === 'accepted') {
+        setAppInstalada(true)
+      }
+      setModalInstalacionAbierto(false)
+    } catch (error) {
+      console.error('No se pudo iniciar la instalación de GSP:', error)
+      setMensajeInstalacion(
+        'Chrome no pudo abrir el instalador automático. Usá el menú ⋮ del navegador y elegí “Instalar aplicación” o “Agregar a pantalla principal”.'
+      )
+      setModalInstalacionAbierto(true)
     }
-    setModalInstalacionAbierto(false)
   }
 
   const obtenerEtiquetaRol = (rol: string) => {
@@ -354,12 +381,15 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
         alCerrar={() => setModalInstalacionAbierto(false)}
         alConfirmar={() => {
           if (!eventoInstalacion) {
-            setModalInstalacionAbierto(false)
+            setMensajeInstalacion(
+              'No hay un diálogo de instalación disponible en Chrome. Usá el menú ⋮ del navegador y elegí “Instalar aplicación” o “Agregar a pantalla principal”. Si no aparece, hay que revisar los requisitos de instalación de la PWA.'
+            )
             return
           }
           void instalarAplicacion()
         }}
         estadoDispositivo={estadoDispositivo}
+        mensajeEstado={mensajeInstalacion}
       />
     </>
   )
