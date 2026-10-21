@@ -31,10 +31,17 @@ export default defineConfig({
         background_color: '#080C14',
         display: 'standalone',
         display_override: ['standalone'],
+        prefer_related_applications: false,
         orientation: 'portrait-primary',
         // Usar el logo oficial de la pantalla de acceso y evitar el icono maskable
         // del escudo, que Android puede recortar al generar la pantalla de inicio.
         icons: [
+          {
+            src: '/logo-gsp.svg',
+            sizes: '192x192 512x512',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
           {
             src: '/Escudo.png',
             sizes: '192x192',
