@@ -26,7 +26,8 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
   const [adminNombre, setAdminNombre] = useState('')
   const [adminApellido, setAdminApellido] = useState('')
   const [adminEmail, setAdminEmail] = useState('')
-  const [adminPassword, setAdminPassword] = useState('')
+  const [adminDni, setAdminDni] = useState('')
+  const [artAseguradora, setArtAseguradora] = useState('')
   const [adminTelefono, setAdminTelefono] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [confirmacionCreacion, setConfirmacionCreacion] = useState(false)
@@ -40,7 +41,8 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
     setAdminNombre('')
     setAdminApellido('')
     setAdminEmail('')
-    setAdminPassword('')
+    setAdminDni('')
+    setArtAseguradora('')
     setAdminTelefono('')
     setError(null)
     setModalAbierto(true)
@@ -80,13 +82,13 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
       return
     }
 
-    if (!adminNombre.trim() || !adminApellido.trim() || !adminEmail.trim() || !adminPassword) {
+    if (!adminNombre.trim() || !adminApellido.trim() || !adminEmail.trim() || !adminDni.trim()) {
       setError('Para crear una empresa también debes indicar los datos de su administrador.')
       return
     }
 
-    if (adminPassword.length < 8) {
-      setError('La contraseña temporal debe tener al menos 8 caracteres.')
+    if (!/^\d{7,8}$/.test(adminDni.replace(/\D/g, ''))) {
+      setError('Ingresá un DNI válido de 7 u 8 números para la contraseña inicial.')
       return
     }
 
@@ -287,10 +289,11 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                   nombre: nombre.trim(),
                   cuit: cuit.trim(),
                   direccion: direccion.trim(),
+                  art_aseguradora: artAseguradora.trim(),
+                  admin_dni: adminDni.replace(/\D/g, ''),
                   admin_nombre: adminNombre.trim(),
                   admin_apellido: adminApellido.trim(),
                   admin_email: adminEmail.trim().toLowerCase(),
-                  admin_password: adminPassword,
                   admin_telefono: adminTelefono.trim()
                 })
                 setProcesandoGuardado(false)
@@ -319,6 +322,10 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
               <Etiqueta>Dirección / Sede Central</Etiqueta>
               <Entrada value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Av. Marcelo T. de Alvear 1040, Río Cuarto" />
             </div>
+            <div>
+              <Etiqueta>Aseguradora de Riesgos del Trabajo (ART)</Etiqueta>
+              <Entrada value={artAseguradora} onChange={(e) => setArtAseguradora(e.target.value)} placeholder="Ej: Provincia ART (opcional)" />
+            </div>
 
             {!empresaEditando && (
               <div className="space-y-4 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 p-4">
@@ -334,7 +341,8 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                   <div><Etiqueta requerido>Apellido</Etiqueta><Entrada value={adminApellido} onChange={(e) => setAdminApellido(e.target.value)} placeholder="Pérez" /></div>
                 </div>
                 <div><Etiqueta requerido>Email de acceso</Etiqueta><Entrada type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@empresa.com" /></div>
-                <div><Etiqueta requerido>Contraseña temporal</Etiqueta><Entrada type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Mínimo 8 caracteres" minLength={8} /></div>
+                <div><Etiqueta requerido>DNI del administrador</Etiqueta><Entrada inputMode="numeric" value={adminDni} onChange={(e) => setAdminDni(e.target.value.replace(/\D/g, '').slice(0, 8))} placeholder="Ej: 30123456" /></div>
+                <p className="-mt-2 text-[11px] text-slate-500 dark:text-slate-400">El DNI será la contraseña inicial. Al ingresar por primera vez, deberá crear una contraseña personal.</p>
                 <div><Etiqueta>Teléfono</Etiqueta><Entrada type="tel" value={adminTelefono} onChange={(e) => setAdminTelefono(e.target.value)} placeholder="351..." /></div>
               </div>
             )}
