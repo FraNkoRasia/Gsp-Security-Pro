@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Building2, Plus, Edit2, MapPin, UserPlus, ArrowRight, Power } from 'lucide-react'
+import { Building2, Plus, Edit2, MapPin, UserPlus, ArrowRight, Power, KeyRound } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { Boton } from '@/componentes/ui/boton'
 import { Insignia } from '@/componentes/ui/insignia'
@@ -8,6 +8,7 @@ import { Entrada } from '@/componentes/ui/entrada'
 import { Etiqueta } from '@/componentes/ui/etiqueta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useTraduccion } from '@/i18n'
+import { supabase } from '@/servicios/supabase'
 import type { Empresa } from '@/tipos'
 
 export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => void }> = ({ onSeleccionarEmpresa }) => {
@@ -18,6 +19,10 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
   const [empresaEditando, setEmpresaEditando] = useState<Empresa | null>(null)
   const [empresaConfirmacion, setEmpresaConfirmacion] = useState<Empresa | null>(null)
   const [procesandoEmpresa, setProcesandoEmpresa] = useState(false)
+  const [empresaRestablecer, setEmpresaRestablecer] = useState<Empresa | null>(null)
+  const [dniRestablecer, setDniRestablecer] = useState('')
+  const [procesandoRestablecimiento, setProcesandoRestablecimiento] = useState(false)
+  const [errorRestablecimiento, setErrorRestablecimiento] = useState<string | null>(null)
   const [errorOperacion, setErrorOperacion] = useState<string | null>(null)
 
   const [nombre, setNombre] = useState('')
@@ -56,6 +61,41 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
     setArtAseguradora(emp.art_aseguradora || '')
     setError(null)
     setModalAbierto(true)
+  }
+
+  const confirmarRestablecimiento = async () => {
+    if (!supabase || !empresaRestablecer) return
+    const dni = dniRestablecer.replace(/\D/g, '')
+    if (!/^\d{7,8}$/.test(dni)) {
+      setErrorRestablecimiento('Ingresá un DNI válido de 7 u 8 números.')
+      return
+    }
+    setProcesandoRestablecimiento(true)
+    setErrorRestablecimiento(null)
+    try {
+      const { data, error: errorFuncion } = await supabase.functions.invoke('editar-empresa', {
+        body: {
+          accion: 'restablecer_contrasena_administrador',
+          empresa_id: empresaRestablecer.id,
+          admin_dni: dni,
+        },
+      })
+      if (errorFuncion || data?.error) {
+        const contexto = (errorFuncion as { context?: Response } | null)?.context
+        let detalle = data?.error as string | undefined
+        if (!detalle && contexto) {
+          try { detalle = ((await contexto.clone().json()) as { error?: string }).error } catch {}
+        }
+        setErrorRestablecimiento(detalle || errorFuncion?.message || 'No se pudo restablecer la contraseña.')
+        return
+      }
+      setEmpresaRestablecer(null)
+      setDniRestablecer('')
+    } catch (err) {
+      setErrorRestablecimiento(err instanceof Error ? err.message : 'No se pudo restablecer la contraseña.')
+    } finally {
+      setProcesandoRestablecimiento(false)
+    }
   }
 
   const manejarGuardar = async (e: React.FormEvent) => {
@@ -151,6 +191,19 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                     <Insignia variante={emp.activa ? 'verde' : 'gris'}>
                       {emp.activa ? 'Activa' : 'Inactiva'}
                     </Insignia>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDniRestablecer('')
+                        setErrorRestablecimiento(null)
+                        setEmpresaRestablecer(emp)
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                      title="Restablecer contraseña del administrador"
+                      aria-label={`Restablecer contraseña del administrador de ${emp.nombre}`}
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => abrirEditar(emp)}
@@ -265,6 +318,34 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
             </div>
           </div>
         )}
+      </Dialogo>
+
+      <Dialogo
+        abierto={Boolean(empresaRestablecer)}
+        alCerrar={() => !procesandoRestablecimiento && setEmpresaRestablecer(null)}
+        titulo="Restablecer contraseña del administrador"
+        subtitulo="La contraseña actual dejará de funcionar y deberá crear una nueva al iniciar sesión."
+        icono={<KeyRound className="w-5 h-5 text-amber-500" />}
+        tamano="chico"
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-4">
+            <p className="text-sm text-slate-600 dark:text-slate-300">Empresa seleccionada:</p>
+            <p className="mt-1 font-bold text-slate-900 dark:text-white">{empresaRestablecer?.nombre}</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Ingresá el DNI registrado del administrador. Se usará como contraseña inicial y el cambio será obligatorio en el próximo ingreso.</p>
+          </div>
+          <div>
+            <Etiqueta requerido>DNI del administrador</Etiqueta>
+            <Entrada value={dniRestablecer} onChange={(e) => setDniRestablecer(e.target.value.replace(/\D/g, '').slice(0, 8))} placeholder="Ej: 30123456" inputMode="numeric" />
+          </div>
+          {errorRestablecimiento && <p className="text-xs font-medium text-red-600 dark:text-red-400">{errorRestablecimiento}</p>}
+          <div className="flex justify-end gap-2">
+            <Boton variante="secundario" tamano="chico" disabled={procesandoRestablecimiento} onClick={() => setEmpresaRestablecer(null)}>Cancelar</Boton>
+            <Boton variante="primario" tamano="chico" disabled={procesandoRestablecimiento || !/^\d{7,8}$/.test(dniRestablecer.replace(/\D/g, ''))} onClick={() => void confirmarRestablecimiento()} icono={<KeyRound className="w-3.5 h-3.5" />}>
+              {procesandoRestablecimiento ? 'Restableciendo…' : 'Confirmar restablecimiento'}
+            </Boton>
+          </div>
+        </div>
       </Dialogo>
 
       {/* Modal Crear / Editar Empresa */}
