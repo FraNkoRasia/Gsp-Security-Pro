@@ -108,9 +108,10 @@ Deno.serve(async (req) => {
     // Las cuentas antiguas pueden no tener DNI registrado. En ese caso se genera
     // una contraseña temporal aleatoria, sin solicitar datos personales al operador.
     const usarDniGuardado = !credencialError && Boolean(credencial?.dni) && /^\d{7,8}$/.test(credencial.dni)
+    const caracteresContrasena = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@"
     const contrasenaTemporal = usarDniGuardado
       ? credencial.dni
-      : Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@"[byte % 60]).join("")
+      : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => caracteresContrasena[byte % caracteresContrasena.length]).join("")
 
     const { error: activarCambioError } = await admin.from("perfiles")
       .update({ debe_cambiar_contrasena: true }).eq("id", perfilAdmin.id)
