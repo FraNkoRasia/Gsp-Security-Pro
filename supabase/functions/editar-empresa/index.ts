@@ -59,8 +59,8 @@ Deno.serve(async (req) => {
   if (!body.empresa_id) return json({ error: "empresa_id es obligatorio." }, 400)
 
   if (body.accion === "registrar_dni_administrador") {
-    const dni = String(body.admin_dni || "").replace(/\\D/g, "")
-    if (!/^\\d{7,8}$/.test(dni)) return json({ error: "El DNI debe tener 7 u 8 números." }, 400)
+    const dni = String(body.admin_dni || "").replace(/\D/g, "")
+    if (!/^\d{7,8}$/.test(dni)) return json({ error: "El DNI debe tener 7 u 8 números." }, 400)
 
     const { data: perfilAdmin, error: perfilError } = await admin
       .from("perfiles").select("id,id_empresa,rol")
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       .eq("id_empresa", body.empresa_id)
       .maybeSingle()
 
-    if (credencialError || !credencial?.dni || !/^\\d{7,8}$/.test(credencial.dni)) {
+    if (credencialError || !credencial?.dni || !/^\d{7,8}$/.test(credencial.dni)) {
       return json({ error: "No hay un DNI guardado para este administrador. Esta cuenta necesita registrar su DNI una sola vez antes de poder restablecer la contraseña." }, 409)
     }
     const dni = credencial.dni
