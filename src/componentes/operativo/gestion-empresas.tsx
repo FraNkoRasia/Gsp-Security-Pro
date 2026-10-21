@@ -342,7 +342,7 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
           <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-4">
             <p className="text-sm text-slate-600 dark:text-slate-300">Empresa seleccionada:</p>
             <p className="mt-1 font-bold text-slate-900 dark:text-white">{empresaRestablecer?.nombre}</p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Se usará el DNI guardado en la base de datos como contraseña inicial. El administrador deberá cambiarla obligatoriamente al próximo ingreso.</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Si hay un DNI guardado, se usará como contraseña inicial. En cuentas antiguas sin DNI registrado, se generará una contraseña temporal segura que se mostrará una sola vez. El administrador deberá cambiarla al ingresar.</p>
           </div>
           {contrasenaTemporalGenerada && (
             <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
