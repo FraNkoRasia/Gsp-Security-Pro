@@ -24,7 +24,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
   const [errorRestablecimiento, setErrorRestablecimiento] = useState<string | null>(null)
   const [dniInicialAdministrador, setDniInicialAdministrador] = useState('')
   const [requiereRegistrarDni, setRequiereRegistrarDni] = useState(false)
-  const [contrasenaTemporalGenerada, setContrasenaTemporalGenerada] = useState<string | null>(null)
   const [errorOperacion, setErrorOperacion] = useState<string | null>(null)
 
   const [nombre, setNombre] = useState('')
@@ -202,7 +201,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                         setErrorRestablecimiento(null)
                         setDniInicialAdministrador('')
                         setRequiereRegistrarDni(false)
-                        setContrasenaTemporalGenerada(null)
                         setErrorRestablecimiento(null)
                         setEmpresaRestablecer(emp)
                       }}
