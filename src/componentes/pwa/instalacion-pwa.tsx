@@ -21,6 +21,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (evento: Event) => {
     evento.preventDefault()
     eventoInstalacionPwa = evento as BeforeInstallPromptEvent
+    ;(window as Window & { __gspInstallPrompt?: BeforeInstallPromptEvent }).__gspInstallPrompt = eventoInstalacionPwa
     window.dispatchEvent(new Event('gsp:pwa-install-available'))
   })
 }
@@ -43,6 +44,7 @@ export const InstalacionPwa: React.FC = () => {
 
     const manejadorAppInstalada = () => {
       eventoInstalacionPwa = null
+      ;(window as Window & { __gspInstallPrompt?: BeforeInstallPromptEvent }).__gspInstallPrompt = undefined
       promptRef.current = null
       setEstadoDispositivo((prev) => ({ ...prev, estaInstalada: true, puedeInstalarDirecto: false }))
       setModalAbierto(false)
@@ -83,6 +85,7 @@ export const InstalacionPwa: React.FC = () => {
     // El evento beforeinstallprompt se consume una sola vez.
     promptRef.current = null
     eventoInstalacionPwa = null
+    ;(window as Window & { __gspInstallPrompt?: BeforeInstallPromptEvent }).__gspInstallPrompt = undefined
     setEstadoDispositivo((prev) => ({ ...prev, puedeInstalarDirecto: false }))
     try {
       const promesaPrompt = evento.prompt()
