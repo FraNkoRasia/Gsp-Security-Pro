@@ -29,6 +29,7 @@ export const InstalacionPwa: React.FC = () => {
   const { t } = useTraduccion()
   const { cargando, estaAutenticado } = useAutenticacion()
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [mensajeInstalacion, setMensajeInstalacion] = useState<string | null>(null)
   const promptRef = useRef<BeforeInstallPromptEvent | null>(eventoInstalacionPwa)
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoInstalacion>(() =>
     obtenerEstadoDispositivo(eventoInstalacionPwa)
@@ -59,17 +60,25 @@ export const InstalacionPwa: React.FC = () => {
     }
   }, [])
 
-  if (cargando || estadoDispositivo.estaInstalada || estaAutenticado) return null
+  if (cargando || estadoDispositivo.estaInstalada) return null
 
-  const manejarClickInstalar = () => setModalAbierto(true)
+  const manejarClickInstalar = () => {
+    setMensajeInstalacion(null)
+    setModalAbierto(true)
+  }
 
   const manejarConfirmarInstalacion = () => {
     const evento = promptRef.current
     if (!evento) {
-      // Sin evento nativo, dejar visible la guía para instalar desde el menú del navegador.
-      setModalAbierto(false)
+      // No cerrar el modal como si se hubiera instalado: Chrome no ofreció
+      // el diálogo nativo. Mantener visible la guía y explicar el siguiente paso.
+      setMensajeInstalacion(
+        'Chrome no habilitó la instalación automática en esta visita. Abrí el menú ⋮ del navegador y elegí “Instalar aplicación” o “Agregar a pantalla principal”. Si esa opción tampoco aparece, el navegador todavía no reconoce esta página como instalable.'
+      )
       return
     }
+
+    setMensajeInstalacion(null)
 
     // El evento beforeinstallprompt se consume una sola vez.
     promptRef.current = null
@@ -133,6 +142,7 @@ export const InstalacionPwa: React.FC = () => {
         alCerrar={() => setModalAbierto(false)}
         alConfirmar={manejarConfirmarInstalacion}
         estadoDispositivo={estadoDispositivo}
+        mensajeEstado={mensajeInstalacion}
       />
     </>
   )
