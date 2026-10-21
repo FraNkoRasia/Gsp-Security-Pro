@@ -87,20 +87,27 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
 
     setMensajeInstalacion(null)
 
-    await eventoInstalacion.prompt()
-    const resultado = await eventoInstalacion.userChoice
+    try {
+      // Invocar prompt directamente desde la acción del usuario.
+      await eventoInstalacion.prompt()
+      const resultado = await eventoInstalacion.userChoice
 
-    // El evento de instalación solo puede utilizarse una vez.
-    // Si el usuario cancela, también debemos descartarlo para esperar
-    // un nuevo beforeinstallprompt en lugar de reutilizar un evento agotado.
-    setEventoInstalacion(null)
-    ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
-    setEstadoDispositivo(obtenerEstadoDispositivo(null))
+      // El evento solo puede utilizarse una vez, incluso si se cancela.
+      setEventoInstalacion(null)
+      ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
+      setEstadoDispositivo(obtenerEstadoDispositivo(null))
 
-    if (resultado.outcome === 'accepted') {
-      setAppInstalada(true)
+      if (resultado.outcome === 'accepted') {
+        setAppInstalada(true)
+      }
+      setModalInstalacionAbierto(false)
+    } catch (error) {
+      console.error('No se pudo iniciar la instalación de GSP:', error)
+      setMensajeInstalacion(
+        'Chrome no pudo abrir el instalador automático. Usá el menú ⋮ del navegador y elegí “Instalar aplicación” o “Agregar a pantalla principal”.'
+      )
+      setModalInstalacionAbierto(true)
     }
-    setModalInstalacionAbierto(false)
   }
 
   const obtenerEtiquetaRol = (rol: string) => {
