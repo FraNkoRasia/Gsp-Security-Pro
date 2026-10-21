@@ -29,6 +29,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
   const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacionPWA | null>(null)
   const [appInstalada, setAppInstalada] = useState(false)
   const [modalInstalacionAbierto, setModalInstalacionAbierto] = useState(false)
+  const [mensajeInstalacion, setMensajeInstalacion] = useState<string | null>(null)
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoInstalacion>(() => obtenerEstadoDispositivo(null))
 
   useEffect(() => {
@@ -64,9 +65,14 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
 
   const instalarAplicacion = async () => {
     if (!eventoInstalacion) {
+      setMensajeInstalacion(
+        'Chrome no habilitó la instalación automática. En el menú ⋮ del navegador, buscá “Instalar aplicación” o “Agregar a pantalla principal”. Si no aparece ninguna opción, Chrome todavía no reconoce esta página como instalable.'
+      )
       setModalInstalacionAbierto(true)
       return
     }
+
+    setMensajeInstalacion(null)
 
     await eventoInstalacion.prompt()
     const resultado = await eventoInstalacion.userChoice
@@ -354,12 +360,15 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
         alCerrar={() => setModalInstalacionAbierto(false)}
         alConfirmar={() => {
           if (!eventoInstalacion) {
-            setModalInstalacionAbierto(false)
+            setMensajeInstalacion(
+              'No hay un diálogo de instalación disponible en Chrome. Usá el menú ⋮ del navegador y elegí “Instalar aplicación” o “Agregar a pantalla principal”. Si no aparece, hay que revisar los requisitos de instalación de la PWA.'
+            )
             return
           }
           void instalarAplicacion()
         }}
         estadoDispositivo={estadoDispositivo}
+        mensajeEstado={mensajeInstalacion}
       />
     </>
   )
