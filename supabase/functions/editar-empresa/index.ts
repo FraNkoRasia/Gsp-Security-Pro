@@ -105,6 +105,11 @@ Deno.serve(async (req) => {
       .eq("id_empresa", body.empresa_id)
       .maybeSingle()
 
+    if (credencialError) {
+      console.error("Error consultando credencial del administrador:", credencialError.message)
+      return json({ error: "No se pudo consultar la credencial del administrador. Intentá nuevamente." }, 500)
+    }
+
     // Las cuentas antiguas pueden no tener DNI registrado. En ese caso se genera
     // una contraseña temporal aleatoria, sin solicitar datos personales al operador.
     const usarDniGuardado = !credencialError && Boolean(credencial?.dni) && /^\d{7,8}$/.test(credencial.dni)
