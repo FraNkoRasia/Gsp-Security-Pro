@@ -354,7 +354,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
     if ((filtroEstadoVigiladores === 'activos') !== v.activo) return false
     if (idObjetivoSeleccionado && !asignaciones.some((a) => a.id_vigilador === v.id && a.id_objetivo === idObjetivoSeleccionado && a.activa)) return false
     if (!terminoBusqueda) return true
-    return [v.nombre, v.apellido, v.email, v.telefono, v.dni, `${v.nombre} ${v.apellido}`]
+    return [v.nombre, v.apellido, v.email, v.telefono, `${v.nombre} ${v.apellido}`]
       .some((dato) => String(dato || '').toLocaleLowerCase('es-AR').includes(terminoBusqueda))
   })
 
