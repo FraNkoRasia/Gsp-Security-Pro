@@ -67,11 +67,11 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
 
   const confirmarRestablecimiento = async () => {
     if (!supabase || !empresaRestablecer) return
-    if (contrasenaTemporalGenerada) {
-      setEmpresaRestablecer(null)
-      setContrasenaTemporalGenerada(null)
+    if (requiereRegistrarDni && !/^\\d{7,8}$/.test(dniInicialAdministrador.replace(/\\D/g, ''))) {
+      setErrorRestablecimiento('Ingresá un DNI válido de 7 u 8 números.')
       return
     }
+
     setProcesandoRestablecimiento(true)
     setErrorRestablecimiento(null)
     try {
@@ -79,6 +79,7 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
         body: {
           accion: 'restablecer_contrasena_administrador',
           empresa_id: empresaRestablecer.id,
+          ...(requiereRegistrarDni ? { admin_dni: dniInicialAdministrador } : {}),
         },
       })
       if (errorFuncion || data?.error) {
@@ -88,14 +89,11 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
           try { detalle = ((await contexto.clone().json()) as { error?: string }).error } catch {}
         }
         const mensaje = detalle || errorFuncion?.message || 'No se pudo restablecer la contraseña.'
+        if (mensaje.includes('no tiene un DNI guardado')) setRequiereRegistrarDni(true)
         setErrorRestablecimiento(mensaje)
         return
       }
-      if (data?.contrasena_temporal) {
-        setContrasenaTemporalGenerada(data.contrasena_temporal as string)
-      } else {
-        setEmpresaRestablecer(null)
-      }
+      setEmpresaRestablecer(null)
       setDniInicialAdministrador('')
       setRequiereRegistrarDni(false)
     } catch (err) {
@@ -342,20 +340,27 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
           <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-4">
             <p className="text-sm text-slate-600 dark:text-slate-300">Empresa seleccionada:</p>
             <p className="mt-1 font-bold text-slate-900 dark:text-white">{empresaRestablecer?.nombre}</p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Si hay un DNI guardado, se usará como contraseña inicial. En cuentas antiguas sin DNI registrado, se generará una contraseña temporal segura que se mostrará una sola vez. El administrador deberá cambiarla al ingresar.</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Se utilizará el DNI registrado como contraseña inicial, igual que con los vigiladores. El administrador deberá cambiarla al ingresar.</p>
           </div>
-          {contrasenaTemporalGenerada && (
-            <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Contraseña temporal generada</p>
-              <p className="text-xs text-slate-600 dark:text-slate-300">La contraseña anterior fue reemplazada. Compartí esta clave directamente con el administrador; deberá cambiarla al iniciar sesión. Por seguridad, no volverá a mostrarse.</p>
-              <p className="select-all break-all rounded-lg border border-emerald-200 bg-white px-3 py-2 font-mono text-base font-bold tracking-wide text-slate-900 dark:border-emerald-800 dark:bg-slate-900 dark:text-white">{contrasenaTemporalGenerada}</p>
+          {requiereRegistrarDni && (
+            <div className="space-y-2">
+              <Etiqueta htmlFor="dni-inicial-administrador">DNI del administrador</Etiqueta>
+              <Entrada
+                id="dni-inicial-administrador"
+                value={dniInicialAdministrador}
+                onChange={(e) => setDniInicialAdministrador(e.target.value.replace(/\\D/g, '').slice(0, 8))}
+                inputMode="numeric"
+                placeholder="Ingresá el DNI de 7 u 8 números"
+                autoComplete="off"
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">Se guardará para futuros restablecimientos. Verificá que sea el DNI correcto.</p>
             </div>
           )}
           {errorRestablecimiento && <p className="text-xs font-medium text-red-600 dark:text-red-400">{errorRestablecimiento}</p>}
           <div className="flex justify-end gap-2">
             <Boton variante="secundario" tamano="chico" disabled={procesandoRestablecimiento} onClick={() => setEmpresaRestablecer(null)}>Cancelar</Boton>
             <Boton variante="primario" tamano="chico" disabled={procesandoRestablecimiento} onClick={() => void confirmarRestablecimiento()} icono={<KeyRound className="w-3.5 h-3.5" />}>
-              {procesandoRestablecimiento ? 'Procesando…' : contrasenaTemporalGenerada ? 'Cerrar' : 'Confirmar restablecimiento'}
+              {procesandoRestablecimiento ? 'Procesando…' : requiereRegistrarDni ? 'Guardar DNI y restablecer' : 'Confirmar restablecimiento'}
             </Boton>
           </div>
         </div>
