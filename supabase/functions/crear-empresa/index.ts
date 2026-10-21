@@ -107,7 +107,6 @@ Deno.serve(async (req) => {
       nombre: adminNombre,
       apellido: adminApellido,
       telefono: body.admin_telefono?.trim() || null,
-      dni,
       rol: "administrador",
       activo: true,
       debe_cambiar_contrasena: true,
