@@ -15,6 +15,16 @@ interface BeforeInstallPromptEvent extends Event {
 // sobrevivir al cambio de pantalla de login a panel sin volver a solicitarlo.
 let eventoInstalacionPwa: BeforeInstallPromptEvent | null = null
 
+// Capturar el evento en cuanto se carga el módulo, antes de que React ejecute
+// los efectos. Chrome puede emitir beforeinstallprompt antes del useEffect.
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (evento: Event) => {
+    evento.preventDefault()
+    eventoInstalacionPwa = evento as BeforeInstallPromptEvent
+    window.dispatchEvent(new Event('gsp:pwa-install-available'))
+  })
+}
+
 export const InstalacionPwa: React.FC = () => {
   const { t } = useTraduccion()
   const { cargando, estaAutenticado } = useAutenticacion()
@@ -25,12 +35,9 @@ export const InstalacionPwa: React.FC = () => {
   )
 
   useEffect(() => {
-    const manejadorPrompt = (e: Event) => {
-      e.preventDefault()
-      const eventoPwa = e as BeforeInstallPromptEvent
-      eventoInstalacionPwa = eventoPwa
-      promptRef.current = eventoPwa
-      setEstadoDispositivo(obtenerEstadoDispositivo(eventoPwa))
+    const actualizarDisponibilidadInstalacion = () => {
+      promptRef.current = eventoInstalacionPwa
+      setEstadoDispositivo(obtenerEstadoDispositivo(eventoInstalacionPwa))
     }
 
     const manejadorAppInstalada = () => {
@@ -40,14 +47,14 @@ export const InstalacionPwa: React.FC = () => {
       setModalAbierto(false)
     }
 
-    // Si el componente se monta tras iniciar sesión, recuperar el evento capturado en login.
-    promptRef.current = eventoInstalacionPwa
-    setEstadoDispositivo(obtenerEstadoDispositivo(eventoInstalacionPwa))
-    window.addEventListener('beforeinstallprompt', manejadorPrompt)
+    // Recuperar un evento capturado antes del montaje y escuchar si Chrome
+    // habilita la instalación después de que la pantalla ya se haya renderizado.
+    actualizarDisponibilidadInstalacion()
+    window.addEventListener('gsp:pwa-install-available', actualizarDisponibilidadInstalacion)
     window.addEventListener('appinstalled', manejadorAppInstalada)
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', manejadorPrompt)
+      window.removeEventListener('gsp:pwa-install-available', actualizarDisponibilidadInstalacion)
       window.removeEventListener('appinstalled', manejadorAppInstalada)
     }
   }, [])
