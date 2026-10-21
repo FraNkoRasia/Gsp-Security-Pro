@@ -59,7 +59,7 @@ export const InstalacionPwa: React.FC = () => {
     }
   }, [])
 
-  if (cargando || estadoDispositivo.estaInstalada || estaAutenticado) return null
+  if (cargando || estadoDispositivo.estaInstalada) return null
 
   const manejarClickInstalar = () => setModalAbierto(true)
 
