@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     return json({ error: "Empresa, nombre, apellido, email y DNI son obligatorios." }, 400)
   }
 
-  if (!/^\\d{7,8}$/.test(dni)) {
+  if (!/^\d{7,8}$/.test(dni)) {
     return json({ error: "El DNI debe tener 7 u 8 números." }, 400)
   }
 
