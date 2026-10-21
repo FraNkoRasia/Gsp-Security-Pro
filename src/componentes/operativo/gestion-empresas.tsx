@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Building2, Plus, Edit2, MapPin, UserPlus, ArrowRight, Power, KeyRound } from 'lucide-react'
+import { Building2, Plus, Edit2, MapPin, UserPlus, ArrowRight, Power, KeyRound, CheckCircle2 } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { Boton } from '@/componentes/ui/boton'
 import { Insignia } from '@/componentes/ui/insignia'
@@ -20,6 +20,7 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
   const [empresaConfirmacion, setEmpresaConfirmacion] = useState<Empresa | null>(null)
   const [procesandoEmpresa, setProcesandoEmpresa] = useState(false)
   const [empresaRestablecer, setEmpresaRestablecer] = useState<Empresa | null>(null)
+  const [empresaRestablecida, setEmpresaRestablecida] = useState<Empresa | null>(null)
   const [procesandoRestablecimiento, setProcesandoRestablecimiento] = useState(false)
   const [errorRestablecimiento, setErrorRestablecimiento] = useState<string | null>(null)
   const [dniInicialAdministrador, setDniInicialAdministrador] = useState('')
@@ -92,6 +93,7 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
         setErrorRestablecimiento(mensaje)
         return
       }
+      setEmpresaRestablecida(empresaRestablecer)
       setEmpresaRestablecer(null)
       setDniInicialAdministrador('')
       setRequiereRegistrarDni(false)
@@ -360,6 +362,28 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
             <Boton variante="primario" tamano="chico" disabled={procesandoRestablecimiento} onClick={() => void confirmarRestablecimiento()} icono={<KeyRound className="w-3.5 h-3.5" />}>
               {procesandoRestablecimiento ? 'Procesando…' : requiereRegistrarDni ? 'Guardar DNI y restablecer' : 'Confirmar restablecimiento'}
             </Boton>
+          </div>
+        </div>
+      </Dialogo>
+
+      <Dialogo
+        abierto={Boolean(empresaRestablecida)}
+        alCerrar={() => setEmpresaRestablecida(null)}
+        titulo="Contraseña restablecida"
+        subtitulo="El restablecimiento se completó correctamente."
+        icono={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+        tamano="chico"
+      >
+        <div className="space-y-5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <CheckCircle2 className="h-9 w-9" />
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            La contraseña del administrador de <strong className="text-slate-900 dark:text-white">{empresaRestablecida?.nombre}</strong> fue restablecida correctamente.
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Deberá ingresar con su DNI y crear una contraseña personal.</p>
+          <div className="flex justify-end">
+            <Boton variante="primario" tamano="chico" onClick={() => setEmpresaRestablecida(null)}>Aceptar</Boton>
           </div>
         </div>
       </Dialogo>

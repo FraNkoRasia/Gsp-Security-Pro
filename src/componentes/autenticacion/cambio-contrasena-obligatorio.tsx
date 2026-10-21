@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
-import { KeyRound, ShieldCheck } from 'lucide-react'
+import { CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react'
 import { Dialogo } from '@/componentes/ui/dialogo'
 import { Entrada } from '@/componentes/ui/entrada'
 import { Boton } from '@/componentes/ui/boton'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 
 export const CambioContrasenaObligatorio: React.FC = () => {
-  const { cambiarContrasenaObligatoria, cerrarSesion } = useAutenticacion()
+  const { cambiarContrasenaObligatoria, confirmarCambioContrasenaObligatorio, cerrarSesion } = useAutenticacion()
   const [nueva, setNueva] = useState('')
   const [confirmacion, setConfirmacion] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [exito, setExito] = useState(false)
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +33,7 @@ export const CambioContrasenaObligatorio: React.FC = () => {
       }
       setNueva('')
       setConfirmacion('')
+      setExito(true)
     } finally {
       setGuardando(false)
     }
@@ -41,11 +43,20 @@ export const CambioContrasenaObligatorio: React.FC = () => {
     <Dialogo
       abierto
       alCerrar={() => undefined}
-      titulo="Creá tu contraseña personal"
-      subtitulo="Por seguridad, debés cambiar la contraseña inicial antes de usar GSP Security Pro."
-      icono={<KeyRound className="w-5 h-5 text-emerald-500" />}
+      titulo={exito ? 'Contraseña modificada correctamente' : 'Creá tu contraseña personal'}
+      subtitulo={exito ? 'Tu nueva contraseña quedó guardada. Ya podés ingresar a GSP Security Pro.' : 'Por seguridad, debés cambiar la contraseña inicial antes de usar GSP Security Pro.'}
+      icono={exito ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <KeyRound className="w-5 h-5 text-emerald-500" />}
       tamano="chico"
     >
+      {exito ? (
+        <div className="space-y-5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <CheckCircle2 className="h-9 w-9" />
+          </div>
+          <p role="status" className="text-sm font-semibold text-slate-700 dark:text-slate-200">Contraseña modificada correctamente.</p>
+          <Boton type="button" className="w-full" onClick={confirmarCambioContrasenaObligatorio}>Continuar a GSP Security Pro</Boton>
+        </div>
+      ) : (
       <form onSubmit={guardar} className="space-y-4">
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
           <ShieldCheck className="mr-1 inline h-4 w-4" />
@@ -63,6 +74,7 @@ export const CambioContrasenaObligatorio: React.FC = () => {
         <Boton type="submit" className="w-full" disabled={guardando} cargando={guardando}>Guardar contraseña y continuar</Boton>
         <button type="button" onClick={() => void cerrarSesion()} className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" disabled={guardando}>Cerrar sesión</button>
       </form>
+      )}
     </Dialogo>
   )
 }
