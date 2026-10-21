@@ -7,6 +7,8 @@ type Body = {
   cuit?: string
   direccion?: string
   art_aseguradora?: string
+  accion?: string
+  admin_dni?: string
 }
 
 const corsHeaders = {
@@ -54,8 +56,50 @@ Deno.serve(async (req) => {
     return json({ error: "Datos inválidos." }, 400)
   }
 
-  if (!body.empresa_id || !body.nombre?.trim()) {
-    return json({ error: "empresa_id y nombre son obligatorios." }, 400)
+  if (!body.empresa_id) return json({ error: "empresa_id es obligatorio." }, 400)
+
+  if (body.accion === "restablecer_contrasena_administrador") {
+    const dni = String(body.admin_dni || "").replace(/\D/g, "")
+    if (!/^\d{7,8}$/.test(dni)) {
+      return json({ error: "Ingresá el DNI del administrador (7 u 8 números) para restablecer su contraseña." }, 400)
+    }
+
+    const { data: empresaObjetivo, error: empresaObjetivoError } = await admin
+      .from("empresas").select("id,nombre").eq("id", body.empresa_id).maybeSingle()
+    if (empresaObjetivoError || !empresaObjetivo) return json({ error: "No se encontró la empresa." }, 404)
+
+    const { data: perfilAdmin, error: perfilAdminError } = await admin
+      .from("perfiles").select("id,id_empresa,rol,debe_cambiar_contrasena")
+      .eq("id_empresa", body.empresa_id).eq("rol", "administrador").maybeSingle()
+    if (perfilAdminError || !perfilAdmin) {
+      return json({ error: "No se encontró una cuenta de administrador asociada a esta empresa." }, 404)
+    }
+
+    const { error: activarCambioError } = await admin.from("perfiles")
+      .update({ debe_cambiar_contrasena: true }).eq("id", perfilAdmin.id)
+    if (activarCambioError) return json({ error: "No se pudo activar el cambio obligatorio; la contraseña no fue modificada." }, 500)
+
+    const { error: passwordError } = await admin.auth.admin.updateUserById(perfilAdmin.id, { password: dni })
+    if (passwordError) {
+      const { error: rollbackError } = await admin.from("perfiles")
+        .update({ debe_cambiar_contrasena: perfilAdmin.debe_cambiar_contrasena === true }).eq("id", perfilAdmin.id)
+      if (rollbackError) console.error("No se pudo revertir la marca de cambio obligatorio:", rollbackError.message)
+      return json({ error: "Supabase no aceptó el DNI como contraseña inicial. Revisá la política de contraseñas de Auth." }, 400)
+    }
+
+    await admin.from("auditoria").insert({
+      id_empresa: body.empresa_id,
+      id_usuario: authData.user.id,
+      accion: "RESTABLECER_CONTRASENA_ADMINISTRADOR",
+      entidad: "Empresa",
+      entidad_id: body.empresa_id,
+      detalle: { texto: "Restableció la contraseña del administrador de " + empresaObjetivo.nombre + " al DNI; cambio obligatorio al próximo ingreso" },
+    })
+    return json({ ok: true })
+  }
+
+  if (!body.nombre?.trim()) {
+    return json({ error: "El nombre de la empresa es obligatorio." }, 400)
   }
 
   const { data: empresa, error: empresaError } = await admin
