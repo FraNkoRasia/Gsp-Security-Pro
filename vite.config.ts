@@ -36,6 +36,12 @@ export default defineConfig({
         // del escudo, que Android puede recortar al generar la pantalla de inicio.
         icons: [
           {
+            src: '/Escudo.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
             src: '/logoAPP.png',
             sizes: '512x512',
             type: 'image/png',
