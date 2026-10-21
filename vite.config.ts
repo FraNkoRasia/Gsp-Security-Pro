@@ -14,6 +14,8 @@ export default defineConfig({
       // El Service Worker se registra explícitamente desde src/main.tsx.
       // Evita que el plugin inyecte un segundo registro en index.html.
       injectRegister: null,
+      // El manifiesto se enlaza explícitamente desde index.html para asegurar que Chrome lo detecte.
+      injectManifestLink: false,
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
