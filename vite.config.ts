@@ -38,7 +38,7 @@ export default defineConfig({
         icons: [
           {
             src: '/logo-gsp.svg',
-            sizes: '192x192 512x512',
+            sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any'
           },
