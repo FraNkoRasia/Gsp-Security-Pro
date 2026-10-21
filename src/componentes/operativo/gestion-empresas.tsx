@@ -53,6 +53,7 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
     setNombre(emp.nombre)
     setCuit(emp.cuit || '')
     setDireccion(emp.direccion || '')
+    setArtAseguradora(emp.art_aseguradora || '')
     setError(null)
     setModalAbierto(true)
   }
@@ -71,7 +72,8 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
       const resultado = await editarEmpresa(empresaEditando.id, {
         nombre: nombre.trim(),
         cuit: cuit.trim(),
-        direccion: direccion.trim()
+        direccion: direccion.trim(),
+        art_aseguradora: artAseguradora.trim()
       })
       setProcesandoGuardado(false)
       if (resultado) {
@@ -184,6 +186,10 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                     )}
                   </div>
                 </div>
+
+                {emp.art_aseguradora && (
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">ART: {emp.art_aseguradora}</p>
+                )}
 
                 {emp.direccion && (
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-3 flex items-center gap-1.5">
