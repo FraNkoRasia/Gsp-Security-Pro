@@ -105,16 +105,24 @@ Deno.serve(async (req) => {
       .eq("id_empresa", body.empresa_id)
       .maybeSingle()
 
-    if (credencialError || !credencial?.dni || !/^\d{7,8}$/.test(credencial.dni)) {
-      return json({ error: "No hay un DNI guardado para este administrador. Esta cuenta necesita registrar su DNI una sola vez antes de poder restablecer la contraseña." }, 409)
+    if (credencialError) {
+      console.error("Error consultando credencial del administrador:", credencialError.message)
+      return json({ error: "No se pudo consultar la credencial del administrador. Intentá nuevamente." }, 500)
     }
-    const dni = credencial.dni
+
+    // Las cuentas antiguas pueden no tener DNI registrado. En ese caso se genera
+    // una contraseña temporal aleatoria, sin solicitar datos personales al operador.
+    const usarDniGuardado = !credencialError && Boolean(credencial?.dni) && /^\d{7,8}$/.test(credencial.dni)
+    const caracteresContrasena = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@"
+    const contrasenaTemporal = usarDniGuardado
+      ? credencial.dni
+      : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => caracteresContrasena[byte % caracteresContrasena.length]).join("")
 
     const { error: activarCambioError } = await admin.from("perfiles")
       .update({ debe_cambiar_contrasena: true }).eq("id", perfilAdmin.id)
     if (activarCambioError) return json({ error: "No se pudo activar el cambio obligatorio; la contraseña no fue modificada." }, 500)
 
-    const { error: passwordError } = await admin.auth.admin.updateUserById(perfilAdmin.id, { password: dni })
+    const { error: passwordError } = await admin.auth.admin.updateUserById(perfilAdmin.id, { password: contrasenaTemporal })
     if (passwordError) {
       const { error: rollbackError } = await admin.from("perfiles")
         .update({ debe_cambiar_contrasena: perfilAdmin.debe_cambiar_contrasena === true }).eq("id", perfilAdmin.id)
@@ -130,7 +138,10 @@ Deno.serve(async (req) => {
       entidad_id: body.empresa_id,
       detalle: { texto: "Restableció la contraseña del administrador de " + empresaObjetivo.nombre + " al DNI; cambio obligatorio al próximo ingreso" },
     })
-    return json({ ok: true })
+    return json({
+      ok: true,
+      ...(usarDniGuardado ? {} : { contrasena_temporal: contrasenaTemporal }),
+    })
   }
 
   if (!body.nombre?.trim()) {
