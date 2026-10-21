@@ -119,10 +119,12 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
       setCargandoEstadoGrilla(false)
       return
     }
+    // Capturar el cliente ya validado para conservar el estrechamiento de tipo dentro de la función async.
+    const dbClient = supabase
     const cargarEstado = async () => {
       const [estadoObjetivo, estadoVigiladores] = await Promise.all([
-        supabase.from('grillas_mensuales').select('mes').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`).maybeSingle(),
-        supabase.from('grillas_mensuales_vigiladores').select('id_vigilador').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`)
+        dbClient.from('grillas_mensuales').select('mes').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`).maybeSingle(),
+        dbClient.from('grillas_mensuales_vigiladores').select('id_vigilador').eq('id_objetivo', objetivoSeleccionado).eq('mes', `${mesSeleccionado}-01`)
       ])
       if (cancelado) return
       setGrillaCreada(estadoObjetivo.error ? true : Boolean(estadoObjetivo.data))
@@ -138,7 +140,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
         setCargandoEstadoGrilla(false)
         return
       }
-      const { data: vigiladoresDb, error: errorVigiladores } = await supabase.from('vigiladores').select('id,id_usuario').in('id', idsDb)
+      const { data: vigiladoresDb, error: errorVigiladores } = await dbClient.from('vigiladores').select('id,id_usuario').in('id', idsDb)
       if (cancelado) return
       if (errorVigiladores) {
         setErrorGuardado('No se pudo verificar el estado de esta grilla. Por seguridad, las fechas históricas quedan bloqueadas.')
