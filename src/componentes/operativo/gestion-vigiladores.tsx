@@ -417,31 +417,31 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
           return (
             <Tarjeta key={vig.id} className="hover:border-blue-500/50 transition-all">
               <TarjetaContenido className={`p-3 sm:p-4 ${tarjetaExpandida ? 'space-y-3' : 'space-y-2'}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-950/70 border border-blue-300 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 font-bold text-base flex items-center justify-center shrink-0">
                       {vig.nombre.charAt(0)}{vig.apellido.charAt(0)}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white text-base leading-snug">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="break-words [overflow-wrap:anywhere] font-bold text-slate-900 dark:text-white text-base leading-snug">
                         {vig.nombre} {vig.apellido}
                       </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                        <Mail className="w-3 h-3 text-slate-400" />
-                        <span>{vig.email || 'Sin cuenta de acceso'}</span>
+                      <p className="min-w-0 text-xs text-slate-500 dark:text-slate-400 flex items-start gap-1.5 mt-0.5">
+                        <Mail className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
+                        <span className="min-w-0 break-all">{vig.email || 'Sin cuenta de acceso'}</span>
                       </p>
                     </div>
                   </div>
 
                   {!modoConsulta && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button type="button" onClick={() => { setVigiladorFicha(vig); setModalFichaAbierto(true) }} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70" title="Ver ficha del vigilador" aria-label={`Ver ficha de ${vig.nombre} ${vig.apellido}`}>
                       <span className="hidden md:inline text-xs font-semibold">Ficha Técnica</span>
                       <Info className="w-4 h-4" />
                     </button>
                   </div>
                   )}
-                  {!modoConsulta && vig.id_usuario && <div className="flex items-center gap-1">
+                  {!modoConsulta && vig.id_usuario && <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setVigiladorRestablecer(vig)}
