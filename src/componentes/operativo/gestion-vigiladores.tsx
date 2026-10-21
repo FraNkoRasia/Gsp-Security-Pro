@@ -426,9 +426,9 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
                       <h4 className="truncate whitespace-nowrap font-bold text-slate-900 dark:text-white text-base leading-snug" title={`${vig.nombre} ${vig.apellido}`}>
                         {vig.nombre} {vig.apellido}
                       </h4>
-                      <p className="min-w-0 overflow-hidden text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                        <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span className="min-w-0 truncate whitespace-nowrap" title={vig.email || 'Sin cuenta de acceso'}>{vig.email || 'Sin cuenta de acceso'}</span>
+                      <p className="flex min-w-0 max-w-full flex-nowrap items-center gap-1.5 overflow-hidden text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <Mail className="w-3 h-3 shrink-0 text-slate-400" />
+                        <span className="block min-w-0 max-w-full flex-1 overflow-hidden text-ellipsis whitespace-nowrap" title={vig.email || 'Sin cuenta de acceso'}>{vig.email || 'Sin cuenta de acceso'}</span>
                       </p>
                     </div>
                   </div>
