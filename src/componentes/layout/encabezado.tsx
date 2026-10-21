@@ -26,7 +26,11 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
   const { temaActual, cambiarTema } = useTema()
 
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false)
-  const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacionPWA | null>(null)
+  const [eventoInstalacion, setEventoInstalacion] = useState<EventoInstalacionPWA | null>(() =>
+    (typeof window !== 'undefined'
+      ? (window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt ?? null
+      : null)
+  )
   const [appInstalada, setAppInstalada] = useState(false)
   const [modalInstalacionAbierto, setModalInstalacionAbierto] = useState(false)
   const [mensajeInstalacion, setMensajeInstalacion] = useState<string | null>(null)
@@ -42,12 +46,14 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
     const manejarBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
       const eventoPwa = event as EventoInstalacionPWA
+      ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = eventoPwa
       setEventoInstalacion(eventoPwa)
       setEstadoDispositivo(obtenerEstadoDispositivo(eventoPwa))
     }
 
     const manejarAppInstalled = () => {
       setEventoInstalacion(null)
+      ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
       setAppInstalada(true)
       setModalInstalacionAbierto(false)
     }
@@ -55,6 +61,13 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
     verificarInstalacion()
     setEstadoDispositivo(obtenerEstadoDispositivo(null))
     window.addEventListener('beforeinstallprompt', manejarBeforeInstallPrompt)
+    window.addEventListener('gsp:pwa-install-available', () => {
+      const eventoCompartido = (window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt
+      if (eventoCompartido) {
+        setEventoInstalacion(eventoCompartido)
+        setEstadoDispositivo(obtenerEstadoDispositivo(eventoCompartido))
+      }
+    })
     window.addEventListener('appinstalled', manejarAppInstalled)
 
     return () => {
@@ -81,6 +94,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
     // Si el usuario cancela, también debemos descartarlo para esperar
     // un nuevo beforeinstallprompt en lugar de reutilizar un evento agotado.
     setEventoInstalacion(null)
+    ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
     setEstadoDispositivo(obtenerEstadoDispositivo(null))
 
     if (resultado.outcome === 'accepted') {
