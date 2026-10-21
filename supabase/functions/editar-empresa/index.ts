@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       return json({ error: "No se encontró una cuenta de administrador asociada a esta empresa." }, 404)
     }
 
-    const { data: credencial, error: credencialError } = await admin
+    let { data: credencial, error: credencialError } = await admin
       .from("credenciales_administradores")
       .select("dni")
       .eq("id_usuario", perfilAdmin.id)
@@ -110,19 +110,34 @@ Deno.serve(async (req) => {
       return json({ error: "No se pudo consultar la credencial del administrador. Intentá nuevamente." }, 500)
     }
 
-    // Las cuentas antiguas pueden no tener DNI registrado. En ese caso se genera
-    // una contraseña temporal aleatoria, sin solicitar datos personales al operador.
-    const usarDniGuardado = !credencialError && Boolean(credencial?.dni) && /^\d{7,8}$/.test(credencial.dni)
-    const caracteresContrasena = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@"
-    const contrasenaTemporal = usarDniGuardado
-      ? credencial.dni
-      : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => caracteresContrasena[byte % caracteresContrasena.length]).join("")
+    // Igual que en los vigiladores: la contraseña inicial siempre es el DNI guardado.
+    // Para cuentas antiguas sin DNI, permitir registrarlo una sola vez desde este flujo.
+    if (!credencial?.dni && body.admin_dni) {
+      const dni = String(body.admin_dni).replace(/\D/g, "")
+      if (!/^\d{7,8}$/.test(dni)) return json({ error: "El DNI debe tener 7 u 8 números." }, 400)
+      const { error: guardarError } = await admin.from("credenciales_administradores").upsert({
+        id_usuario: perfilAdmin.id,
+        id_empresa: body.empresa_id,
+        dni,
+        actualizado_en: new Date().toISOString(),
+      }, { onConflict: "id_usuario" })
+      if (guardarError) {
+        console.error("Error guardando DNI del administrador:", guardarError.message)
+        return json({ error: "No se pudo guardar el DNI del administrador." }, 500)
+      }
+      credencial = { dni }
+    }
 
+    if (!credencial?.dni || !/^\d{7,8}$/.test(String(credencial.dni))) {
+      return json({ error: "Este administrador no tiene un DNI guardado. Ingresá su DNI para registrarlo una sola vez y restablecer la contraseña." }, 409)
+    }
+
+    const passwordInicial = String(credencial.dni).replace(/\D/g, "")
     const { error: activarCambioError } = await admin.from("perfiles")
       .update({ debe_cambiar_contrasena: true }).eq("id", perfilAdmin.id)
     if (activarCambioError) return json({ error: "No se pudo activar el cambio obligatorio; la contraseña no fue modificada." }, 500)
 
-    const { error: passwordError } = await admin.auth.admin.updateUserById(perfilAdmin.id, { password: contrasenaTemporal })
+    const { error: passwordError } = await admin.auth.admin.updateUserById(perfilAdmin.id, { password: passwordInicial })
     if (passwordError) {
       const { error: rollbackError } = await admin.from("perfiles")
         .update({ debe_cambiar_contrasena: perfilAdmin.debe_cambiar_contrasena === true }).eq("id", perfilAdmin.id)
@@ -130,7 +145,7 @@ Deno.serve(async (req) => {
       return json({ error: "Supabase no aceptó el DNI como contraseña inicial. Revisá la política de contraseñas de Auth." }, 400)
     }
 
-    await admin.from("auditoria").insert({
+    const { error: auditError } = await admin.from("auditoria").insert({
       id_empresa: body.empresa_id,
       id_usuario: authData.user.id,
       accion: "RESTABLECER_CONTRASENA_ADMINISTRADOR",
@@ -138,10 +153,8 @@ Deno.serve(async (req) => {
       entidad_id: body.empresa_id,
       detalle: { texto: "Restableció la contraseña del administrador de " + empresaObjetivo.nombre + " al DNI; cambio obligatorio al próximo ingreso" },
     })
-    return json({
-      ok: true,
-      ...(usarDniGuardado ? {} : { contrasena_temporal: contrasenaTemporal }),
-    })
+    if (auditError) console.error("No se pudo registrar auditoría:", auditError.message)
+    return json({ ok: true })
   }
 
   if (!body.nombre?.trim()) {
