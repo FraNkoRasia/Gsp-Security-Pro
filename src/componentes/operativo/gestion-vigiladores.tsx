@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { UserPlus, ArrowRightLeft, History, Edit2, Phone, Mail, MapPin, UserCheck, UserX, Info, KeyRound } from 'lucide-react'
+import { UserPlus, ArrowRightLeft, History, Edit2, Phone, Mail, MapPin, UserCheck, UserX, Info, KeyRound, Search, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { Boton } from '@/componentes/ui/boton'
 import { Insignia } from '@/componentes/ui/insignia'
@@ -47,6 +47,8 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
   const [modalEstadoAbierto, setModalEstadoAbierto] = useState(false)
   const [vigiladorEstado, setVigiladorEstado] = useState<Usuario | null>(null)
   const [filtroEstadoVigiladores, setFiltroEstadoVigiladores] = useState<'activos' | 'inactivos'>('activos')
+  const [busquedaVigilador, setBusquedaVigilador] = useState('')
+  const [tarjetasExpandidas, setTarjetasExpandidas] = useState<Set<string>>(() => new Set())
   const hoy = new Date()
   const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
   const mesActual = fechaHoy.slice(0, 7)
@@ -346,11 +348,21 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
     mesActual
   ])).filter(m => m <= mesActual).sort((a, b) => b.localeCompare(a))
 
+  const terminoBusqueda = busquedaVigilador.trim().toLocaleLowerCase('es-AR')
   const vigiladoresMostrados = vigiladores.filter((v) => {
     if (v.id_empresa !== idEmpresaActiva) return false
     if ((filtroEstadoVigiladores === 'activos') !== v.activo) return false
-    if (!idObjetivoSeleccionado) return true
-    return asignaciones.some((a) => a.id_vigilador === v.id && a.id_objetivo === idObjetivoSeleccionado && a.activa)
+    if (idObjetivoSeleccionado && !asignaciones.some((a) => a.id_vigilador === v.id && a.id_objetivo === idObjetivoSeleccionado && a.activa)) return false
+    if (!terminoBusqueda) return true
+    return [v.nombre, v.apellido, v.email, v.telefono, v.dni, `${v.nombre} ${v.apellido}`]
+      .some((dato) => String(dato || '').toLocaleLowerCase('es-AR').includes(terminoBusqueda))
+  })
+
+  const alternarTarjeta = (id: string) => setTarjetasExpandidas(actuales => {
+    const siguientes = new Set(actuales)
+    if (siguientes.has(id)) siguientes.delete(id)
+    else siguientes.add(id)
+    return siguientes
   })
 
   return (
@@ -382,15 +394,29 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          value={busquedaVigilador}
+          onChange={(e) => setBusquedaVigilador(e.target.value)}
+          placeholder="Buscar por nombre, apellido, DNI, teléfono o correo..."
+          aria-label="Buscar vigilador"
+          className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-slate-100"
+        />
+        {busquedaVigilador && <button type="button" onClick={() => setBusquedaVigilador('')} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800" aria-label="Limpiar búsqueda"><X className="h-4 w-4" /></button>}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {vigiladoresMostrados.map((vig) => {
           const asignacionActiva = asignaciones.find(
             (a) => a.id_vigilador === vig.id && a.activa
           )
+          const tarjetaExpandida = tarjetasExpandidas.has(vig.id)
 
           return (
             <Tarjeta key={vig.id} className="hover:border-blue-500/50 transition-all">
-              <TarjetaContenido className="p-5 space-y-3">
+              <TarjetaContenido className={`p-3 sm:p-4 ${tarjetaExpandida ? 'space-y-3' : 'space-y-2'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-950/70 border border-blue-300 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 font-bold text-base flex items-center justify-center shrink-0">
@@ -444,7 +470,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
                   </div>}
                 </div>
 
-                {vig.telefono && (
+                {tarjetaExpandida && vig.telefono && (
                   <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                     <span>{vig.telefono}</span>
@@ -452,7 +478,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
                 )}
 
                 {/* Asignación Actual */}
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                {tarjetaExpandida && <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
                     <div>
@@ -463,10 +489,10 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
                     </div>
                   </div>
                   <Insignia variante={vig.activo ? "verde" : "rojo"}>{vig.activo ? "En servicio" : "Dado de baja"}</Insignia>
-                </div>
+                </div>}
 
                 {/* Acciones de Traslado e Historial (Sección 20 y 21) */}
-                {!modoConsulta && <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-200 dark:border-slate-800">
+                {tarjetaExpandida && !modoConsulta && <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => { setVigiladorSeleccionado(vig); setMesHistorialOperativo(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`); setModalHistorialOperativoAbierto(true) }}
@@ -493,11 +519,14 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
                     Trasladar
                   </Boton>
                 </div>}
+                <button type="button" onClick={() => alternarTarjeta(vig.id)} aria-expanded={tarjetaExpandida} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300">
+                  {tarjetaExpandida ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver más detalles</>}
+                </button>
               </TarjetaContenido>
             </Tarjeta>
           )
         })}
-        {vigiladoresMostrados.length === 0 && <div className="md:col-span-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500">{filtroEstadoVigiladores === 'activos' ? 'No hay vigilantes activos para este filtro.' : 'No hay vigilantes inactivos para este filtro.'}</div>}
+        {vigiladoresMostrados.length === 0 && <div className="md:col-span-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500">{terminoBusqueda ? `No se encontraron vigiladores para “${busquedaVigilador.trim()}”.` : filtroEstadoVigiladores === 'activos' ? 'No hay vigilantes activos para este filtro.' : 'No hay vigilantes inactivos para este filtro.'}</div>}
       </div>
 
       <Dialogo
