@@ -352,7 +352,13 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
       <ModalInstalacion
         abierto={modalInstalacionAbierto}
         alCerrar={() => setModalInstalacionAbierto(false)}
-        alConfirmar={() => { void instalarAplicacion() }}
+        alConfirmar={() => {
+          if (!eventoInstalacion) {
+            setModalInstalacionAbierto(false)
+            return
+          }
+          void instalarAplicacion()
+        }}
         estadoDispositivo={estadoDispositivo}
       />
     </>
