@@ -70,8 +70,8 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
     setErrorRestablecimiento(null)
     try {
       if (requiereRegistrarDni) {
-        const dni = dniInicialAdministrador.replace(/\\D/g, '')
-        if (!/^\\d{7,8}$/.test(dni)) {
+        const dni = dniInicialAdministrador.replace(/\D/g, '')
+        if (!/^\d{7,8}$/.test(dni)) {
           setErrorRestablecimiento('Ingresá un DNI válido de 7 u 8 números para registrar esta cuenta por única vez.')
           return
         }
@@ -350,7 +350,7 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
           {requiereRegistrarDni && (
             <div className="space-y-2">
               <Etiqueta requerido>DNI del administrador (solo esta primera vez)</Etiqueta>
-              <Entrada inputMode="numeric" value={dniInicialAdministrador} onChange={(e) => setDniInicialAdministrador(e.target.value.replace(/\\D/g, '').slice(0, 8))} placeholder="Ej: 30123456" />
+              <Entrada inputMode="numeric" value={dniInicialAdministrador} onChange={(e) => setDniInicialAdministrador(e.target.value.replace(/\D/g, '').slice(0, 8))} placeholder="Ej: 30123456" />
               <p className="text-xs text-slate-500 dark:text-slate-400">Esta cuenta fue creada antes de guardar el DNI en la base de datos. Se registrará de forma privada y las próximas veces no tendrás que ingresarlo.</p>
             </div>
           )}
