@@ -5,10 +5,11 @@ type Body = {
   nombre: string
   cuit?: string
   direccion?: string
+  art_aseguradora?: string
+  admin_dni: string
   admin_nombre: string
   admin_apellido: string
   admin_email: string
-  admin_password: string
   admin_telefono?: string
 }
 
@@ -61,14 +62,14 @@ Deno.serve(async (req) => {
   const adminNombre = body.admin_nombre?.trim()
   const adminApellido = body.admin_apellido?.trim()
   const email = body.admin_email?.trim().toLowerCase()
-  const password = body.admin_password || ""
+  const dni = body.admin_dni?.replace(/\D/g, "") || ""
 
-  if (!nombre || !adminNombre || !adminApellido || !email || !password) {
-    return json({ error: "Empresa, nombre, apellido, email y contraseña son obligatorios." }, 400)
+  if (!nombre || !adminNombre || !adminApellido || !email || !dni) {
+    return json({ error: "Empresa, nombre, apellido, email y DNI son obligatorios." }, 400)
   }
 
-  if (password.length < 8) {
-    return json({ error: "La contraseña temporal debe tener al menos 8 caracteres." }, 400)
+  if (!/^\\d{7,8}$/.test(dni)) {
+    return json({ error: "El DNI debe tener 7 u 8 números." }, 400)
   }
 
   const { data: empresa, error: empresaError } = await admin
@@ -77,6 +78,7 @@ Deno.serve(async (req) => {
       nombre,
       cuit: body.cuit?.trim() || null,
       direccion: body.direccion?.trim() || null,
+      art_aseguradora: body.art_aseguradora?.trim() || null,
       activa: true,
     })
     .select("*")
@@ -88,7 +90,7 @@ Deno.serve(async (req) => {
 
   const { data: nuevoUsuario, error: usuarioError } = await admin.auth.admin.createUser({
     email,
-    password,
+    password: dni,
     email_confirm: true,
   })
 
@@ -105,6 +107,7 @@ Deno.serve(async (req) => {
       nombre: adminNombre,
       apellido: adminApellido,
       telefono: body.admin_telefono?.trim() || null,
+      dni,
       rol: "administrador",
       activo: true,
       debe_cambiar_contrasena: true,
