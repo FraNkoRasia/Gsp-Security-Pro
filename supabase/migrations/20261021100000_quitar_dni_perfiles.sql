@@ -1,0 +1,1 @@
+ALTER TABLE public.perfiles DROP COLUMN IF EXISTS dni;

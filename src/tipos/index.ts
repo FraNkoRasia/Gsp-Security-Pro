@@ -22,6 +22,7 @@ export interface Empresa {
   nombre: string
   cuit?: string
   direccion?: string
+  art_aseguradora?: string
   activa: boolean
   creada_en: string
 }
