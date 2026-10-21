@@ -389,40 +389,35 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
         </div>
       </Dialogo>
 
-      <Dialogo
-        abierto={Boolean(empresaCreadaNombre)}
-        alCerrar={() => setEmpresaCreadaNombre(null)}
-        titulo="Empresa creada con éxito"
-        subtitulo="La empresa y la cuenta de su administrador se crearon correctamente."
-        icono={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-        tamano="chico"
-      >
-        <div className="space-y-5 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-            <CheckCircle2 className="h-9 w-9" />
-          </div>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            La empresa <strong className="text-slate-900 dark:text-white">"{empresaCreadaNombre}"</strong> fue creada con éxito.
-          </p>
-          <div className="flex justify-end">
-            <Boton variante="primario" tamano="chico" onClick={() => setEmpresaCreadaNombre(null)}>Aceptar</Boton>
-          </div>
-        </div>
-      </Dialogo>
-
       {/* Modal Crear / Editar Empresa */}
       <Dialogo
         abierto={modalAbierto}
         alCerrar={() => {
           if (procesandoGuardado) return
           setConfirmacionCreacion(false)
+          setEmpresaCreadaNombre(null)
           setModalAbierto(false)
         }}
-        titulo={empresaEditando ? 'Editar Empresa' : confirmacionCreacion ? 'Confirmar alta de empresa' : 'Nueva Empresa'}
-        subtitulo={empresaEditando ? 'Gestión de organizaciones para aislamiento de grillas y personal.' : confirmacionCreacion ? 'Se creará la empresa y la cuenta de su administrador.' : 'Gestión de organizaciones para aislamiento de grillas y personal.'}
-        icono={<Building2 className="w-5 h-5 text-blue-500" />}
+        titulo={empresaCreadaNombre ? 'Empresa creada con éxito' : empresaEditando ? 'Editar Empresa' : confirmacionCreacion ? 'Confirmar alta de empresa' : 'Nueva Empresa'}
+        subtitulo={empresaCreadaNombre ? 'La empresa y la cuenta de su administrador se crearon correctamente.' : empresaEditando ? 'Gestión de organizaciones para aislamiento de grillas y personal.' : confirmacionCreacion ? 'Se creará la empresa y la cuenta de su administrador.' : 'Gestión de organizaciones para aislamiento de grillas y personal.'}
+        icono={empresaCreadaNombre ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Building2 className="w-5 h-5 text-blue-500" />}
       >
-        {confirmacionCreacion ? (
+        {empresaCreadaNombre ? (
+          <div className="space-y-5 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              La empresa <strong className="text-slate-900 dark:text-white">"{empresaCreadaNombre}"</strong> fue creada con éxito.
+            </p>
+            <div className="flex justify-end">
+              <Boton variante="primario" tamano="chico" onClick={() => {
+                setEmpresaCreadaNombre(null)
+                setModalAbierto(false)
+              }}>Aceptar</Boton>
+            </div>
+          </div>
+        ) : confirmacionCreacion ? (
           <div className="space-y-5">
             <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/20 p-4">
               <p className="text-sm text-slate-600 dark:text-slate-300">¿Deseas crear la empresa:</p>
@@ -451,7 +446,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                   return
                 }
                 setConfirmacionCreacion(false)
-                setModalAbierto(false)
                 setEmpresaCreadaNombre(nombre.trim())
               }}>
                 {procesandoGuardado ? 'Creando...' : 'Confirmar alta'}
