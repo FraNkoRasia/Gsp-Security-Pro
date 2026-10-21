@@ -13,6 +13,7 @@ interface ContextoAutenticacionTipo {
   solicitarRecuperacion: (email: string) => Promise<{ exito: boolean; error?: string }>
   cambiarContrasena: (contrasenaActual: string, nuevaContrasena: string) => Promise<{ exito: boolean; error?: string }>
   cambiarContrasenaObligatoria: (nuevaContrasena: string) => Promise<{ exito: boolean; error?: string }>
+  confirmarCambioContrasenaObligatorio: () => void
 }
 
 const ContextoAutenticacion = createContext<ContextoAutenticacionTipo | undefined>(undefined)
@@ -278,11 +279,14 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
         }
         return { exito: false, error: detalle || error?.message || 'No se pudo actualizar la contraseña.' }
       }
-      setUsuario((actual) => actual ? { ...actual, debe_cambiar_contrasena: false } : actual)
       return { exito: true }
     } catch (err) {
       return { exito: false, error: err instanceof Error ? err.message : 'No se pudo actualizar la contraseña.' }
     }
+  }
+
+  const confirmarCambioContrasenaObligatorio = () => {
+    setUsuario((actual) => actual ? { ...actual, debe_cambiar_contrasena: false } : actual)
   }
 
   const cerrarSesion = async () => {
@@ -328,7 +332,8 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
         cerrarSesion,
         solicitarRecuperacion,
         cambiarContrasena,
-        cambiarContrasenaObligatoria
+        cambiarContrasenaObligatoria,
+        confirmarCambioContrasenaObligatorio
       }}
     >
       {children}
