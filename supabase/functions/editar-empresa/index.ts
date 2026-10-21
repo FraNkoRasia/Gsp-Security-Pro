@@ -58,12 +58,35 @@ Deno.serve(async (req) => {
 
   if (!body.empresa_id) return json({ error: "empresa_id es obligatorio." }, 400)
 
-  if (body.accion === "restablecer_contrasena_administrador") {
+  if (body.accion === "registrar_dni_administrador") {
     const dni = String(body.admin_dni || "").replace(/\D/g, "")
-    if (!/^\d{7,8}$/.test(dni)) {
-      return json({ error: "Ingresá el DNI del administrador (7 u 8 números) para restablecer su contraseña." }, 400)
-    }
+    if (!/^\d{7,8}$/.test(dni)) return json({ error: "El DNI debe tener 7 u 8 números." }, 400)
 
+    const { data: perfilAdmin, error: perfilError } = await admin
+      .from("perfiles").select("id,id_empresa,rol")
+      .eq("id_empresa", body.empresa_id).eq("rol", "administrador").maybeSingle()
+    if (perfilError || !perfilAdmin) return json({ error: "No se encontró el administrador de esta empresa." }, 404)
+
+    const { error: guardarError } = await admin.from("credenciales_administradores").upsert({
+      id_usuario: perfilAdmin.id,
+      id_empresa: body.empresa_id,
+      dni,
+      actualizado_en: new Date().toISOString(),
+    }, { onConflict: "id_empresa,id_usuario" })
+    if (guardarError) return json({ error: "No se pudo guardar el DNI de forma segura." }, 500)
+
+    await admin.from("auditoria").insert({
+      id_empresa: body.empresa_id,
+      id_usuario: authData.user.id,
+      accion: "REGISTRAR_DNI_ADMINISTRADOR",
+      entidad: "Empresa",
+      entidad_id: body.empresa_id,
+      detalle: { texto: "Registró el DNI inicial del administrador para futuros restablecimientos" },
+    })
+    return json({ ok: true })
+  }
+
+  if (body.accion === "restablecer_contrasena_administrador") {
     const { data: empresaObjetivo, error: empresaObjetivoError } = await admin
       .from("empresas").select("id,nombre").eq("id", body.empresa_id).maybeSingle()
     if (empresaObjetivoError || !empresaObjetivo) return json({ error: "No se encontró la empresa." }, 404)
@@ -74,6 +97,18 @@ Deno.serve(async (req) => {
     if (perfilAdminError || !perfilAdmin) {
       return json({ error: "No se encontró una cuenta de administrador asociada a esta empresa." }, 404)
     }
+
+    const { data: credencial, error: credencialError } = await admin
+      .from("credenciales_administradores")
+      .select("dni")
+      .eq("id_usuario", perfilAdmin.id)
+      .eq("id_empresa", body.empresa_id)
+      .maybeSingle()
+
+    if (credencialError || !credencial?.dni || !/^\d{7,8}$/.test(credencial.dni)) {
+      return json({ error: "No hay un DNI guardado para este administrador. Esta cuenta necesita registrar su DNI una sola vez antes de poder restablecer la contraseña." }, 409)
+    }
+    const dni = credencial.dni
 
     const { error: activarCambioError } = await admin.from("perfiles")
       .update({ debe_cambiar_contrasena: true }).eq("id", perfilAdmin.id)
