@@ -20,7 +20,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
   const [empresaConfirmacion, setEmpresaConfirmacion] = useState<Empresa | null>(null)
   const [procesandoEmpresa, setProcesandoEmpresa] = useState(false)
   const [empresaRestablecer, setEmpresaRestablecer] = useState<Empresa | null>(null)
-  const [dniRestablecer, setDniRestablecer] = useState('')
   const [procesandoRestablecimiento, setProcesandoRestablecimiento] = useState(false)
   const [errorRestablecimiento, setErrorRestablecimiento] = useState<string | null>(null)
   const [errorOperacion, setErrorOperacion] = useState<string | null>(null)
@@ -65,11 +64,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
 
   const confirmarRestablecimiento = async () => {
     if (!supabase || !empresaRestablecer) return
-    const dni = dniRestablecer.replace(/\D/g, '')
-    if (!/^\d{7,8}$/.test(dni)) {
-      setErrorRestablecimiento('Ingresá un DNI válido de 7 u 8 números.')
-      return
-    }
     setProcesandoRestablecimiento(true)
     setErrorRestablecimiento(null)
     try {
@@ -77,7 +71,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
         body: {
           accion: 'restablecer_contrasena_administrador',
           empresa_id: empresaRestablecer.id,
-          admin_dni: dni,
         },
       })
       if (errorFuncion || data?.error) {
@@ -90,7 +83,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
         return
       }
       setEmpresaRestablecer(null)
-      setDniRestablecer('')
     } catch (err) {
       setErrorRestablecimiento(err instanceof Error ? err.message : 'No se pudo restablecer la contraseña.')
     } finally {
@@ -194,7 +186,6 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
                     <button
                       type="button"
                       onClick={() => {
-                        setDniRestablecer('')
                         setErrorRestablecimiento(null)
                         setEmpresaRestablecer(emp)
                       }}
@@ -332,16 +323,12 @@ export const GestionEmpresas: React.FC<{ onSeleccionarEmpresa?: (id: string) => 
           <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-4">
             <p className="text-sm text-slate-600 dark:text-slate-300">Empresa seleccionada:</p>
             <p className="mt-1 font-bold text-slate-900 dark:text-white">{empresaRestablecer?.nombre}</p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Ingresá el DNI registrado del administrador. Se usará como contraseña inicial y el cambio será obligatorio en el próximo ingreso.</p>
-          </div>
-          <div>
-            <Etiqueta requerido>DNI del administrador</Etiqueta>
-            <Entrada value={dniRestablecer} onChange={(e) => setDniRestablecer(e.target.value.replace(/\D/g, '').slice(0, 8))} placeholder="Ej: 30123456" inputMode="numeric" />
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Se usará el DNI guardado en la base de datos como contraseña inicial. El administrador deberá cambiarla obligatoriamente al próximo ingreso.</p>
           </div>
           {errorRestablecimiento && <p className="text-xs font-medium text-red-600 dark:text-red-400">{errorRestablecimiento}</p>}
           <div className="flex justify-end gap-2">
             <Boton variante="secundario" tamano="chico" disabled={procesandoRestablecimiento} onClick={() => setEmpresaRestablecer(null)}>Cancelar</Boton>
-            <Boton variante="primario" tamano="chico" disabled={procesandoRestablecimiento || !/^\d{7,8}$/.test(dniRestablecer.replace(/\D/g, ''))} onClick={() => void confirmarRestablecimiento()} icono={<KeyRound className="w-3.5 h-3.5" />}>
+            <Boton variante="primario" tamano="chico" disabled={procesandoRestablecimiento} onClick={() => void confirmarRestablecimiento()} icono={<KeyRound className="w-3.5 h-3.5" />}>
               {procesandoRestablecimiento ? 'Restableciendo…' : 'Confirmar restablecimiento'}
             </Boton>
           </div>
