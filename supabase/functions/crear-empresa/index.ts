@@ -118,6 +118,21 @@ Deno.serve(async (req) => {
     return json({ error: perfilError.message }, 400)
   }
 
+  const { error: credencialError } = await admin
+    .from("credenciales_administradores")
+    .upsert({
+      id_usuario: nuevoUsuario.user.id,
+      id_empresa: empresa.id,
+      dni,
+      actualizado_en: new Date().toISOString(),
+    }, { onConflict: "id_empresa,id_usuario" })
+
+  if (credencialError) {
+    await admin.auth.admin.deleteUser(nuevoUsuario.user.id)
+    await admin.from("empresas").delete().eq("id", empresa.id)
+    return json({ error: "No se pudo guardar de forma segura la credencial inicial del administrador." }, 500)
+  }
+
   await admin.from("auditoria").insert({
     id_empresa: empresa.id,
     id_usuario: authData.user.id,
