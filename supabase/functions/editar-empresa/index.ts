@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       id_empresa: body.empresa_id,
       dni,
       actualizado_en: new Date().toISOString(),
-    }, { onConflict: "id_empresa,id_usuario" })
+    }, { onConflict: "id_usuario" })
     if (guardarError) return json({ error: "No se pudo guardar el DNI de forma segura." }, 500)
 
     await admin.from("auditoria").insert({

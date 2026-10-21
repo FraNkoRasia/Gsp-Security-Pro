@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       id_empresa: empresa.id,
       dni,
       actualizado_en: new Date().toISOString(),
-    }, { onConflict: "id_empresa,id_usuario" })
+    }, { onConflict: "id_usuario" })
 
   if (credencialError) {
     await admin.auth.admin.deleteUser(nuevoUsuario.user.id)
