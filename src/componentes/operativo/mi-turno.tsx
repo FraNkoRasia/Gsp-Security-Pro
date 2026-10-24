@@ -193,7 +193,7 @@ export const MiTurno: React.FC = () => {
                     </div>
                     <div>
                       <Insignia variante={esFranco ? 'gris' : turno.tipo === 'nocturno' ? 'azul' : 'dorado'}>
-                        {esFranco ? (idioma === 'en' ? 'Day Off' : 'Franco') : nombreTurno}
+                        {esFranco ? (idioma === 'en' ? '🛌 Day Off' : '🛌 Franco') : nombreTurno}
                       </Insignia>
                     </div>
                   </div>
