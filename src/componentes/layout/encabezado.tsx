@@ -198,19 +198,28 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
 
               {/* Información del usuario si está autenticado */}
               {estaAutenticado && usuario ? (
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">
+                <div className="w-full min-w-0 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="w-full min-w-0 break-words font-bold leading-snug text-slate-900 dark:text-white text-sm sm:flex-1">
                       {usuario.nombre} {usuario.apellido}
                     </span>
-                    <Insignia variante={obtenerEtiquetaRol(usuario.rol).variante}>
+                    <Insignia
+                      variante={obtenerEtiquetaRol(usuario.rol).variante}
+                      className="max-w-full whitespace-normal break-words leading-snug"
+                    >
                       {obtenerEtiquetaRol(usuario.rol).texto}
                     </Insignia>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  <p
+                    className="block w-full min-w-0 truncate text-xs text-slate-500 dark:text-slate-400"
+                    title={usuario.email}
+                  >
                     {usuario.email}
                   </p>
-                  <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                  <p
+                    className="block w-full min-w-0 truncate text-[11px] font-semibold text-blue-600 dark:text-blue-400"
+                    title={usuario.empresa_nombre || 'GSP Plataforma Global'}
+                  >
                     {usuario.empresa_nombre || 'GSP Plataforma Global'}
                   </p>
                 </div>
