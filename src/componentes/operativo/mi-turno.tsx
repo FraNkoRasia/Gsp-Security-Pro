@@ -96,7 +96,7 @@ export const MiTurno: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <TarjetaTitulo className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-blue-500" />
-                Guardia de Hoy {formatearFecha(hoyStr)}
+                Guardia de Hoy {formatearFecha(turnoVisible?.fecha || hoyStr)}
               </TarjetaTitulo>
               {enServicio ? (
                 <Insignia variante="verde" className="animate-pulse w-fit self-start sm:self-auto">{idioma === 'en' ? 'On Duty' : 'En Servicio'}</Insignia>
