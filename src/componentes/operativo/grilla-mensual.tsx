@@ -623,11 +623,12 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                       key={dia}
                       title={nombreFeriado}
                       aria-label={`${dia} de ${nombreMesSeleccionado}${nombreFeriado ? `, feriado: ${nombreFeriado}` : ''}`}
+                      style={claveFecha === fechaHoyClave ? { backgroundColor: 'rgba(2, 44, 34, 0.6)', borderColor: 'rgba(4, 120, 87, 0.8)', color: 'rgb(167, 243, 208)' } : undefined}
                       className={`p-1.5 text-center border-r border-slate-200 dark:border-slate-800/80 font-semibold ${
                         'min-w-[42px] max-w-[42px]'
                       } ${claveFecha === fechaHoyClave ? 'relative z-[1] animate-pulse' : ''} ${
                         claveFecha === fechaHoyClave
-                          ? 'bg-emerald-950/60 border border-emerald-700/80 text-emerald-300 rounded-md'
+                          ? 'border rounded-md'
                           : esFeriado
                           ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300'
                           : esFinDeSemana
