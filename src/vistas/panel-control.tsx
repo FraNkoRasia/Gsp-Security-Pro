@@ -141,11 +141,16 @@ export const VistaPanelControl: React.FC = () => {
                   variante="secundario"
                   tamano="chico"
                   onClick={() => {
-                    setObjetivoSeleccionadoId(null)
-                    setEmpresaSeleccionadaId(null)
+                    if (objetivoSeleccionadoId) {
+                      setObjetivoSeleccionadoId(null)
+                    } else {
+                      setEmpresaSeleccionadaId(null)
+                    }
                   }}
                 >
-                  ← {idioma === 'en' ? 'Back to Companies' : 'Volver a Empresas'}
+                  ← {objetivoSeleccionadoId
+                    ? (idioma === 'en' ? 'Back to Sites' : 'Volver a Objetivos')
+                    : (idioma === 'en' ? 'Back to Companies' : 'Volver a Empresas')}
                 </Boton>
                 <Insignia variante="azul">Vista de Empresa</Insignia>
               </div>
@@ -156,22 +161,11 @@ export const VistaPanelControl: React.FC = () => {
                   onSeleccionarObjetivo={setObjetivoSeleccionadoId}
                 />
               ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-end pt-2">
-                    <Boton
-                      variante="secundario"
-                      tamano="chico"
-                      onClick={() => setObjetivoSeleccionadoId(null)}
-                    >
-                      ← {idioma === 'en' ? 'Back to Sites' : 'Volver a Objetivos'}
-                    </Boton>
-                  </div>
-                  <GestionVigiladores
-                    idEmpresaSeleccionada={empresaSeleccionadaId}
-                    idObjetivoSeleccionado={objetivoSeleccionadoId}
-                    modoConsulta
-                  />
-                </div>
+                <GestionVigiladores
+                  idEmpresaSeleccionada={empresaSeleccionadaId}
+                  idObjetivoSeleccionado={objetivoSeleccionadoId}
+                  modoConsulta
+                />
               )}
             </div>
           )}
