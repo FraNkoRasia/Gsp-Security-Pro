@@ -627,7 +627,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                         'min-w-[42px] max-w-[42px]'
                       } ${claveFecha === fechaHoyClave ? 'relative z-[1] animate-pulse' : ''} ${
                         claveFecha === fechaHoyClave
-                          ? '!bg-green-400 dark:!bg-green-500 !text-slate-950 dark:!text-slate-950'
+                          ? '!bg-green-400/60 dark:!bg-green-500/45 !text-slate-950 dark:!text-slate-100'
                           : esFeriado
                           ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300'
                           : esFinDeSemana
