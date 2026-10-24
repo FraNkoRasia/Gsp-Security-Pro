@@ -15,7 +15,7 @@ export const MiTurno: React.FC = () => {
   const idVig = usuario?.id || 'usr-vig-01'
   const [ahora, setAhora] = useState(() => new Date())
   useEffect(() => {
-    const intervalo = window.setInterval(() => setAhora(new Date()), 30_000)
+    const intervalo = window.setInterval(() => setAhora(new Date()), 1_000)
     return () => window.clearInterval(intervalo)
   }, [])
   const hoy = ahora
@@ -36,14 +36,28 @@ export const MiTurno: React.FC = () => {
     return horas * 60 + (minutos || 0)
   }
   const minutosActuales = hoy.getHours() * 60 + hoy.getMinutes()
+  const minutosExactosActuales = minutosActuales + hoy.getSeconds() / 60
   const turnoAyerEnCurso = !!turnoAyer
     && turnoAyer.tipo !== 'franco'
     && turnoAyer.horas_totales > 0
     && minutosHora(turnoAyer.hora_inicio) > minutosHora(turnoAyer.hora_fin)
-    && minutosActuales < minutosHora(turnoAyer.hora_fin)
-  // Si hoy figura franco pero el turno nocturno de ayer aún no terminó, sigue en servicio.
+    && minutosExactosActuales < minutosHora(turnoAyer.hora_fin)
+  // Una asignación no implica que la guardia ya haya comenzado: validar el horario real.
   const turnoVisible = (!turnoHoy || turnoHoy.tipo === 'franco') && turnoAyerEnCurso ? turnoAyer : turnoHoy
-  const enServicio = !!turnoVisible && turnoVisible.tipo !== 'franco' && turnoVisible.horas_totales > 0
+  const turnoVisibleEsDeAyer = turnoVisible === turnoAyer && turnoAyerEnCurso
+  const inicioTurno = turnoVisible ? minutosHora(turnoVisible.hora_inicio) : 0
+  const finTurno = turnoVisible ? minutosHora(turnoVisible.hora_fin) : 0
+  const esNocturno = !!turnoVisible && inicioTurno > finTurno
+  const turnoYaComenzo = !!turnoVisible && (turnoVisibleEsDeAyer
+    ? minutosExactosActuales < finTurno
+    : (esNocturno
+      ? minutosExactosActuales >= inicioTurno || minutosExactosActuales < finTurno
+      : minutosExactosActuales >= inicioTurno && minutosExactosActuales < finTurno))
+  const enServicio = !!turnoVisible && turnoVisible.tipo !== 'franco' && turnoVisible.horas_totales > 0 && turnoYaComenzo
+  const minutosHastaInicio = turnoVisible && !turnoVisibleEsDeAyer && turnoVisible.tipo !== 'franco' && turnoVisible.horas_totales > 0 && minutosExactosActuales < inicioTurno
+    ? Math.max(0, Math.ceil((inicioTurno - minutosExactosActuales) * 60))
+    : null
+  const tiempoRestanteIngreso = minutosHastaInicio === null ? null : `${String(Math.floor(minutosHastaInicio / 3600)).padStart(2, '0')}:${String(Math.floor((minutosHastaInicio % 3600) / 60)).padStart(2, '0')}:${String(minutosHastaInicio % 60).padStart(2, '0')}`
   // Antes de las 07:00, si sigue activa la guardia nocturna de ayer, el día operativo
   // actual todavía no terminó. Incluirlo en próximos turnos y avanzar al día siguiente
   // recién cuando finalice la guardia.
@@ -85,9 +99,11 @@ export const MiTurno: React.FC = () => {
                 Guardia de Hoy {formatearFecha(hoyStr)}
               </TarjetaTitulo>
               {enServicio ? (
-                <Insignia variante="verde" className="animate-pulse w-fit self-start sm:self-auto">En Servicio</Insignia>
+                <Insignia variante="verde" className="animate-pulse w-fit self-start sm:self-auto">{idioma === 'en' ? 'On Duty' : 'En Servicio'}</Insignia>
+              ) : tiempoRestanteIngreso !== null ? (
+                <Insignia variante="azul" className="w-fit self-start sm:self-auto">{idioma === 'en' ? 'Starts in' : 'Ingresás en'} {tiempoRestanteIngreso}</Insignia>
               ) : (
-                <Insignia variante="gris" className="w-fit self-start sm:self-auto">Franco de Servicio</Insignia>
+                <Insignia variante="gris" className="w-fit self-start sm:self-auto">{idioma === 'en' ? 'Off Duty' : 'Franco de Servicio'}</Insignia>
               )}
             </div>
           </TarjetaEncabezado>
