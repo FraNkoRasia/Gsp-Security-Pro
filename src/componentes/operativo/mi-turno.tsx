@@ -179,9 +179,10 @@ export const MiTurno: React.FC = () => {
               {proximosTurnos.map(({ fecha, turno }) => {
                 const esFranco = !turno || turno.tipo === 'franco' || turno.horas_totales === 0
                 const nombreConfigurado = turno ? tiposTurno.find(t => t.id === turno.id_tipo_turno)?.nombre : undefined
+                const horasTurno = turno ? Number.isInteger(turno.horas_totales) ? turno.horas_totales : Number(turno.horas_totales.toFixed(2)) : 0
                 const nombreTurno = turno
-                  ? turno.tipo === 'nocturno' ? (idioma === 'en' ? (nombreConfigurado?.replace(/nocturno/gi, 'Night Shift') || '12🌙 Night Shift') : nombreConfigurado || '12🌙 Nocturno') : turno.tipo === 'diurno' ? (idioma === 'en' ? (nombreConfigurado?.replace(/diurno/gi, 'Day Shift') || '12☀️ Day Shift') : nombreConfigurado || '12☀️ Diurno') : turno.tipo === 'franco' ? (idioma === 'en' ? 'Day Off' : nombreConfigurado || 'Franco') : nombreConfigurado || turno.tipo
-                  : (idioma === 'en' ? 'Day Off' : 'Franco')
+                  ? turno.tipo === 'nocturno' ? (idioma === 'en' ? `🌙 ${horasTurno}Hs Night Shift` : `🌙 ${horasTurno}Hs Nocturno`) : turno.tipo === 'diurno' ? (idioma === 'en' ? `☀️ ${horasTurno}Hs Day Shift` : `☀️ ${horasTurno}Hs Diurno`) : turno.tipo === 'franco' ? (idioma === 'en' ? '🛌 Day Off' : '🛌 Franco') : nombreConfigurado || turno.tipo
+                  : (idioma === 'en' ? '🛌 Day Off' : '🛌 Franco')
                 return (
                   <div key={fecha} className="py-3 flex items-center justify-between gap-3">
                     <div>
