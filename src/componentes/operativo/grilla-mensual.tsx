@@ -625,7 +625,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                       aria-label={`${dia} de ${nombreMesSeleccionado}${nombreFeriado ? `, feriado: ${nombreFeriado}` : ''}`}
                       className={`p-1.5 text-center border-r border-slate-200 dark:border-slate-800/80 font-semibold ${
                         'min-w-[42px] max-w-[42px]'
-                      } ${claveFecha === fechaHoyClave ? 'relative z-[1] animate-pulse border-b-2 border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-100' : ''} ${
+                      } ${claveFecha === fechaHoyClave ? 'relative z-[1] animate-pulse bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-100' : ''} ${
                         esFeriado
                           ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300'
                           : esFinDeSemana
@@ -758,7 +758,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                   return (
                     <td
                       key={dia}
-                      className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 text-blue-700 dark:text-blue-400 font-mono ${fechaClave(new Date(anioSeleccionado, numeroMesSeleccionado - 1, dia)) === fechaHoyClave ? 'relative z-[1] animate-pulse border-b-2 border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-950/60' : 'bg-slate-50 dark:bg-[#101827]'}`}
+                      className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 text-blue-700 dark:text-blue-400 font-mono ${fechaClave(new Date(anioSeleccionado, numeroMesSeleccionado - 1, dia)) === fechaHoyClave ? 'relative z-[1] animate-pulse bg-blue-100 dark:bg-blue-950/60' : 'bg-slate-50 dark:bg-[#101827]'}`}
                     >
                       {formatearTotalDiario(total)}h
                     </td>
