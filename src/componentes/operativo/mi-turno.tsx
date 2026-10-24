@@ -128,7 +128,7 @@ export const MiTurno: React.FC = () => {
                   Horario del Turno:
                 </span>
                 <span className="font-extrabold text-slate-900 dark:text-white text-base break-words">
-                  {turnoVisible ? `${turnoVisible.hora_inicio} → ${turnoVisible.hora_fin}` : (idioma === 'en' ? 'No shift today' : 'Sin turno hoy')}
+                  {turnoVisible ? `${String(turnoVisible.hora_inicio).slice(0, 5)} → ${String(turnoVisible.hora_fin).slice(0, 5)}` : (idioma === 'en' ? 'No shift today' : 'Sin turno hoy')}
                 </span>
                 <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold block mt-0.5">
                   {turnoVisible ? (turnoVisible.tipo === 'nocturno' ? (idioma === 'en' ? (tiposTurno.find(t => t.id === turnoVisible.id_tipo_turno)?.nombre?.replace(/nocturno/gi, 'Night Shift') || 'Night Shift') : tiposTurno.find(t => t.id === turnoVisible.id_tipo_turno)?.nombre || 'Turno nocturno') : turnoVisible.tipo === 'diurno' ? (idioma === 'en' ? (tiposTurno.find(t => t.id === turnoVisible.id_tipo_turno)?.nombre?.replace(/diurno/gi, 'Day Shift') || 'Day Shift') : tiposTurno.find(t => t.id === turnoVisible.id_tipo_turno)?.nombre || 'Turno diurno') : (idioma === 'en' ? 'Day Off' : 'Franco')) : (idioma === 'en' ? 'No shift scheduled' : 'Sin guardia programada')}
