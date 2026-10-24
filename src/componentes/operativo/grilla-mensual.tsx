@@ -625,7 +625,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                       aria-label={`${dia} de ${nombreMesSeleccionado}${nombreFeriado ? `, feriado: ${nombreFeriado}` : ''}`}
                       className={`p-1.5 text-center border-r border-slate-200 dark:border-slate-800/80 font-semibold ${
                         'min-w-[42px] max-w-[42px]'
-                      } ${
+                      } ${claveFecha === fechaHoyClave ? 'relative z-[1] animate-pulse ring-2 ring-inset ring-cyan-400 dark:ring-cyan-300 bg-cyan-100 dark:bg-cyan-950/80 text-cyan-900 dark:text-cyan-100' : ''} ${
                         esFeriado
                           ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300'
                           : esFinDeSemana
@@ -703,7 +703,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                         <td
                           key={dia}
                           onClick={() => { if (celdaBloqueada) { if (!soloLectura && vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave) mostrarAvisoBloqueo(); return } abrirEditarCelda(vig.id, `${vig.nombre} ${vig.apellido}`, dia) }}
-                          className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 transition-colors select-none group ${feriadoCelda ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-white dark:bg-[#0C121E]'} ${celdaBloqueada ? '' : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-800/80'}`}
+                          className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 transition-colors select-none group ${fechaCelda === fechaHoyClave ? 'relative z-[1] animate-pulse ring-2 ring-inset ring-cyan-400 dark:ring-cyan-300 bg-cyan-50 dark:bg-cyan-950/40' : feriadoCelda ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-white dark:bg-[#0C121E]'} ${celdaBloqueada ? '' : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-800/80'}`}
                           title={feriadoCelda ? `${feriadoCelda} · ${fechaCelda}` : celdaBloqueada ? 'Día bloqueado para edición' : 'Clic para modificar turno'}
                         >
                           <div
@@ -758,7 +758,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
                   return (
                     <td
                       key={dia}
-                      className="p-1 text-center border-r border-slate-200 dark:border-slate-800/70 text-blue-700 dark:text-blue-400 font-mono bg-slate-50 dark:bg-[#101827]"
+                      className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 text-blue-700 dark:text-blue-400 font-mono ${fechaClave(new Date(anioSeleccionado, numeroMesSeleccionado - 1, dia)) === fechaHoyClave ? 'relative z-[1] animate-pulse ring-2 ring-inset ring-cyan-400 dark:ring-cyan-300 bg-cyan-100 dark:bg-cyan-950/80' : 'bg-slate-50 dark:bg-[#101827]'}`}
                     >
                       {formatearTotalDiario(total)}h
                     </td>
