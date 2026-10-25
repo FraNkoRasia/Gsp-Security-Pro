@@ -12,6 +12,7 @@ import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Usuario } from '@/tipos'
 import { FichaVigilador } from './ficha-vigilador'
 import { supabase } from '@/servicios/supabase'
+import { turnoFinalizado } from '@/utilidades/calculo-horas-mes'
 
 const formatearDuracion = (horas: number | null | undefined) => {
   const minutosTotales = Math.max(0, Math.round(Number(horas || 0) * 60))
@@ -330,12 +331,18 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
   // La grilla no tiene fichaje de entrada/salida: tomamos los turnos pasados
   // que no fueron franco, ausencia ni reemplazo. Usamos el desglose de horas
   // si está cargado y, si está en cero, recurrimos a las horas totales del turno.
-  const turnosTrabajadosHistorial = turnosHistorial.filter(t =>
-    t.fecha < fechaHoy && t.tipo !== 'franco' && t.estado !== 'ausente' && t.estado !== 'reemplazado'
+  // El historial operativo solo considera turnos cuyo horario terminó realmente.
+  // La fecha de inicio por sí sola no alcanza: un turno nocturno puede seguir en curso después de medianoche.
+  const turnosHistorialFinalizados = turnosHistorial.filter(t =>
+    t.tipo === 'franco' ? t.fecha < fechaHoy : turnoFinalizado(t, hoy)
+  )
+  const idsTurnosFinalizados = new Set(turnosHistorialFinalizados.map(t => t.id))
+  const turnosTrabajadosHistorial = turnosHistorialFinalizados.filter(t =>
+    t.tipo !== 'franco' && t.estado !== 'ausente' && t.estado !== 'reemplazado'
   )
   const minutosDiurnos = turnosTrabajadosHistorial.reduce((total, t) => total + Math.round(Number(t.horas_diurnas || (t.tipo === 'diurno' ? t.horas_totales : 0)) * 60), 0)
   const minutosNocturnos = turnosTrabajadosHistorial.reduce((total, t) => total + Math.round(Number(t.horas_nocturnas || (t.tipo === 'nocturno' ? t.horas_totales : 0)) * 60), 0)
-  const minutosExtras = extrasHistorial.filter(s => s.estado === 'aprobada').reduce((total, s) => total + Number(s.minutos_aprobados ?? s.minutos_solicitados ?? 0), 0)
+  const minutosExtras = extrasHistorial.filter(s => s.estado === 'aprobada' && idsTurnosFinalizados.has(s.id_turno)).reduce((total, s) => total + Number(s.minutos_aprobados ?? s.minutos_solicitados ?? 0), 0)
   const formatearMinutos = (minutos: number) => formatearDuracion(minutos / 60)
   const minutosTrabajados = minutosDiurnos + minutosNocturnos + minutosExtras
 
@@ -547,7 +554,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
           <details className="group rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
             <summary className="cursor-pointer list-none p-4 sm:p-5 bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-950/40 dark:via-slate-950 dark:to-indigo-950/30">
               <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white"><History className="h-4 w-4" /></span><div><h4 className="font-black text-base text-slate-900 dark:text-white">Resumen de turnos</h4><p className="text-xs text-slate-500">{turnosHistorial.length} turnos registrados · tocar para ver el detalle</p></div></div>
+                <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white"><History className="h-4 w-4" /></span><div><h4 className="font-black text-base text-slate-900 dark:text-white">Resumen de turnos</h4><p className="text-xs text-slate-500">{turnosHistorialFinalizados.length} turnos finalizados · tocar para ver el detalle</p></div></div>
                 <span className="text-xs font-bold text-blue-700 dark:text-blue-300 group-open:hidden">Ver detalle ⌄</span><span className="hidden text-xs font-bold text-blue-700 dark:text-blue-300 group-open:inline">Ocultar ⌃</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -558,7 +565,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
               </div>
             </summary>
             <div className="space-y-2 border-t border-slate-200 dark:border-slate-800 p-3">
-              {turnosHistorial.length ? turnosHistorial.map(t => <div key={t.id} className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 text-xs"><div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1"><strong>{t.fecha} · {t.tipo}</strong><span className="font-medium">{formatearDuracion(t.horas_totales)} + {formatearDuracion(t.horas_extra)} extra</span></div><p className="mt-1 text-slate-500">{objetivos.find(o => o.id === t.id_objetivo)?.nombre || 'Objetivo'} · {t.hora_inicio.slice(0, 5)}–{t.hora_fin.slice(0, 5)}</p><p className="mt-1 text-slate-500">Estado: {resumenEstadoTurno(t.estado)}</p></div>) : <p className="text-xs text-slate-500">Sin turnos para este mes.</p>}
+              {turnosHistorialFinalizados.length ? turnosHistorialFinalizados.map(t => <div key={t.id} className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 text-xs"><div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1"><strong>{t.fecha} · {t.tipo}</strong><span className="font-medium">{formatearDuracion(t.horas_totales)} + {formatearDuracion(t.horas_extra)} extra</span></div><p className="mt-1 text-slate-500">{objetivos.find(o => o.id === t.id_objetivo)?.nombre || 'Objetivo'} · {t.hora_inicio.slice(0, 5)}–{t.hora_fin.slice(0, 5)}</p><p className="mt-1 text-slate-500">Estado: {resumenEstadoTurno(t.estado)}</p></div>) : <p className="text-xs text-slate-500">Sin turnos para este mes.</p>}
             </div>
           </details>
 
