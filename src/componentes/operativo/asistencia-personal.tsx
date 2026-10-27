@@ -239,15 +239,35 @@ export const AsistenciaPersonal: React.FC = () => {
         {cargando ? <div className="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin"/>Cargando registros…</div> : personal.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay personal registrado para este objetivo.</div> : personalOrdenado.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">No se encontraron personas que coincidan con “{busqueda}”.</div> : personalOrdenado.map(p=>{
           const a=asistenciaDe(p.id)
           const rechazado=p.estado_aprobacion==='rechazado'
-          return <article key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h4 className="font-bold text-slate-900 dark:text-white">{p.nombre} {p.apellido}</h4><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{p.categoria}</p></div><span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${p.estado_aprobacion==='aprobado'?'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':rechazado?'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300':'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}>{p.estado_aprobacion==='aprobado'?'Aprobado':rechazado?'Rechazado':'Pendiente de aprobación'}</span></div>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/60"><span className="text-slate-500 dark:text-slate-400">Ingreso</span><p className="mt-1 flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100"><LogIn className="h-3.5 w-3.5 text-emerald-600"/>{hora(a?.ingreso||null)}</p></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/60"><span className="text-slate-500 dark:text-slate-400">Egreso</span><p className="mt-1 flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100"><LogOut className="h-3.5 w-3.5 text-amber-600"/>{hora(a?.egreso||null)}</p></div></div>
-            {a?.jornada_cerrada && <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><Check className="h-4 w-4"/>Jornada cerrada{a.informe_enviado_en?' · informe registrado':''}</p>}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" disabled={guardando||rechazado||!!a?.ingreso||!!a?.jornada_cerrada} onClick={()=>void guardarMarca(p,'ingreso')} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300 disabled:opacity-40"><LogIn className="h-3.5 w-3.5"/> Marcar ingreso</button>
-              <button type="button" disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada} onClick={()=>void guardarMarca(p,'egreso')} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-500/20 dark:text-amber-300 disabled:opacity-40"><LogOut className="h-3.5 w-3.5"/> Marcar egreso</button>
+          const marcaClase = (tipo: 'ingreso'|'egreso') => {
+            const marcada = tipo === 'ingreso' ? !!a?.ingreso : !!a?.egreso
+            const color = tipo === 'ingreso' ? 'emerald' : 'amber'
+            return `flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors ${color==='emerald' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300'} ${marcada ? 'ring-1 ring-current/20' : ''} disabled:cursor-not-allowed disabled:opacity-40`
+          }
+          return <article key={p.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-[#0C121E]">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate text-sm font-bold text-slate-900 dark:text-white">{p.apellido}{p.nombre ? `, ${p.nombre}` : ''}</h4>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span>{p.categoria}</span>
+                  {p.estado_aprobacion!=='aprobado' && <span className={`font-semibold ${rechazado?'text-red-600 dark:text-red-300':'text-amber-600 dark:text-amber-300'}`}>{rechazado?'Rechazado':'Pendiente de aprobación'}</span>}
+                  {a?.jornada_cerrada && <span className="font-semibold text-emerald-700 dark:text-emerald-300">Jornada cerrada</span>}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <div className="flex w-[48px] flex-col items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span>
+                  <button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!!a?.jornada_cerrada} onClick={()=>void guardarMarca(p,'ingreso')} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/></button>
+                  <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span>
+                </div>
+                <div className="flex w-[48px] flex-col items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">Egreso</span>
+                  <button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada} onClick={()=>void guardarMarca(p,'egreso')} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button>
+                  <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span>
+                </div>
+              </div>
             </div>
-            {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-3 flex gap-2 border-t border-slate-200 pt-3 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}
+            {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-2 flex gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}
           </article>
         })}
       </div>
