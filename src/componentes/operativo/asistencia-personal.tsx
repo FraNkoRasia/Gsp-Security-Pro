@@ -114,7 +114,8 @@ export const AsistenciaPersonal: React.FC = () => {
     finally { setCargando(false) }
   },[usuario,objetivoId,objetivoVigilador,esEncargado,fecha])
 
-  useEffect(() => { void cargar() },[cargar])
+  // Cargar al entrar y cuando el usuario cambia explícitamente la fecha o cambia la cuenta/objetivo; no depender de la identidad del callback, que puede recrearse en cada render del contexto.
+  useEffect(() => { void cargar() },[usuario?.id, objetivoVigilador, esEncargado, fecha])
 
   const crearCategoria = async () => {
     const nombreLimpio = nuevaCategoria.trim()
