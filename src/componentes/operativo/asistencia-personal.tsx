@@ -140,11 +140,35 @@ export const AsistenciaPersonal: React.FC = () => {
     } else {
       if (tipo==='ingreso' && existente.ingreso) { setError('El ingreso ya fue registrado.'); setGuardando(false); return }
       if (tipo==='egreso' && (!existente.ingreso || existente.egreso)) { setError('Para registrar el egreso debe existir un ingreso y no haberse marcado antes.'); setGuardando(false); return }
-      result = await supabase.from('asistencias_personal_empresa').update(tipo==='ingreso'?{ingreso:marca,actualizado_en:marca}:{egreso:marca,actualizado_en:marca}).eq('id',existente.id)
+      // Actualización condicional: si el otro rol ya registró esta marca, no se sobrescribe.
+      result = await supabase.from('asistencias_personal_empresa')
+        .update(tipo==='ingreso'?{ingreso:marca,actualizado_en:marca}:{egreso:marca,actualizado_en:marca})
+        .eq('id',existente.id)
+        .is(tipo, null)
+        .select('id,id_personal,fecha,ingreso,egreso,jornada_cerrada,informe_enviado_en')
+        .maybeSingle()
     }
     setGuardando(false)
-    if (result.error) setError(result.error.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para marcar asistencia en este objetivo.' : result.error.message)
-    else { setMensaje(tipo==='ingreso'?'Ingreso registrado.':'Egreso registrado.'); await cargar() }
+    if (result.error) {
+      const conflicto = result.error.code === '23505' || result.error.message.toLocaleLowerCase('es-AR').includes('duplicate')
+      setError(conflicto ? 'Esta asistencia acaba de ser modificada por otro usuario. Actualizá la pantalla y verificá la marca antes de volver a intentarlo.' : result.error.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para marcar asistencia en este objetivo.' : result.error.message)
+      if (conflicto) setMensaje('')
+    } else if (!result.data && existente) {
+      setError('Esta asistencia ya fue modificada por otro usuario. Actualizá la pantalla para ver la marca registrada; no se sobrescribió el cambio.')
+      setMensaje('')
+    } else {
+      if (result.data) {
+        setAsistencias(prev => {
+          const sinAnterior = prev.filter(a => a.id !== result.data.id)
+          return [...sinAnterior, result.data as Asistencia]
+        })
+      } else if (!existente) {
+        // Para un ingreso recién insertado, recuperar solo cuando sea necesario con el botón Actualizar.
+        setMensaje('Ingreso registrado. Para ver la hora guardada, usá Actualizar.')
+        return
+      }
+      setMensaje(tipo==='ingreso'?'Ingreso registrado.':'Egreso registrado.')
+    }
   }
 
   const cerrarJornada = async () => {
