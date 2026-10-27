@@ -248,6 +248,28 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
         </div>
       </Dialogo>
 
+      <Dialogo abierto={!!encargadoEditando} alCerrar={() => setEncargadoEditando(null)} titulo="Editar encargado del objetivo" subtitulo="Actualizá los datos de acceso del encargado asignado." icono={<Users className="w-5 h-5 text-emerald-500"/>}>
+        {encargadoEditando && <form className="space-y-4" onSubmit={async e => {
+          e.preventDefault()
+          if (!supabase || !encargadoEditando) return
+          setError(null)
+          try {
+            const r = await supabase.functions.invoke('gestionar-encargado-empresa', { body: { accion:'editar', id:encargadoEditando.id, id_empresa:encargadoEditando.id_empresa, nombre:encargadoEditando.nombre.trim(), apellido:encargadoEditando.apellido.trim(), email:encargadoEditando.email.trim(), telefono:encargadoEditando.telefono || '' } })
+            if (r.error || r.data?.error) { setError(String(r.data?.error || r.error?.message || 'No se pudieron guardar los datos.')); return }
+            const actualizado = r.data.encargado
+            setEncargados(p => p.map(x => x.id === actualizado.id ? actualizado : x))
+            setEncargadoEditando(null)
+          } catch (err) { setError(err instanceof Error ? err.message : 'No se pudieron guardar los datos.') }
+        }}>
+          <div><Etiqueta requerido>Nombre</Etiqueta><Entrada value={encargadoEditando.nombre} onChange={e=>setEncargadoEditando(p=>p?{...p,nombre:e.target.value}:p)}/></div>
+          <div><Etiqueta requerido>Apellido</Etiqueta><Entrada value={encargadoEditando.apellido} onChange={e=>setEncargadoEditando(p=>p?{...p,apellido:e.target.value}:p)}/></div>
+          <div><Etiqueta requerido>Correo de acceso</Etiqueta><Entrada type="email" value={encargadoEditando.email} onChange={e=>setEncargadoEditando(p=>p?{...p,email:e.target.value}:p)}/></div>
+          <div><Etiqueta>Teléfono</Etiqueta><Entrada value={encargadoEditando.telefono||''} onChange={e=>setEncargadoEditando(p=>p?{...p,telefono:e.target.value}:p)}/></div>
+          {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
+          <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3"><Boton type="button" variante="secundario" onClick={()=>setEncargadoEditando(null)}>Cancelar</Boton><Boton type="submit" variante="primario">Guardar datos</Boton></div>
+        </form>}
+      </Dialogo>
+
       {/* Modal Crear / Editar Objetivo */}
       <Dialogo
         abierto={modalAbierto}
