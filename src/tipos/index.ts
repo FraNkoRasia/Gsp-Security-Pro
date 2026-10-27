@@ -38,6 +38,7 @@ export interface Objetivo {
   elementos_a_cargo?: string | null
   supervisor_nombre?: string | null
   id_supervisor?: string | null
+  id_encargado_empresa?: string | null
   activo: boolean
   creado_en: string
 }
