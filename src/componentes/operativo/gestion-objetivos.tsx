@@ -365,11 +365,15 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
 
           <div className="space-y-1.5">
             <Etiqueta>Encargado de empresa para este objetivo</Etiqueta>
-            <select value={encargadoId} onChange={e=>setEncargadoId(e.target.value)} className="w-full rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 p-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Sin encargado asignado</option>
-              {encargados.filter(e=>!e.id_empresa || e.id_empresa===idEmpresaActiva).map(e=><option key={e.id} value={e.id}>{e.nombre} {e.apellido}</option>)}
-            </select>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Solo se muestran cuentas activas con el rol Encargado de empresa. La cuenta debe existir previamente.</p>
+            {!objetivoEditando && <label className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm text-slate-700 dark:text-slate-200"><input type="checkbox" checked={crearEncargadoNuevo} onChange={e=>setCrearEncargadoNuevo(e.target.checked)} className="mt-1 accent-emerald-600"/><span><strong>Crear una cuenta nueva para este objetivo</strong><span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Se creará el encargado y quedará asignado al objetivo al guardar.</span></span></label>}
+            {(!crearEncargadoNuevo || objetivoEditando) ? <select value={encargadoId} onChange={e=>setEncargadoId(e.target.value)} className="w-full rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 p-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"><option value="">Sin encargado asignado</option>{encargados.filter(e=>!e.id_empresa || e.id_empresa===idEmpresaActiva).map(e=><option key={e.id} value={e.id}>{e.nombre} {e.apellido}</option>)}</select> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><Etiqueta requerido>Nombre del encargado</Etiqueta><Entrada value={encargadoNombre} onChange={e=>setEncargadoNombre(e.target.value)} placeholder="Nombre"/></div>
+              <div><Etiqueta requerido>Apellido del encargado</Etiqueta><Entrada value={encargadoApellido} onChange={e=>setEncargadoApellido(e.target.value)} placeholder="Apellido"/></div>
+              <div><Etiqueta requerido>Correo de acceso</Etiqueta><Entrada value={encargadoEmail} onChange={e=>setEncargadoEmail(e.target.value)} placeholder="encargado@empresa.com" type="email"/></div>
+              <div><Etiqueta>Teléfono</Etiqueta><Entrada value={encargadoTelefono} onChange={e=>setEncargadoTelefono(e.target.value)} placeholder="Teléfono"/></div>
+              <div className="sm:col-span-2"><Etiqueta requerido>Contraseña inicial (mínimo 8 caracteres)</Etiqueta><Entrada value={encargadoPassword} onChange={e=>setEncargadoPassword(e.target.value)} placeholder="Contraseña inicial" type="password"/><p className="mt-1 text-[11px] text-slate-500">El encargado deberá cambiarla al ingresar por primera vez.</p></div>
+            </div>}
+            <p className="text-xs text-slate-500 dark:text-slate-400">Cada objetivo tendrá un encargado asignado; la cuenta se crea de forma segura en Supabase.</p>
           </div>
 
           {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
@@ -378,8 +382,8 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
             <Boton type="button" variante="secundario" onClick={() => setModalAbierto(false)}>
               Cancelar
             </Boton>
-            <Boton type="submit" variante="primario">
-              {objetivoEditando ? 'Guardar Cambios' : 'Crear Objetivo'}
+            <Boton type="submit" variante="primario" disabled={guardando}>
+              {guardando ? 'Guardando…' : objetivoEditando ? 'Guardar Cambios' : 'Crear Objetivo'}
             </Boton>
           </div>
         </form>
