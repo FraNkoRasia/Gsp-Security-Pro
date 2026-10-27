@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ClipboardCheck, Clock3, Search, LogIn, LogOut, Plus, RefreshCw, Send, UserRoundPlus, X, AlertTriangle, Trash2 } from 'lucide-react'
+import { Check, ClipboardCheck, Clock3, Search, Plus, RefreshCw, Send, UserRoundPlus, X, AlertTriangle, Trash2 } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
