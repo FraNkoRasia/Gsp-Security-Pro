@@ -97,7 +97,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setModalAbierto(true)
   }
 
-  const manejarGuardar = (e: React.FormEvent) => {
+  const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -106,32 +106,35 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
       return
     }
 
-    if (objetivoEditando) {
-      editarObjetivo(objetivoEditando.id, {
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim(),
-        elementos_a_cargo: elementosACargo.trim(),
-        supervisor_nombre: supervisorNombre.trim() || null,
-        direccion: direccion.trim(),
-        localidad: localidad.trim(),
-        provincia: provincia.trim(),
-        id_encargado_empresa: encargadoId || null
-      })
-    } else {
-      crearObjetivo({
-        id_empresa: idEmpresaActiva,
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim(),
-        elementos_a_cargo: elementosACargo.trim(),
-        supervisor_nombre: supervisorNombre.trim() || null,
-        direccion: direccion.trim(),
-        localidad: localidad.trim(),
-        provincia: provincia.trim(),
-        id_encargado_empresa: encargadoId || null
-      })
-    }
-
-    setModalAbierto(false)
+    setGuardando(true)
+    try {
+      let idEncargado = encargadoId || null
+      if (!objetivoEditando && crearEncargadoNuevo) {
+        if (!encargadoNombre.trim() || !encargadoApellido.trim() || !encargadoEmail.trim() || encargadoPassword.length < 8) {
+          setError('Completá nombre, apellido, correo y una contraseña inicial de al menos 8 caracteres para el encargado.')
+          return
+        }
+        if (!supabase) { setError('Supabase no está configurado.'); return }
+        const alta = await supabase.functions.invoke('gestionar-encargado-empresa', { body: { nombre: encargadoNombre.trim(), apellido: encargadoApellido.trim(), email: encargadoEmail.trim(), telefono: encargadoTelefono.trim(), password: encargadoPassword, id_empresa: idEmpresaActiva } })
+        if (alta.error || alta.data?.error || !alta.data?.encargado?.id) {
+          let mensaje = String(alta.data?.error || alta.error?.message || 'No se pudo crear la cuenta del encargado.')
+          const contexto = (alta.error as {context?:Response}|null)?.context
+          if (contexto) { try { const cuerpo = await contexto.clone().json() as {error?:string}; mensaje = cuerpo.error || mensaje } catch {} }
+          setError(mensaje); return
+        }
+        const nuevo = alta.data.encargado as {id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}
+        idEncargado = nuevo.id
+        setEncargados(p => [...p.filter(x => x.id !== nuevo.id), nuevo])
+      }
+      if (objetivoEditando) {
+        editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
+      } else {
+        crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
+      }
+      setModalAbierto(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el objetivo y su encargado.')
+    } finally { setGuardando(false) }
   }
 
   return (
