@@ -139,7 +139,7 @@ export const VistaPanelControl: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pb-2 border-b border-slate-200 dark:border-slate-800/80">
+          {!esEncargado && <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pb-2 border-b border-slate-200 dark:border-slate-800/80">
             {pestanas.map((p) => {
               const estaActiva = pestanaRenderizada === p.id
               return (
@@ -158,7 +158,7 @@ export const VistaPanelControl: React.FC = () => {
                 </button>
               )
             })}
-          </div>
+          </div>}
           <div className="pt-1">
             {pestanaRenderizada === 'objetivos' && esAdmin && <GestionObjetivos onSeleccionarObjetivo={(id) => { setObjetivoGrillaId(id); setVistaObjetivo('detalle'); setPestanaActiva('grillaObjetivo') }} />}
             {pestanaRenderizada === 'grillaObjetivo' && esAdmin && objetivoGrillaId && (() => {
