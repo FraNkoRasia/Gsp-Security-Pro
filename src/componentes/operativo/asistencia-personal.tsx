@@ -5,13 +5,9 @@ import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
 
-type Categoria = 'operario_fijo' | 'jornalero' | 'limpieza' | 'encargado' | 'otro'
-type Personal = { id: string; nombre: string; apellido: string; categoria: Categoria; estado_aprobacion: 'pendiente'|'aprobado'|'rechazado'; activo: boolean }
+type Categoria = { id: string; nombre: string; activa: boolean }
+type Personal = { id: string; nombre: string; apellido: string; categoria: string; estado_aprobacion: 'pendiente'|'aprobado'|'rechazado'; activo: boolean }
 type Asistencia = { id: string; id_personal: string; fecha: string; ingreso: string|null; egreso: string|null; jornada_cerrada: boolean; informe_enviado_en: string|null }
-const categorias: {value: Categoria; label: string}[] = [
-  {value:'operario_fijo',label:'Operario fijo'}, {value:'jornalero',label:'Operario jornalero'},
-  {value:'limpieza',label:'Personal de limpieza'}, {value:'encargado',label:'Personal encargado'}, {value:'otro',label:'Otro'}
-]
 const fechaLocal = () => {
   const ahora = new Date()
   return new Date(ahora.getTime() - ahora.getTimezoneOffset()*60000).toISOString().slice(0,10)
@@ -32,7 +28,10 @@ export const AsistenciaPersonal: React.FC = () => {
   const [busqueda,setBusqueda] = useState('')
   const [nombre,setNombre] = useState('')
   const [apellido,setApellido] = useState('')
-  const [categoria,setCategoria] = useState<Categoria>('operario_fijo')
+  const [categoria,setCategoria] = useState('')
+  const [categorias,setCategorias] = useState<Categoria[]>([])
+  const [nuevaCategoria,setNuevaCategoria] = useState('')
+  const [guardandoCategoria,setGuardandoCategoria] = useState(false)
   const [modalAltaAbierto,setModalAltaAbierto] = useState(false)
   const [cargando,setCargando] = useState(true)
   const [guardando,setGuardando] = useState(false)
@@ -54,35 +53,53 @@ export const AsistenciaPersonal: React.FC = () => {
       }
       if (!idObjetivo) { setObjetivoId(''); setPersonal([]); setAsistencias([]); setCargando(false); return }
       setObjetivoId(idObjetivo)
-      const [p,a] = await Promise.all([
+      const [p,a,c] = await Promise.all([
         supabase.from('personal_empresa').select('id,nombre,apellido,categoria,estado_aprobacion,activo').eq('id_objetivo',idObjetivo).eq('activo',true).order('nombre'),
-        supabase.from('asistencias_personal_empresa').select('id,id_personal,fecha,ingreso,egreso,jornada_cerrada,informe_enviado_en').eq('id_objetivo',idObjetivo).eq('fecha',fecha)
+        supabase.from('asistencias_personal_empresa').select('id,id_personal,fecha,ingreso,egreso,jornada_cerrada,informe_enviado_en').eq('id_objetivo',idObjetivo).eq('fecha',fecha),
+        supabase.from('categorias_personal_empresa').select('id,nombre,activa').eq('id_objetivo',idObjetivo).eq('activa',true).order('nombre')
       ])
       if (p.error) throw p.error
       if (a.error) throw a.error
+      if (c.error) throw c.error
       setPersonal((p.data || []) as Personal[])
       setAsistencias((a.data || []) as Asistencia[])
+      setCategorias((c.data || []) as Categoria[])
+      setCategoria(actual => c.data?.some(x=>x.nombre===actual) ? actual : (c.data?.[0]?.nombre || ''))
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron cargar los registros.') }
     finally { setCargando(false) }
   },[usuario,objetivoId,objetivoVigilador,esEncargado,fecha])
 
   useEffect(() => { void cargar() },[cargar])
 
+  const crearCategoria = async () => {
+    const nombreLimpio = nuevaCategoria.trim()
+    if (!supabase || !usuario || !objetivoId || !esEncargado || !nombreLimpio) return
+    setGuardandoCategoria(true); setError('')
+    const objetivo = objetivos.find(o => o.id === objetivoId)
+    const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
+    if (!idEmpresa) { setError('No se pudo identificar la empresa de este objetivo.'); setGuardandoCategoria(false); return }
+    const {data,error:err} = await supabase.from('categorias_personal_empresa').insert({id_empresa:idEmpresa,id_objetivo:objetivoId,nombre:nombreLimpio,creado_por:usuario.id}).select('id,nombre,activa').single()
+    setGuardandoCategoria(false)
+    if (err) { setError(err.code==='23505' ? 'Ya existe una categoría con ese nombre en este objetivo.' : err.message); return }
+    setCategorias(prev=>[...prev,data as Categoria].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'})))
+    setCategoria(data.nombre); setNuevaCategoria('')
+  }
+
   const registrarPersona = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase || !usuario || !objetivoId || !nombre.trim()) return
+    if (!supabase || !usuario || !objetivoId || !nombre.trim() || !categoria) return
     const objetivo = objetivos.find(o => o.id === objetivoId)
     const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
     if (!idEmpresa) { setError('No se pudo identificar la empresa de este objetivo.'); return }
     setGuardando(true); setError(''); setMensaje('')
     const {error:err} = await supabase.from('personal_empresa').insert({
       id_empresa:idEmpresa,id_objetivo:objetivoId,nombre:nombre.trim(),apellido:apellido.trim(),
-      categoria,estado_aprobacion:'pendiente',creado_por:usuario.id
+      categoria,estado_aprobacion:esEncargado?'aprobado':'pendiente',creado_por:usuario.id,revisado_por:esEncargado?usuario.id:null,revisado_en:esEncargado?new Date().toISOString():null
     })
     setGuardando(false)
     if (err) { setError(err.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para registrar personal en este objetivo.' : err.message); return }
-    setNombre(''); setApellido(''); setCategoria('operario_fijo'); setModalAltaAbierto(false)
-    setMensaje('Personal agregado. Queda pendiente de aprobación del encargado; el registro se conserva para la jornada.')
+    setNombre(''); setApellido(''); setNuevaCategoria(''); setModalAltaAbierto(false)
+    setMensaje(esEncargado?'Personal dado de alta correctamente.':'Alta propuesta; queda pendiente de aprobación del encargado. El registro se conserva para la jornada.')
     await cargar()
   }
 
@@ -176,13 +193,13 @@ export const AsistenciaPersonal: React.FC = () => {
         <form onSubmit={registrarPersona} className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md shrink-0 space-y-4 overflow-y-auto overscroll-contain rounded-2xl border border-emerald-500/25 bg-white p-5 shadow-2xl dark:bg-[#0C121E] sm:p-6">
           <div className="flex items-start gap-3">
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-700 dark:text-emerald-300"><UserRoundPlus className="h-5 w-5"/></div>
-            <div className="min-w-0 flex-1"><h3 id="alta-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">Proponer alta de personal</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Las altas nuevas quedan pendientes de revisión del encargado. La asistencia de la jornada se conserva mientras se revisa.</p></div>
+            <div className="min-w-0 flex-1"><h3 id="alta-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">{esEncargado?'Dar de alta personal':'Proponer alta de personal'}</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{esEncargado?'Registrá el personal y elegí una categoría propia de este objetivo.':'El encargado debe haber creado la categoría para este objetivo. El alta quedará pendiente de aprobación.'}</p></div>
             <button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar"><X className="h-5 w-5"/></button>
           </div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre<input required value={nombre} onChange={e=>setNombre(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Apellido<input value={apellido} onChange={e=>setApellido(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Categoría<select value={categoria} onChange={e=>setCategoria(e.target.value as Categoria)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white">{categorias.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
-          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button><button disabled={guardando||cargando} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"><Plus className="h-4 w-4"/>{guardando?'Guardando…':'Agregar personal'}</button></div>
+          <div className="space-y-2"><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Categoría<select required value={categoria} onChange={e=>setCategoria(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">Seleccionar categoría</option>{categorias.map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}</select></label>{esEncargado && <div className="flex gap-2"><input value={nuevaCategoria} onChange={e=>setNuevaCategoria(e.target.value)} placeholder="Crear categoría para este objetivo" maxLength={80} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"/><button type="button" disabled={!nuevaCategoria.trim()||guardandoCategoria} onClick={()=>void crearCategoria()} className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:text-emerald-300"><Plus className="h-4 w-4"/>Crear</button></div>}{categorias.length===0 && <p className="text-xs text-amber-700 dark:text-amber-300">{esEncargado?'Creá una categoría para poder dar de alta personal.':'Todavía no hay categorías creadas para este objetivo. Pedile al encargado que cree una.'}</p>}</div>
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button><button disabled={guardando||cargando||!categoria||categorias.length===0} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"><Plus className="h-4 w-4"/>{guardando?(esEncargado?'Guardando…':'Enviando…'):(esEncargado?'Dar de alta':'Proponer alta')}</button></div>
         </form>
       </div>, document.body)}
 
@@ -193,7 +210,7 @@ export const AsistenciaPersonal: React.FC = () => {
           const a=asistenciaDe(p.id)
           const rechazado=p.estado_aprobacion==='rechazado'
           return <article key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h4 className="font-bold text-slate-900 dark:text-white">{p.nombre} {p.apellido}</h4><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{categorias.find(c=>c.value===p.categoria)?.label || p.categoria}</p></div><span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${p.estado_aprobacion==='aprobado'?'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':rechazado?'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300':'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}>{p.estado_aprobacion==='aprobado'?'Aprobado':rechazado?'Rechazado':'Pendiente de aprobación'}</span></div>
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h4 className="font-bold text-slate-900 dark:text-white">{p.nombre} {p.apellido}</h4><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{p.categoria}</p></div><span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${p.estado_aprobacion==='aprobado'?'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':rechazado?'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300':'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}>{p.estado_aprobacion==='aprobado'?'Aprobado':rechazado?'Rechazado':'Pendiente de aprobación'}</span></div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/60"><span className="text-slate-500 dark:text-slate-400">Ingreso</span><p className="mt-1 flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100"><LogIn className="h-3.5 w-3.5 text-emerald-600"/>{hora(a?.ingreso||null)}</p></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950/60"><span className="text-slate-500 dark:text-slate-400">Egreso</span><p className="mt-1 flex items-center gap-1 font-bold text-slate-800 dark:text-slate-100"><LogOut className="h-3.5 w-3.5 text-amber-600"/>{hora(a?.egreso||null)}</p></div></div>
             {a?.jornada_cerrada && <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><Check className="h-4 w-4"/>Jornada cerrada{a.informe_enviado_en?' · informe registrado':''}</p>}
             <div className="mt-3 flex flex-wrap gap-2">
