@@ -55,10 +55,12 @@ Deno.serve(async (req) => {
     })
     if (createError || !created.user) return json({ error: createError?.message || "No se pudo crear la cuenta." }, 400)
     const id = created.user.id
-    const { data, error } = await admin.from("perfiles").insert({
-      id, id_empresa: idEmpresa, nombre, apellido, email, telefono,
+    // El trigger on_auth_user_created_gsp ya crea perfiles con el mismo id.
+    // Actualizamos ese perfil automático en lugar de insertar una segunda fila.
+    const { data, error } = await admin.from("perfiles").update({
+      id_empresa: idEmpresa, nombre, apellido, email, telefono,
       rol: "encargado_empresa", activo: true, debe_cambiar_contrasena: true,
-    }).select("id,nombre,apellido,email,telefono,rol,id_empresa,activo").single()
+    }).eq("id", id).select("id,nombre,apellido,email,telefono,rol,id_empresa,activo").single()
     if (error) {
       await admin.auth.admin.deleteUser(id)
       return json({ error: error.message }, 400)
