@@ -116,6 +116,8 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
         return { texto: t.roles.superAdmin, variante: 'dorado' as const }
       case 'administrador':
         return { texto: t.roles.admin, variante: 'azul' as const }
+      case 'encargado_empresa':
+        return { texto: 'Encargado de Empresa', variante: 'verde' as const }
       case 'supervisor':
         return { texto: t.roles.supervisor, variante: 'morado' as const }
       case 'vigilador':
