@@ -10,23 +10,41 @@ type Personal = { id: string; nombre: string; apellido: string; categoria: strin
 type Asistencia = { id: string; id_personal: string; fecha: string; ingreso: string|null; egreso: string|null; jornada_cerrada: boolean; informe_enviado_en: string|null }
 
 function SelectorOdometro({valor,maximo,alCambiar,tono,etiqueta}:{valor:number;maximo:number;alCambiar:(valor:number)=>void;tono:'emerald'|'amber';etiqueta:string}) {
-  const inicioDeslizamiento = useRef<number|null>(null)
+  const inicioY = useRef<number|null>(null)
+  const valorInicial = useRef(valor)
+  const pasosAplicados = useRef(0)
   const anterior = (valor + maximo) % (maximo + 1)
   const siguiente = (valor + 1) % (maximo + 1)
   const cambiarPor = (delta:number) => alCambiar((valor + delta + maximo + 1) % (maximo + 1))
   const color = tono === 'emerald'
     ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'
     : 'border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300'
-  return <div role="group" aria-label={etiqueta} className={`relative flex h-[104px] w-[68px] select-none flex-col items-center justify-center overflow-hidden rounded-xl border ${color}`}
-    style={{touchAction:'none'}}
-    onTouchStart={e=>{inicioDeslizamiento.current=e.touches[0]?.clientY??null}}
-    onTouchEnd={e=>{if(inicioDeslizamiento.current===null)return;const diferencia=inicioDeslizamiento.current-(e.changedTouches[0]?.clientY??inicioDeslizamiento.current);if(Math.abs(diferencia)>=10)cambiarPor(diferencia>0?1:-1);inicioDeslizamiento.current=null}}
+  const comenzar = (e:React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    inicioY.current = e.clientY
+    valorInicial.current = valor
+    pasosAplicados.current = 0
+    e.currentTarget.setPointerCapture(e.pointerId)
+    e.preventDefault()
+  }
+  const arrastrar = (e:React.PointerEvent<HTMLDivElement>) => {
+    if (inicioY.current === null) return
+    e.preventDefault()
+    // Cada 12 px de recorrido cambia un número; cuanto más se arrastra, más pasos se aplican.
+    const pasos = Math.trunc((inicioY.current - e.clientY) / 12)
+    if (pasos === pasosAplicados.current) return
+    pasosAplicados.current = pasos
+    alCambiar((valorInicial.current + pasos + (maximo + 1) * 100) % (maximo + 1))
+  }
+  const terminar = () => { inicioY.current = null; pasosAplicados.current = 0 }
+  return <div role="group" aria-label={etiqueta} className={`relative flex h-[104px] w-[68px] touch-none select-none flex-col items-center justify-center overflow-hidden rounded-xl border cursor-ns-resize ${color}`}
+    onPointerDown={comenzar} onPointerMove={arrastrar} onPointerUp={terminar} onPointerCancel={terminar}
     onWheel={e=>{e.preventDefault();cambiarPor(e.deltaY>0?1:-1)}}>
     <div className="pointer-events-none absolute inset-x-1 top-1/3 border-t border-current opacity-15"/>
     <div className="pointer-events-none absolute inset-x-1 bottom-1/3 border-t border-current opacity-15"/>
-    <button type="button" tabIndex={-1} aria-label={`${etiqueta} anterior`} onClick={()=>cambiarPor(-1)} className="h-7 w-full shrink-0 text-sm font-semibold opacity-40">{String(anterior).padStart(2,'0')}</button>
-    <div className="flex h-10 w-full shrink-0 items-center justify-center bg-white/70 text-2xl font-black tabular-nums text-slate-900 dark:bg-slate-950/70 dark:text-white">{String(valor).padStart(2,'0')}</div>
-    <button type="button" tabIndex={-1} aria-label={`${etiqueta} siguiente`} onClick={()=>cambiarPor(1)} className="h-7 w-full shrink-0 text-sm font-semibold opacity-40">{String(siguiente).padStart(2,'0')}</button>
+    <div className="pointer-events-none flex h-7 w-full shrink-0 items-center justify-center text-sm font-semibold opacity-40">{String(anterior).padStart(2,'0')}</div>
+    <div className="pointer-events-none flex h-10 w-full shrink-0 items-center justify-center bg-white/70 text-2xl font-black tabular-nums text-slate-900 dark:bg-slate-950/70 dark:text-white">{String(valor).padStart(2,'0')}</div>
+    <div className="pointer-events-none flex h-7 w-full shrink-0 items-center justify-center text-sm font-semibold opacity-40">{String(siguiente).padStart(2,'0')}</div>
   </div>
 }
 const fechaLocal = () => {
