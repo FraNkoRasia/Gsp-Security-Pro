@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { Check, ClipboardCheck, Clock3, LogIn, LogOut, Plus, RefreshCw, Send, UserRoundPlus, X, AlertTriangle } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Check, ClipboardCheck, Clock3, Search, LogIn, LogOut, Plus, RefreshCw, Send, UserRoundPlus, X, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -28,6 +28,7 @@ export const AsistenciaPersonal: React.FC = () => {
   const [personal,setPersonal] = useState<Personal[]>([])
   const [asistencias,setAsistencias] = useState<Asistencia[]>([])
   const [fecha,setFecha] = useState(fechaLocal())
+  const [busqueda,setBusqueda] = useState('')
   const [nombre,setNombre] = useState('')
   const [apellido,setApellido] = useState('')
   const [categoria,setCategoria] = useState<Categoria>('operario_fijo')
@@ -132,6 +133,10 @@ export const AsistenciaPersonal: React.FC = () => {
     else { setMensaje(aprobar?'Personal aprobado.':'Alta rechazada.'); await cargar() }
   }
 
+  const personalOrdenado = useMemo(() => {
+    const termino = busqueda.trim().toLocaleLowerCase('es-AR')
+    return [...personal].filter(p => !termino || `${p.apellido} ${p.nombre}`.toLocaleLowerCase('es-AR').includes(termino) || `${p.nombre} ${p.apellido}`.toLocaleLowerCase('es-AR').includes(termino)).sort((a,b) => a.apellido.localeCompare(b.apellido, 'es', { sensitivity: 'base' }) || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
+  }, [personal, busqueda])
   const asistenciaDe = (id:string) => asistencias.find(a=>a.id_personal===id)
   const nombreObjetivo = objetivos.find(o=>o.id===objetivoId)?.nombre
 
@@ -173,8 +178,9 @@ export const AsistenciaPersonal: React.FC = () => {
       </form>}
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2"><h3 className="font-bold text-slate-900 dark:text-white">Personal del objetivo</h3>{asistencias.some(a=>!a.jornada_cerrada) && <button type="button" disabled={guardando} onClick={()=>setConfirmarCierre(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 disabled:opacity-50"><Send className="h-3.5 w-3.5"/> Cerrar jornada e informar</button>}</div>
-        {cargando ? <div className="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin"/>Cargando registros…</div> : personal.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay personal registrado para este objetivo.</div> : personal.map(p=>{
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-bold text-slate-900 dark:text-white">Personal del objetivo</h3>{asistencias.some(a=>!a.jornada_cerrada) && <button type="button" disabled={guardando} onClick={()=>setConfirmarCierre(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 disabled:opacity-50"><Send className="h-3.5 w-3.5"/> Cerrar jornada e informar</button>}</div>
+        <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por apellido o nombre…" aria-label="Buscar personal por apellido o nombre" className="block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-800 dark:bg-[#0C121E] dark:text-white"/></label>
+        {cargando ? <div className="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin"/>Cargando registros…</div> : personal.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay personal registrado para este objetivo.</div> : personalOrdenado.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">No se encontraron personas que coincidan con “{busqueda}”.</div> : personalOrdenado.map(p=>{
           const a=asistenciaDe(p.id)
           const rechazado=p.estado_aprobacion==='rechazado'
           return <article key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
