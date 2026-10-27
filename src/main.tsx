@@ -13,11 +13,10 @@ const registrarServiceWorker = () => {
       console.error('GSP Security Pro: no se pudo registrar el Service Worker.', error)
     })
 
-    let recargando = false
+    // Evita recargas repetidas durante el uso: los cambios del Service Worker
+    // se aplican al navegar/abrir de nuevo, no interrumpiendo la pantalla activa.
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (recargando) return
-      recargando = true
-      window.location.reload()
+      console.info('GSP Security Pro: nueva versión disponible; se aplicará al volver a abrir la app.')
     })
   })
 }
