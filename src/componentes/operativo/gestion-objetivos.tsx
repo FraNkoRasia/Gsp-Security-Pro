@@ -33,6 +33,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
   const [encargadoTelefono, setEncargadoTelefono] = useState('')
   const [encargadoPassword, setEncargadoPassword] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [encargadoNuevaPassword, setEncargadoNuevaPassword] = useState('')
   const [encargadoEditando, setEncargadoEditando] = useState<{id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}|null>(null)
   const [encargados, setEncargados] = useState<{id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}[]>([])
   const [direccion, setDireccion] = useState('')
@@ -207,7 +208,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
                   <span>{obj.direccion}</span>
                 </p>
 
-                {obj.id_encargado_empresa && (() => { const encargado = encargados.find(e => e.id === obj.id_encargado_empresa); return <div className="flex items-start justify-between gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3"><div className="min-w-0"><p className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 font-bold">Encargado de empresa</p><p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{encargado ? `${encargado.nombre} ${encargado.apellido}` : 'Cuenta asignada'}</p><p className="text-xs text-slate-500 dark:text-slate-400 break-all">{encargado?.email || ''}</p></div>{!modoConsulta && encargado && <button type="button" title="Editar datos del encargado" onClick={() => setEncargadoEditando(encargado)} className="shrink-0 rounded-lg border border-slate-300/70 dark:border-slate-700 bg-white/50 dark:bg-slate-900/40 p-2 text-slate-500 hover:text-emerald-600"><Edit2 className="w-4 h-4"/></button>}</div> })()}
+                {obj.id_encargado_empresa && (() => { const encargado = encargados.find(e => e.id === obj.id_encargado_empresa); return <div className="flex items-start justify-between gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3"><div className="min-w-0"><p className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 font-bold">Encargado de empresa</p><p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{encargado ? `${encargado.nombre} ${encargado.apellido}` : 'Cuenta asignada'}</p><p className="text-xs text-slate-500 dark:text-slate-400 break-all">{encargado?.email || ''}</p></div>{!modoConsulta && encargado && <button type="button" title="Editar datos del encargado" onClick={() => setEncargadoNuevaPassword(''); setEncargadoEditando(encargado)} className="shrink-0 rounded-lg border border-slate-300/70 dark:border-slate-700 bg-white/50 dark:bg-slate-900/40 p-2 text-slate-500 hover:text-emerald-600"><Edit2 className="w-4 h-4"/></button>}</div> })()}
                 {obj.descripcion && (
                   <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 bg-slate-50 dark:bg-slate-950/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/80">
                     {obj.descripcion}
@@ -267,7 +268,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
           if (!supabase || !encargadoEditando) return
           setError(null)
           try {
-            const r = await supabase.functions.invoke('gestionar-encargado-empresa', { body: { accion:'editar', id:encargadoEditando.id, id_empresa:encargadoEditando.id_empresa, nombre:encargadoEditando.nombre.trim(), apellido:encargadoEditando.apellido.trim(), email:encargadoEditando.email.trim(), telefono:encargadoEditando.telefono || '' } })
+            const r = await supabase.functions.invoke('gestionar-encargado-empresa', { body: { accion:'editar', id:encargadoEditando.id, id_empresa:encargadoEditando.id_empresa, nombre:encargadoEditando.nombre.trim(), apellido:encargadoEditando.apellido.trim(), email:encargadoEditando.email.trim(), telefono:encargadoEditando.telefono || '', password:encargadoNuevaPassword } })
             if (r.error || r.data?.error) { setError(String(r.data?.error || r.error?.message || 'No se pudieron guardar los datos.')); return }
             const actualizado = r.data.encargado
             setEncargados(p => p.map(x => x.id === actualizado.id ? actualizado : x))
@@ -278,6 +279,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
           <div><Etiqueta requerido>Apellido</Etiqueta><Entrada value={encargadoEditando.apellido} onChange={e=>setEncargadoEditando(p=>p?{...p,apellido:e.target.value}:p)}/></div>
           <div><Etiqueta requerido>Correo de acceso</Etiqueta><Entrada type="email" value={encargadoEditando.email} onChange={e=>setEncargadoEditando(p=>p?{...p,email:e.target.value}:p)}/></div>
           <div><Etiqueta>Teléfono</Etiqueta><Entrada value={encargadoEditando.telefono||''} onChange={e=>setEncargadoEditando(p=>p?{...p,telefono:e.target.value}:p)}/></div>
+          <div><Etiqueta>Nueva contraseña (opcional)</Etiqueta><Entrada type="password" value={encargadoNuevaPassword} onChange={e=>setEncargadoNuevaPassword(e.target.value)} placeholder="Mínimo 8 caracteres"/><p className="mt-1 text-xs text-slate-500">Completala para restablecer el acceso si el encargado no puede iniciar sesión.</p></div>
           {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
           <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3"><Boton type="button" variante="secundario" onClick={()=>setEncargadoEditando(null)}>Cancelar</Boton><Boton type="submit" variante="primario">Guardar datos</Boton></div>
         </form>}
