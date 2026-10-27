@@ -204,9 +204,10 @@ export const AsistenciaPersonal: React.FC = () => {
       setMensaje('')
     } else {
       if (result.data) {
+        const asistenciaGuardada = result.data as Asistencia
         setAsistencias(prev => {
-          const sinAnterior = prev.filter(a => a.id !== result.data.id)
-          return [...sinAnterior, result.data as Asistencia]
+          const sinAnterior = prev.filter(a => a.id !== asistenciaGuardada.id)
+          return [...sinAnterior, asistenciaGuardada]
         })
       } else if (!existente) {
         // Para un ingreso recién insertado, recuperar solo cuando sea necesario con el botón Actualizar.
