@@ -32,6 +32,7 @@ export const AsistenciaPersonal: React.FC = () => {
   const [nombre,setNombre] = useState('')
   const [apellido,setApellido] = useState('')
   const [categoria,setCategoria] = useState<Categoria>('operario_fijo')
+  const [modalAltaAbierto,setModalAltaAbierto] = useState(false)
   const [cargando,setCargando] = useState(true)
   const [guardando,setGuardando] = useState(false)
   const [error,setError] = useState('')
@@ -79,7 +80,7 @@ export const AsistenciaPersonal: React.FC = () => {
     })
     setGuardando(false)
     if (err) { setError(err.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para registrar personal en este objetivo.' : err.message); return }
-    setNombre(''); setApellido(''); setCategoria('operario_fijo')
+    setNombre(''); setApellido(''); setCategoria('operario_fijo'); setModalAltaAbierto(false)
     setMensaje('Personal agregado. Queda pendiente de aprobación del encargado; el registro se conserva para la jornada.')
     await cargar()
   }
@@ -166,16 +167,23 @@ export const AsistenciaPersonal: React.FC = () => {
 
       {!objetivoId && !cargando && <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">{esEncargado?'Esta cuenta todavía no está vinculada a un objetivo.':'No tenés un objetivo activo asignado actualmente.'}</div>}
 
-      {objetivoId && <form onSubmit={registrarPersona} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E] sm:p-5">
-        <h3 className="flex items-center gap-2 font-bold text-slate-900 dark:text-white"><UserRoundPlus className="h-5 w-5 text-emerald-600"/> Proponer alta de personal</h3>
-        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Las altas nuevas quedan pendientes de revisión del encargado. La asistencia de la jornada se conserva mientras se revisa.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nombre<input required value={nombre} onChange={e=>setNombre(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Apellido<input value={apellido} onChange={e=>setApellido(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 sm:col-span-2">Categoría<select value={categoria} onChange={e=>setCategoria(e.target.value as Categoria)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white">{categorias.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
-        </div>
-        <button disabled={guardando||cargando} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"><Plus className="h-4 w-4"/>{guardando?'Guardando…':'Agregar personal'}</button>
-      </form>}
+      {objetivoId && <div className="flex justify-end">
+        <button type="button" onClick={()=>{setError('');setModalAltaAbierto(true)}} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"><Plus className="h-4 w-4"/> Agregar personal</button>
+      </div>}
+
+      {modalAltaAbierto && objetivoId && <div className="fixed inset-0 z-[10000] flex items-center justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="alta-personal-titulo">
+        <form onSubmit={registrarPersona} className="my-auto w-full max-w-md space-y-4 rounded-2xl border border-emerald-500/25 bg-white p-5 shadow-2xl dark:bg-[#0C121E] sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-700 dark:text-emerald-300"><UserRoundPlus className="h-5 w-5"/></div>
+            <div className="min-w-0 flex-1"><h3 id="alta-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">Proponer alta de personal</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Las altas nuevas quedan pendientes de revisión del encargado. La asistencia de la jornada se conserva mientras se revisa.</p></div>
+            <button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar"><X className="h-5 w-5"/></button>
+          </div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre<input required value={nombre} onChange={e=>setNombre(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Apellido<input value={apellido} onChange={e=>setApellido(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Categoría<select value={categoria} onChange={e=>setCategoria(e.target.value as Categoria)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white">{categorias.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button><button disabled={guardando||cargando} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"><Plus className="h-4 w-4"/>{guardando?'Guardando…':'Agregar personal'}</button></div>
+        </form>
+      </div>}
 
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-bold text-slate-900 dark:text-white">Personal del objetivo</h3>{asistencias.some(a=>!a.jornada_cerrada) && <button type="button" disabled={guardando} onClick={()=>setConfirmarCierre(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 disabled:opacity-50"><Send className="h-3.5 w-3.5"/> Cerrar jornada e informar</button>}</div>
