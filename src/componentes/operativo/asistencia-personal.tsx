@@ -19,9 +19,10 @@ const hora = (value: string|null) => value ? new Date(value).toLocaleTimeString(
 
 export const AsistenciaPersonal: React.FC = () => {
   const { usuario } = useAutenticacion()
-  const { asignaciones, objetivos } = useOperativo()
+  const { asignaciones, objetivos, vigiladores } = useOperativo()
   const esEncargado = usuario?.rol === 'encargado_empresa'
-  const asignacion = asignaciones.find(a => a.id_vigilador === usuario?.id && a.activa)
+  const vigiladorActual = vigiladores.find(v => v.id_usuario === usuario?.id)
+  const asignacion = asignaciones.find(a => a.id_vigilador === vigiladorActual?.id && a.activa)
   const objetivoVigilador = asignacion?.id_objetivo
   const [objetivoId,setObjetivoId] = useState<string>('')
   const [personal,setPersonal] = useState<Personal[]>([])
