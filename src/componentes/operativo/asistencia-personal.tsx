@@ -321,7 +321,6 @@ export const AsistenciaPersonal: React.FC = () => {
       {!objetivoId && !cargando && <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">{esEncargado?'Esta cuenta todavía no está vinculada a un objetivo.':'No tenés un objetivo activo asignado actualmente.'}</div>}
 
       {objetivoId && <div className="flex justify-end">
-        <button type="button" onClick={()=>{setError('');setModalAltaAbierto(true)}} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"><Plus className="h-4 w-4"/> Agregar personal</button>
       </div>}
 
       {modalAltaAbierto && objetivoId && createPortal(<div className="fixed inset-0 z-[10000] flex h-[100dvh] w-full items-center justify-center overflow-y-auto overscroll-contain bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="alta-personal-titulo">
