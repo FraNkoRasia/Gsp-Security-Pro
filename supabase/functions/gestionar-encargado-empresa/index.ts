@@ -41,7 +41,11 @@ Deno.serve(async (req) => {
       const { data: perfil, error: perfilError } = await admin.from("perfiles").select("id,id_empresa,rol").eq("id", id).single()
       if (perfilError || !perfil || perfil.rol !== "encargado_empresa" || perfil.id_empresa !== idEmpresa)
         return json({ error: "El encargado no pertenece a esta empresa o no existe." }, 404)
-      const { error: authUpdateError } = await admin.auth.admin.updateUserById(id, { email })
+      const nuevaContrasena = String(body.password || "")
+      if (nuevaContrasena && nuevaContrasena.length < 8) return json({ error: "La nueva contraseña debe tener al menos 8 caracteres." }, 400)
+      const cambiosAuth: { email: string; password?: string } = { email }
+      if (nuevaContrasena) cambiosAuth.password = nuevaContrasena
+      const { error: authUpdateError } = await admin.auth.admin.updateUserById(id, cambiosAuth)
       if (authUpdateError) return json({ error: authUpdateError.message }, 400)
       const { data, error } = await admin.from("perfiles").update({ nombre, apellido, email, telefono }).eq("id", id).select("id,nombre,apellido,email,telefono,rol,id_empresa,activo").single()
       if (error) return json({ error: error.message }, 400)
