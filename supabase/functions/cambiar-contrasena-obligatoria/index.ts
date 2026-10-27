@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const { data: perfil, error: perfilError } = await admin.from("perfiles")
       .select("id,rol,debe_cambiar_contrasena,activo").eq("id", authData.user.id).single()
     if (perfilError || !perfil?.activo) return json({ error: "No se encontró un perfil activo." }, 403)
-    if (!["vigilador", "administrador"].includes(perfil.rol)) {
+    if (!["vigilador", "administrador", "encargado_empresa"].includes(perfil.rol)) {
       return json({ error: "El cambio obligatorio no está habilitado para este tipo de cuenta." }, 403)
     }
     if (perfil.debe_cambiar_contrasena !== true) {
