@@ -12,7 +12,7 @@ const fechaLocal = () => {
   const ahora = new Date()
   return new Date(ahora.getTime() - ahora.getTimezoneOffset()*60000).toISOString().slice(0,10)
 }
-const hora = (value: string|null) => value ? new Date(value).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '—'
+const hora = (value: string|null) => value ? new Date(value).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—'
 
 export const AsistenciaPersonal: React.FC = () => {
   const { usuario } = useAutenticacion()
