@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ClipboardCheck, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Trash2 } from 'lucide-react'
+import { Check, ClipboardCheck, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -40,6 +40,7 @@ export const AsistenciaPersonal: React.FC = () => {
   const [error,setError] = useState('')
   const [mensaje,setMensaje] = useState('')
   const [confirmacionMarca,setConfirmacionMarca] = useState<{persona: Personal; tipo: 'ingreso'|'egreso'}|null>(null)
+  const [edicionHorario,setEdicionHorario] = useState<{persona: Personal; ingreso: string; egreso: string; original: Asistencia|null}|null>(null)
 
   const cargar = useCallback(async () => {
     if (!supabase || !usuario) { setError('No hay conexión con la base de datos.'); setCargando(false); return }
@@ -117,6 +118,54 @@ export const AsistenciaPersonal: React.FC = () => {
     setNombre(''); setApellido(''); setNuevaCategoria(''); setModalAltaAbierto(false)
     setMensaje(esEncargado?'Personal dado de alta correctamente.':'Alta propuesta; queda pendiente de aprobación del encargado. El registro se conserva para la jornada.')
     await cargar()
+  }
+
+  const puedeEditarHorario = esEncargado ? fecha <= fechaLocal() : fecha === fechaLocal()
+  const abrirEdicionHorario = (persona: Personal) => {
+    if (!puedeEditarHorario) return
+    const original = asistencias.find(a=>a.id_personal===persona.id) || null
+    const aHora = (v: string|null|undefined) => v ? new Date(v).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false}) : ''
+    setEdicionHorario({persona,ingreso:aHora(original?.ingreso),egreso:aHora(original?.egreso),original})
+    setError(''); setMensaje('')
+  }
+
+  const guardarEdicionHorario = async () => {
+    if (!supabase || !usuario || !objetivoId || !edicionHorario || !puedeEditarHorario) return
+    const {persona,ingreso,egreso,original} = edicionHorario
+    if (!ingreso) { setError('Ingresá la hora de ingreso.'); return }
+    if (egreso && egreso < ingreso) { setError('La hora de egreso no puede ser anterior al ingreso.'); return }
+    const convertir = (horaValor: string) => new Date(`${fecha}T${horaValor}:00`).toISOString()
+    const ingresoISO = convertir(ingreso)
+    const egresoISO = egreso ? convertir(egreso) : null
+    const ahora = new Date().toISOString()
+    setGuardando(true); setError(''); setMensaje('')
+    let result
+    if (!original) {
+      const objetivo = objetivos.find(o=>o.id===objetivoId)
+      const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
+      if (!idEmpresa) { setGuardando(false); setError('No se pudo identificar la empresa.'); return }
+      result = await supabase.from('asistencias_personal_empresa').insert({
+        id_empresa:idEmpresa,id_objetivo:objetivoId,id_personal:persona.id,fecha,
+        ingreso:ingresoISO,egreso:egresoISO,registrado_por:usuario.id,actualizado_en:ahora
+      }).select('id,id_personal,fecha,ingreso,egreso,jornada_cerrada,informe_enviado_en').single()
+    } else {
+      let query = supabase.from('asistencias_personal_empresa').update({ingreso:ingresoISO,egreso:egresoISO,actualizado_en:ahora}).eq('id',original.id)
+      query = original.ingreso ? query.eq('ingreso',original.ingreso) : query.is('ingreso',null)
+      query = original.egreso ? query.eq('egreso',original.egreso) : query.is('egreso',null)
+      result = await query.select('id,id_personal,fecha,ingreso,egreso,jornada_cerrada,informe_enviado_en').maybeSingle()
+    }
+    setGuardando(false)
+    if (result.error) {
+      setError(result.error.code==='23505' ? 'Ya existe una asistencia para esta persona y fecha.' : result.error.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para editar esta asistencia.' : result.error.message)
+      return
+    }
+    if (!result.data) {
+      setError('La asistencia fue modificada por otro usuario. Tocá Actualizar y revisá los horarios antes de volver a editar.')
+      return
+    }
+    setAsistencias(prev=>[...prev.filter(a=>a.id_personal!==persona.id),result.data as Asistencia])
+    setEdicionHorario(null)
+    setMensaje('Horario de asistencia actualizado correctamente.')
   }
 
   const guardarMarca = async (persona: Personal, tipo: 'ingreso'|'egreso') => {
@@ -295,12 +344,24 @@ export const AsistenciaPersonal: React.FC = () => {
                   <button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'egreso'})} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button>
                   <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span>
                 </div>
+                <button type="button" aria-label={esEncargado?'Editar ingreso y egreso':'Editar ingreso'} title={esEncargado?'Editar ingreso y egreso':'Editar ingreso'} disabled={guardando||rechazado||!puedeEditarHorario} onClick={()=>abrirEdicionHorario(p)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-400/40 bg-slate-500/10 text-slate-600 transition-colors hover:bg-slate-500/20 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"><Pencil className="h-4 w-4"/></button>
               </div>
             </div>
             {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-2 flex gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}
           </article>
         })}</div></section>)}</div>}
       </div>
+      {edicionHorario && createPortal(<div className="fixed inset-0 z-[12100] flex h-[100dvh] w-full items-center justify-center overflow-y-auto overscroll-contain bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="editar-horario-titulo">
+        <div className="my-auto w-full max-w-sm space-y-4 rounded-2xl border border-slate-400/30 bg-white p-5 shadow-2xl dark:bg-[#0C121E]">
+          <div className="flex items-start gap-3"><div className="rounded-xl border border-slate-400/30 bg-slate-500/10 p-3 text-slate-700 dark:text-slate-200"><Pencil className="h-5 w-5"/></div><div className="min-w-0 flex-1"><h3 id="editar-horario-titulo" className="text-lg font-black text-slate-900 dark:text-white">Editar asistencia</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{edicionHorario.persona.apellido}, {edicionHorario.persona.nombre} · {fecha.split('-').reverse().join('-')}</p></div><button type="button" onClick={()=>setEdicionHorario(null)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cancelar"><X className="h-5 w-5"/></button></div>
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">Hora de ingreso<input type="time" value={edicionHorario.ingreso} onChange={e=>setEdicionHorario(prev=>prev?{...prev,ingreso:e.target.value}:prev)} className="mt-1.5 w-full rounded-xl border border-emerald-500/40 bg-white px-3 py-2.5 text-base text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/30 dark:bg-slate-950 dark:text-white" required/></label>
+            {esEncargado && <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">Hora de egreso<input type="time" value={edicionHorario.egreso} onChange={e=>setEdicionHorario(prev=>prev?{...prev,egreso:e.target.value}:prev)} className="mt-1.5 w-full rounded-xl border border-amber-500/40 bg-white px-3 py-2.5 text-base text-slate-900 outline-none focus:ring-2 focus:ring-amber-500/30 dark:bg-slate-950 dark:text-white"/></label>}
+            {!esEncargado && <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-800 dark:text-amber-200">Como vigilador, solo podés corregir el ingreso del día de hoy. El encargado puede editar ingreso y egreso de hoy o de días anteriores.</p>}
+          </div>
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setEdicionHorario(null)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="button" disabled={guardando||!edicionHorario.ingreso} onClick={()=>void guardarEdicionHorario()} className="rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{guardando?'Guardando…':'Guardar cambios'}</button></div>
+        </div>
+      </div>,document.body)}
       {confirmacionMarca && puedeMarcarFecha && createPortal(<div className="fixed inset-0 z-[12000] flex h-[100dvh] w-full items-center justify-center overflow-y-auto overscroll-contain bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirmar-marca-titulo">
         <div className={`my-auto w-full max-w-sm space-y-4 rounded-2xl border bg-white p-5 shadow-2xl dark:bg-[#0C121E] ${confirmacionMarca.tipo==='ingreso'?'border-emerald-500/30':'border-amber-500/30'}`}>
           <div className="flex items-start gap-3">
