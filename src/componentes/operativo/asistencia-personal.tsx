@@ -290,7 +290,6 @@ export const AsistenciaPersonal: React.FC = () => {
     }))
   }, [personal, busqueda, categoriaFiltro])
   const asistenciaDe = (id:string) => asistencias.find(a=>a.id_personal===id)
-  const nombreObjetivo = objetivos.find(o=>o.id===objetivoId)?.nombre
   const hoyLocal = fechaLocal()
   const fechaFutura = fecha > hoyLocal
   const fechaPasada = fecha < hoyLocal
