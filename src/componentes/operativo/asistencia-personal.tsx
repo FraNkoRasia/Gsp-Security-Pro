@@ -170,9 +170,25 @@ export const AsistenciaPersonal: React.FC = () => {
     else { setMensaje(aprobar?'Personal aprobado.':'Alta rechazada.'); await cargar() }
   }
 
-  const personalOrdenado = useMemo(() => {
+  const personalPorCategoria = useMemo(() => {
     const termino = busqueda.trim().toLocaleLowerCase('es-AR')
-    return [...personal].filter(p => !termino || `${p.apellido} ${p.nombre}`.toLocaleLowerCase('es-AR').includes(termino) || `${p.nombre} ${p.apellido}`.toLocaleLowerCase('es-AR').includes(termino)).sort((a,b) => a.apellido.localeCompare(b.apellido, 'es', { sensitivity: 'base' }) || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
+    const filtrado = [...personal].filter(p => !termino || `${p.apellido} ${p.nombre}`.toLocaleLowerCase('es-AR').includes(termino) || `${p.nombre} ${p.apellido}`.toLocaleLowerCase('es-AR').includes(termino))
+    const prioridadCategoria = (nombre: string) => {
+      const normalizado = nombre.trim().toLocaleLowerCase('es-AR')
+      if (normalizado === 'operarios fijos') return 0
+      if (normalizado === 'jornaleros') return 1
+      return 2
+    }
+    const nombres = [...new Set(filtrado.map(p => p.categoria))].sort((a,b) =>
+      prioridadCategoria(a)-prioridadCategoria(b) || a.localeCompare(b, 'es', {sensitivity:'base'})
+    )
+    return nombres.map(nombre => ({
+      nombre,
+      personas: filtrado.filter(p => p.categoria === nombre).sort((a,b) =>
+        a.apellido.localeCompare(b.apellido, 'es', {sensitivity:'base'}) ||
+        a.nombre.localeCompare(b.nombre, 'es', {sensitivity:'base'})
+      )
+    }))
   }, [personal, busqueda])
   const asistenciaDe = (id:string) => asistencias.find(a=>a.id_personal===id)
   const nombreObjetivo = objetivos.find(o=>o.id===objetivoId)?.nombre
@@ -243,7 +259,7 @@ export const AsistenciaPersonal: React.FC = () => {
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-bold text-slate-900 dark:text-white">Personal del objetivo</h3>{asistencias.some(a=>!a.jornada_cerrada) && <button type="button" disabled={guardando} onClick={()=>setConfirmarCierre(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 disabled:opacity-50"><Send className="h-3.5 w-3.5"/> Cerrar jornada e informar</button>}</div>
         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por apellido o nombre…" aria-label="Buscar personal por apellido o nombre" className="block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-800 dark:bg-[#0C121E] dark:text-white"/></label>
-        {cargando ? <div className="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin"/>Cargando registros…</div> : personal.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay personal registrado para este objetivo.</div> : personalOrdenado.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">No se encontraron personas que coincidan con “{busqueda}”.</div> : personalOrdenado.map(p=>{
+        {cargando ? <div className="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin"/>Cargando registros…</div> : personal.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay personal registrado para este objetivo.</div> : personalOrdenado.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">No se encontraron personas que coincidan con “{busqueda}”.</div> : personalPorCategoria.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No se encontraron personas que coincidan con “{busqueda}”.</div> : <div className="space-y-5">{personalPorCategoria.map(grupo=><section key={grupo.nombre} className="space-y-2"><h4 className="sticky top-0 z-10 rounded-lg border border-slate-200 bg-slate-100/95 px-3 py-2 text-sm font-black text-slate-800 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-100">{grupo.nombre}<span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">({grupo.personas.length})</span></h4><div className="space-y-2">{grupo.personas.map(p=>{
           const a=asistenciaDe(p.id)
           const rechazado=p.estado_aprobacion==='rechazado'
           const marcaClase = (tipo: 'ingreso'|'egreso') => {
@@ -276,7 +292,7 @@ export const AsistenciaPersonal: React.FC = () => {
             </div>
             {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-2 flex gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}
           </article>
-        })}
+        })}</div></section>)}</div>}
       </div>
       {confirmacionMarca && puedeMarcarFecha && createPortal(<div className="fixed inset-0 z-[12000] flex h-[100dvh] w-full items-center justify-center overflow-y-auto overscroll-contain bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirmar-marca-titulo">
         <div className={`my-auto w-full max-w-sm space-y-4 rounded-2xl border bg-white p-5 shadow-2xl dark:bg-[#0C121E] ${confirmacionMarca.tipo==='ingreso'?'border-emerald-500/30':'border-amber-500/30'}`}>
