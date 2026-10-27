@@ -65,6 +65,7 @@ export const AsistenciaPersonal: React.FC = () => {
   const [asistencias,setAsistencias] = useState<Asistencia[]>([])
   const [fecha,setFecha] = useState(fechaLocal())
   const [busqueda,setBusqueda] = useState('')
+  const [categoriaFiltro,setCategoriaFiltro] = useState('Todas')
   const [nombre,setNombre] = useState('')
   const [apellido,setApellido] = useState('')
   const [categoria,setCategoria] = useState('')
@@ -286,7 +287,7 @@ export const AsistenciaPersonal: React.FC = () => {
         a.nombre.localeCompare(b.nombre, 'es', {sensitivity:'base'})
       )
     }))
-  }, [personal, busqueda])
+  }, [personal, busqueda, categoriaFiltro])
   const asistenciaDe = (id:string) => asistencias.find(a=>a.id_personal===id)
   const nombreObjetivo = objetivos.find(o=>o.id===objetivoId)?.nombre
   const hoyLocal = fechaLocal()
@@ -296,23 +297,20 @@ export const AsistenciaPersonal: React.FC = () => {
 
   return (
     <section className="space-y-5 animate-fadeIn">
-      <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-[#0C121E] sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-700 dark:text-emerald-300"><ClipboardCheck className="h-6 w-6" /></div>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">Asistencia del personal</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Personal de empresa; independiente de las grillas y turnos de vigilancia.</p>
-            {nombreObjetivo && <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{nombreObjetivo}</p>}
-          </div>
-          <button type="button" onClick={()=>void cargar()} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" aria-label="Actualizar"><RefreshCw className="h-4 w-4"/></button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="min-w-0 text-lg font-black text-slate-900 dark:text-white sm:text-2xl">Asistencia del personal</h2>
+          <label className="flex shrink-0 items-center rounded-xl border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200">
+            <span className="sr-only">Fecha de asistencia</span><input aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="w-[145px] min-w-0 bg-transparent outline-none"/>
+          </label>
         </div>
-      </header>
-
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E] sm:flex-row sm:items-end sm:justify-between">
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Fecha de asistencia
-          <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/>
-        </label>
-        <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400"><span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='aprobado').length} aprobados</span><span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='pendiente').length} pendientes</span></div>
+        <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
+        {objetivoId && <button type="button" onClick={()=>{setError('');setModalAltaAbierto(true)}} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-400 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-600 transition hover:bg-emerald-500/15 dark:text-emerald-300"><Plus className="h-5 w-5"/>Agregar personal</button>}
+        <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
+          {['Todas',...categorias.map(cat=>cat.nombre)].map(nombreCategoria=><button key={nombreCategoria} type="button" onClick={()=>setCategoriaFiltro(nombreCategoria)} aria-pressed={categoriaFiltro===nombreCategoria} className={`shrink-0 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition ${categoriaFiltro===nombreCategoria?'border-emerald-400 bg-emerald-500/10 text-emerald-500':'border-slate-300 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300'}`}>{nombreCategoria}</button>)}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='aprobado').length} aprobados</span><span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='pendiente').length} pendientes</span><button type="button" onClick={()=>void cargar()} className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 dark:border-slate-700" aria-label="Actualizar"><RefreshCw className="mr-1 inline h-3.5 w-3.5"/>Actualizar</button></div>
+        {nombreObjetivo && <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">{nombreObjetivo}</p>}
       </div>
 
       {fechaFutura && <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">No se pueden registrar ingresos ni egresos para un día posterior a hoy.</div>}
