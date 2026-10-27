@@ -40,6 +40,7 @@ export const AsistenciaPersonal: React.FC = () => {
   const [error,setError] = useState('')
   const [mensaje,setMensaje] = useState('')
   const [confirmarCierre,setConfirmarCierre] = useState(false)
+  const [confirmacionMarca,setConfirmacionMarca] = useState<{persona: Personal; tipo: 'ingreso'|'egreso'}|null>(null)
   const [informeCerrado,setInformeCerrado] = useState(false)
 
   const cargar = useCallback(async () => {
@@ -257,12 +258,12 @@ export const AsistenciaPersonal: React.FC = () => {
               <div className="flex shrink-0 items-center gap-3">
                 <div className="flex w-[48px] flex-col items-center gap-1">
                   <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span>
-                  <button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!!a?.jornada_cerrada} onClick={()=>void guardarMarca(p,'ingreso')} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/></button>
+                  <button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!!a?.jornada_cerrada} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/></button>
                   <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span>
                 </div>
                 <div className="flex w-[48px] flex-col items-center gap-1">
                   <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">Egreso</span>
-                  <button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada} onClick={()=>void guardarMarca(p,'egreso')} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button>
+                  <button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada} onClick={()=>setConfirmacionMarca({persona:p,tipo:'egreso'})} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button>
                   <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span>
                 </div>
               </div>
@@ -271,6 +272,23 @@ export const AsistenciaPersonal: React.FC = () => {
           </article>
         })}
       </div>
+      {confirmacionMarca && createPortal(<div className="fixed inset-0 z-[12000] flex h-[100dvh] w-full items-center justify-center overflow-y-auto overscroll-contain bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirmar-marca-titulo">
+        <div className={`my-auto w-full max-w-sm space-y-4 rounded-2xl border bg-white p-5 shadow-2xl dark:bg-[#0C121E] ${confirmacionMarca.tipo==='ingreso'?'border-emerald-500/30':'border-amber-500/30'}`}>
+          <div className="flex items-start gap-3">
+            <div className={`rounded-xl border p-3 ${confirmacionMarca.tipo==='ingreso'?'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}><Check className="h-5 w-5"/></div>
+            <div className="min-w-0 flex-1">
+              <h3 id="confirmar-marca-titulo" className="text-lg font-black text-slate-900 dark:text-white">Confirmar {confirmacionMarca.tipo}</h3>
+              <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-400">¿Querés registrar el {confirmacionMarca.tipo} de <span className="font-bold text-slate-900 dark:text-white">{confirmacionMarca.persona.nombre} {confirmacionMarca.persona.apellido}</span> para el {fecha.split('-').reverse().join('-')}?</p>
+            </div>
+            <button type="button" onClick={()=>setConfirmacionMarca(null)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cancelar"><X className="h-5 w-5"/></button>
+          </div>
+          <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">Al confirmar, se guardará la hora actual. Revisá que hayas seleccionado a la persona correcta.</p>
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
+            <button type="button" onClick={()=>setConfirmacionMarca(null)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button>
+            <button type="button" disabled={guardando} onClick={()=>{const marcaPendiente=confirmacionMarca;setConfirmacionMarca(null);if(marcaPendiente)void guardarMarca(marcaPendiente.persona,marcaPendiente.tipo)}} className={`rounded-xl border px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 ${confirmacionMarca.tipo==='ingreso'?'border-emerald-500/30 bg-emerald-600 hover:bg-emerald-700':'border-amber-500/30 bg-amber-600 hover:bg-amber-700'}`}>{guardando?'Guardando…':'Confirmar marca'}</button>
+          </div>
+        </div>
+      </div>,document.body)}
       {confirmarCierre && <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirmar-cierre-titulo">
         <div className="w-full max-w-md overflow-hidden rounded-2xl border border-emerald-500/25 bg-white shadow-2xl dark:bg-[#0C121E]">
           <div className="flex items-start gap-3 border-b border-slate-200 p-5 dark:border-slate-800">
