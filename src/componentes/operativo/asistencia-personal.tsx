@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ClipboardCheck, Clock3, Search, Plus, RefreshCw, Send, UserRoundPlus, X, AlertTriangle, Trash2 } from 'lucide-react'
+import { Check, ClipboardCheck, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Trash2 } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -39,9 +39,7 @@ export const AsistenciaPersonal: React.FC = () => {
   const [guardando,setGuardando] = useState(false)
   const [error,setError] = useState('')
   const [mensaje,setMensaje] = useState('')
-  const [confirmarCierre,setConfirmarCierre] = useState(false)
   const [confirmacionMarca,setConfirmacionMarca] = useState<{persona: Personal; tipo: 'ingreso'|'egreso'}|null>(null)
-  const [informeCerrado,setInformeCerrado] = useState(false)
 
   const cargar = useCallback(async () => {
     if (!supabase || !usuario) { setError('No hay conexión con la base de datos.'); setCargando(false); return }
@@ -124,7 +122,6 @@ export const AsistenciaPersonal: React.FC = () => {
   const guardarMarca = async (persona: Personal, tipo: 'ingreso'|'egreso') => {
     if (!supabase || !usuario || !objetivoId) return
     const existente = asistencias.find(a=>a.id_personal===persona.id)
-    if (existente?.jornada_cerrada) { setError('La jornada ya está cerrada y no admite más marcas.'); return }
     setGuardando(true); setError(''); setMensaje('')
     const marca = new Date().toISOString()
     let result
@@ -171,19 +168,6 @@ export const AsistenciaPersonal: React.FC = () => {
     }
   }
 
-  const cerrarJornada = async () => {
-    if (!supabase || !usuario || !objetivoId) return
-    const abiertos = asistencias.filter(a=>a.ingreso && !a.egreso)
-    if (abiertos.length) { setError('No se puede cerrar la jornada: hay personal con ingreso pero sin egreso.'); return }
-    setConfirmarCierre(false)
-    setGuardando(true); setError(''); setMensaje('')
-    const ids = asistencias.filter(a=>!a.jornada_cerrada).map(a=>a.id)
-    for (const id of ids) {
-      const {error:err} = await supabase.from('asistencias_personal_empresa').update({jornada_cerrada:true,informe_enviado_en:new Date().toISOString(),actualizado_en:new Date().toISOString()}).eq('id',id)
-      if (err) { setError(err.message); setGuardando(false); return }
-    }
-    setGuardando(false); setInformeCerrado(true); setMensaje('Jornada cerrada. El informe quedó registrado para consulta del encargado.'); await cargar()
-  }
 
   const revisar = async (persona: Personal, aprobar: boolean) => {
     if (!supabase || !usuario) return
@@ -281,7 +265,7 @@ export const AsistenciaPersonal: React.FC = () => {
         </div>
       </div>,document.body)}
       <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-bold text-slate-900 dark:text-white">Personal del objetivo</h3>{asistencias.some(a=>!a.jornada_cerrada) && <button type="button" disabled={guardando} onClick={()=>setConfirmarCierre(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 disabled:opacity-50"><Send className="h-3.5 w-3.5"/> Cerrar jornada e informar</button>}</div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-bold text-slate-900 dark:text-white">Personal del objetivo</h3></div>
         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por apellido o nombre…" aria-label="Buscar personal por apellido o nombre" className="block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-800 dark:bg-[#0C121E] dark:text-white"/></label>
         {cargando ? <div className="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin"/>Cargando registros…</div> : personal.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Todavía no hay personal registrado para este objetivo.</div> : personalPorCategoria.length===0 ? <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No se encontraron personas que coincidan con “{busqueda}”.</div> : <div className="space-y-5">{personalPorCategoria.map(grupo=><section key={grupo.nombre} className="space-y-2"><h4 className="sticky top-0 z-10 rounded-lg border border-slate-200 bg-slate-100/95 px-3 py-2 text-sm font-black text-slate-800 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-100">{grupo.nombre}<span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">({grupo.personas.length})</span></h4><div className="space-y-2">{grupo.personas.map(p=>{
           const a=asistenciaDe(p.id)
@@ -298,13 +282,12 @@ export const AsistenciaPersonal: React.FC = () => {
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                   <span>{p.categoria}</span>
                   {p.estado_aprobacion!=='aprobado' && <span className={`font-semibold ${rechazado?'text-red-600 dark:text-red-300':'text-amber-600 dark:text-amber-300'}`}>{rechazado?'Rechazado':'Pendiente de aprobación'}</span>}
-                  {a?.jornada_cerrada && <span className="font-semibold text-emerald-700 dark:text-emerald-300">Jornada cerrada</span>}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 <div className="flex w-[48px] flex-col items-center gap-1">
                   <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span>
-                  <button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!!a?.jornada_cerrada||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/></button>
+                  <button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/></button>
                   <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span>
                 </div>
                 <div className="flex w-[48px] flex-col items-center gap-1">
@@ -335,22 +318,6 @@ export const AsistenciaPersonal: React.FC = () => {
           </div>
         </div>
       </div>,document.body)}
-      {confirmarCierre && <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirmar-cierre-titulo">
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-emerald-500/25 bg-white shadow-2xl dark:bg-[#0C121E]">
-          <div className="flex items-start gap-3 border-b border-slate-200 p-5 dark:border-slate-800">
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-700 dark:text-emerald-300"><Send className="h-5 w-5"/></div>
-            <div className="min-w-0"><h3 id="confirmar-cierre-titulo" className="text-lg font-black text-slate-900 dark:text-white">Cerrar jornada e informar</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{nombreObjetivo || 'Objetivo seleccionado'} · {fecha}</p></div>
-            <button type="button" onClick={()=>setConfirmarCierre(false)} className="ml-auto rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cancelar"><X className="h-5 w-5"/></button>
-          </div>
-          <div className="space-y-3 p-5"><p className="text-sm leading-6 text-slate-700 dark:text-slate-300">¿Confirmás el cierre de la jornada y el registro del informe de asistencia para el encargado?</p><div className="flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-800 dark:text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/>Una vez cerrada, la jornada no permitirá nuevas marcas de ingreso o egreso.</div></div>
-          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 p-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setConfirmarCierre(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Seguir revisando</button><button type="button" disabled={guardando} onClick={()=>void cerrarJornada()} className="rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">{guardando?'Cerrando jornada…':'Confirmar cierre'}</button></div>
-        </div>
-      </div>}
-      {informeCerrado && <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="informe-cerrado-titulo">
-        <div className="w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-white p-6 text-center shadow-2xl dark:bg-[#0C121E]">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"><Check className="h-7 w-7"/></div><h3 id="informe-cerrado-titulo" className="mt-4 text-lg font-black text-slate-900 dark:text-white">Informe de asistencia cerrado</h3><p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">La jornada quedó cerrada y el informe registrado para consulta del encargado.</p><button type="button" onClick={()=>setInformeCerrado(false)} className="mt-5 w-full rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700">Aceptar</button>
-        </div>
-      </div>}
       <p className="flex items-start gap-2 text-xs leading-5 text-slate-500 dark:text-slate-400"><Clock3 className="mt-0.5 h-4 w-4 shrink-0"/>El selector de fecha permite consultar jornadas anteriores. Las marcas guardadas se mantienen separadas de la grilla de vigilancia.</p>
     </section>
   )
