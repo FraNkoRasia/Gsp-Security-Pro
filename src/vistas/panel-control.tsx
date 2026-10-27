@@ -8,6 +8,7 @@ import {
   Bell,
   Clock,
   History,
+  ClipboardCheck,
   ArrowLeft,
   Shield
 } from 'lucide-react'
@@ -23,6 +24,7 @@ import { AvisosComunicacion } from '@/componentes/operativo/avisos-comunicacion'
 import { MiTurno } from '@/componentes/operativo/mi-turno'
 import { MiMes } from '@/componentes/operativo/mi-mes'
 import { HistorialLaboral } from '@/componentes/operativo/historial-laboral'
+import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 import { GestionHorasExtra } from '@/componentes/operativo/gestion-horas-extra'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
@@ -65,6 +67,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'grilla', label: 'Grilla', icono: <Calendar className="w-4 h-4" /> },
         { id: 'miMes', label: 'Mi Mes', icono: <Calendar className="w-4 h-4" /> },
         { id: 'historialLaboral', label: 'Historial laboral', icono: <History className="w-4 h-4" /> },
+        { id: 'asistenciaPersonal', label: 'Asistencia del personal', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'novedades', label: 'Libro de Novedades', contador: novedadesNoLeidas, icono: <BookOpen className="w-4 h-4" /> },
         { id: 'cambios', label: 'Cambios de Turno', contador: solicitudesCambioNoLeidas, icono: <ArrowRightLeft className="w-4 h-4" /> },
         { id: 'avisos', label: 'Avisos', contador: avisosNoLeidos, icono: <Bell className="w-4 h-4" /> }
@@ -271,6 +274,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'grilla' && esVigilador && !objetivoVigiladorId && <div className="rounded-2xl border border-slate-800 bg-[#0C121E] p-6 text-center text-sm text-slate-400">No tenés un objetivo activo asignado actualmente.</div>}
             {pestanaRenderizada === 'miMes' && esVigilador && <MiMes />}
             {pestanaRenderizada === 'historialLaboral' && esVigilador && <HistorialLaboral />}
+            {pestanaRenderizada === 'asistenciaPersonal' && esVigilador && <AsistenciaPersonal />}
           </div>
         </>
       )}
