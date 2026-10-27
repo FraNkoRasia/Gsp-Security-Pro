@@ -126,11 +126,10 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
         idEncargado = nuevo.id
         setEncargados(p => [...p.filter(x => x.id !== nuevo.id), nuevo])
       }
-      if (objetivoEditando) {
-        editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
-      } else {
-        crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
-      }
+      const errorGuardar = objetivoEditando
+        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
+        : await crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
+      if (errorGuardar) { setError(errorGuardar); return }
       setModalAbierto(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el objetivo y su encargado.')
