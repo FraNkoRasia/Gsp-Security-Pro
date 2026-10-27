@@ -96,47 +96,6 @@ export const VistaPanelControl: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Banner de Bienvenida y Rol Activo */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0C121E] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950/70 border border-blue-300 dark:border-blue-800/80 flex items-center justify-center p-2 text-blue-600 dark:text-blue-400 shadow-sm shrink-0">
-            <img src="/Escudo.png" alt="Escudo GSP" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-['Outfit']">
-                {usuario.nombre} {usuario.apellido}
-              </h2>
-              <Insignia
-                variante={
-                  esSuperAdmin
-                    ? 'dorado'
-                    : esAdmin
-                    ? 'azul'
-                    : 'verde'
-                }
-              >
-                {esSuperAdmin
-                  ? t.roles.superAdmin
-                  : esAdmin
-                  ? t.roles.admin
-                  : esEncargado
-                  ? 'Encargado de empresa'
-                  : t.roles.vigilador}
-              </Insignia>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-              <span className="font-mono text-blue-600 dark:text-blue-400">{usuario.email}</span>
-              <span>•</span>
-              <span className="font-medium text-slate-700 dark:text-slate-300">
-                {usuario.empresa_nombre || 'GSP Plataforma Global'}
-              </span>
-            </p>
-          </div>
-        </div>
-
-      </div>
-
       {/* Navegación y contenido operativo */}
       {esSuperAdmin ? (
         <div className="pt-1">
