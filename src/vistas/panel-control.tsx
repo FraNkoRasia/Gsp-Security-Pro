@@ -32,7 +32,7 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 
 export const VistaPanelControl: React.FC = () => {
   const { usuario } = useAutenticacion()
-  const { t, idioma } = useTraduccion()
+  const { idioma } = useTraduccion()
 
   const [pestanaActiva, setPestanaActiva] = useState<string>('objetivos')
   const [objetivoGrillaId, setObjetivoGrillaId] = useState<string | null>(null)
