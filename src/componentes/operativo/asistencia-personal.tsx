@@ -61,9 +61,12 @@ export const AsistenciaPersonal: React.FC = () => {
       if (p.error) throw p.error
       if (a.error) throw a.error
       if (c.error) throw c.error
-      setPersonal((p.data || []) as Personal[])
+      const categoriasActivas = (c.data || []) as Categoria[]
+      const nombresCategoriasActivas = new Set(categoriasActivas.map(cat => cat.nombre.trim().toLocaleLowerCase('es-AR')))
+      // Nunca mostrar personal con categorías fijas antiguas ni categorías de otro objetivo.
+      setPersonal(((p.data || []) as Personal[]).filter(persona => nombresCategoriasActivas.has(persona.categoria.trim().toLocaleLowerCase('es-AR'))))
       setAsistencias((a.data || []) as Asistencia[])
-      setCategorias((c.data || []) as Categoria[])
+      setCategorias(categoriasActivas)
       setCategoria(actual => c.data?.some(x=>x.nombre===actual) ? actual : (c.data?.[0]?.nombre || ''))
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron cargar los registros.') }
     finally { setCargando(false) }
