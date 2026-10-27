@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, Check, ClipboardCheck, Clock3, LogIn, LogOut, Plus, RefreshCw, Send, UserRoundPlus, X } from 'lucide-react'
+import { Check, ClipboardCheck, Clock3, LogIn, LogOut, Plus, RefreshCw, Send, UserRoundPlus, X } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
