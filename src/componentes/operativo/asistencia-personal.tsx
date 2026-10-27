@@ -67,7 +67,7 @@ export const AsistenciaPersonal: React.FC = () => {
     e.preventDefault()
     if (!supabase || !usuario || !objetivoId || !nombre.trim()) return
     const objetivo = objetivos.find(o => o.id === objetivoId)
-    const idEmpresa = objetivo?.id_empresa || asignacion?.id_empresa || usuario.id_empresa
+    const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
     if (!idEmpresa) { setError('No se pudo identificar la empresa de este objetivo.'); return }
     setGuardando(true); setError(''); setMensaje('')
     const {error:err} = await supabase.from('personal_empresa').insert({
@@ -91,7 +91,7 @@ export const AsistenciaPersonal: React.FC = () => {
     if (!existente) {
       if (tipo !== 'ingreso') { setError('Primero registrá el ingreso.'); setGuardando(false); return }
       const objetivo = objetivos.find(o=>o.id===objetivoId)
-      const idEmpresa = objetivo?.id_empresa || asignacion?.id_empresa || usuario.id_empresa
+      const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
       if (!idEmpresa) { setError('No se pudo identificar la empresa.'); setGuardando(false); return }
       result = await supabase.from('asistencias_personal_empresa').insert({
         id_empresa:idEmpresa,id_objetivo:objetivoId,id_personal:persona.id,fecha,
