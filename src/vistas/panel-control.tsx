@@ -49,6 +49,7 @@ export const VistaPanelControl: React.FC = () => {
   const esSuperAdmin = usuario.rol === 'super_administrador'
   const esAdmin = usuario.rol === 'administrador'
   const esVigilador = usuario.rol === 'vigilador'
+  const esEncargado = usuario.rol === 'encargado_empresa'
   const { asignaciones, objetivos, solicitudesHorasExtra, solicitudesCambio, avisos, novedades, novedadesLeidas } = useOperativo()
   const asignacionActiva = asignaciones.find((a) => a.id_vigilador === usuario.id && a.activa)
   const objetivoVigiladorId = asignacionActiva?.id_objetivo || null
@@ -74,6 +75,8 @@ export const VistaPanelControl: React.FC = () => {
       ]
     : esSuperAdmin
     ? []
+    : esEncargado
+    ? [{ id: 'asistenciaPersonal', label: 'Asistencia del personal', icono: <ClipboardCheck className="w-4 h-4" /> }]
     : esAdmin
     ? [
         { id: 'objetivos', label: 'Objetivos', icono: <MapPin className="w-4 h-4" /> },
@@ -117,6 +120,8 @@ export const VistaPanelControl: React.FC = () => {
                   ? t.roles.superAdmin
                   : esAdmin
                   ? t.roles.admin
+                  : esEncargado
+                  ? 'Encargado de empresa'
                   : t.roles.vigilador}
               </Insignia>
             </div>
@@ -274,7 +279,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'grilla' && esVigilador && !objetivoVigiladorId && <div className="rounded-2xl border border-slate-800 bg-[#0C121E] p-6 text-center text-sm text-slate-400">No tenés un objetivo activo asignado actualmente.</div>}
             {pestanaRenderizada === 'miMes' && esVigilador && <MiMes />}
             {pestanaRenderizada === 'historialLaboral' && esVigilador && <HistorialLaboral />}
-            {pestanaRenderizada === 'asistenciaPersonal' && esVigilador && <AsistenciaPersonal />}
+            {pestanaRenderizada === 'asistenciaPersonal' && (esVigilador || esEncargado) && <AsistenciaPersonal />}
           </div>
         </>
       )}
