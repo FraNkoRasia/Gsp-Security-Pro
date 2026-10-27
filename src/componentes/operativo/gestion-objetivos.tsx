@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { MapPin, Plus, Edit2, Shield, Users, CheckCircle2, XCircle } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { Boton } from '@/componentes/ui/boton'
@@ -9,6 +9,7 @@ import { Etiqueta } from '@/componentes/ui/etiqueta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Objetivo } from '@/tipos'
+import { supabase } from '@/servicios/supabase'
 
 export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) => void; idEmpresaSeleccionada?: string; modoConsulta?: boolean }> = ({ onSeleccionarObjetivo, idEmpresaSeleccionada, modoConsulta = false }) => {
   const { objetivos, asignaciones, empresas, supervisores, crearObjetivo, editarObjetivo, cambiarEstadoObjetivo } = useOperativo()
@@ -24,10 +25,14 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
   const [descripcion, setDescripcion] = useState('')
   const [elementosACargo, setElementosACargo] = useState('')
   const [supervisorNombre, setSupervisorNombre] = useState('')
+  const [encargadoId, setEncargadoId] = useState('')
+  const [encargados, setEncargados] = useState<{id:string;nombre:string;apellido:string;id_empresa:string|null}[]>([])
   const [direccion, setDireccion] = useState('')
   const [localidad, setLocalidad] = useState('Río Cuarto')
   const [provincia, setProvincia] = useState('Córdoba')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => { let vigente = true; void (async () => { if (!supabase) return; const q = supabase.from('perfiles').select('id,nombre,apellido,id_empresa').eq('rol','encargado_empresa').eq('activo',true); const {data,error:err}=await q; if(vigente && !err) setEncargados((data||[]) as {id:string;nombre:string;apellido:string;id_empresa:string|null}[]) })(); return () => { vigente=false } }, [])
 
   // Filtrar objetivos si es admin de empresa
   const idEmpresaActiva = idEmpresaSeleccionada || usuario?.id_empresa || empresas[0]?.id || 'emp-wall-01'
@@ -44,6 +49,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setDescripcion('')
     setElementosACargo('')
     setSupervisorNombre('')
+    setEncargadoId('')
     setDireccion('')
     setLocalidad('Río Cuarto')
     setProvincia('Córdoba')
@@ -71,6 +77,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setElementosACargo(obj.elementos_a_cargo || '')
     const supervisorExistente = supervisores.find(s => s.id === obj.id_supervisor)
     setSupervisorNombre(obj.supervisor_nombre || (supervisorExistente ? `${supervisorExistente.nombre} ${supervisorExistente.apellido}`.trim() : ''))
+    setEncargadoId(obj.id_encargado_empresa || '')
     setDireccion(obj.direccion)
     setLocalidad(obj.localidad)
     setProvincia(obj.provincia)
@@ -95,7 +102,8 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
         supervisor_nombre: supervisorNombre.trim() || null,
         direccion: direccion.trim(),
         localidad: localidad.trim(),
-        provincia: provincia.trim()
+        provincia: provincia.trim(),
+        id_encargado_empresa: encargadoId || null
       })
     } else {
       crearObjetivo({
@@ -106,7 +114,8 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
         supervisor_nombre: supervisorNombre.trim() || null,
         direccion: direccion.trim(),
         localidad: localidad.trim(),
-        provincia: provincia.trim()
+        provincia: provincia.trim(),
+        id_encargado_empresa: encargadoId || null
       })
     }
 
@@ -314,6 +323,15 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
               placeholder="Ej: Control de acceso vehicular, rondas perimetrales cada 2 horas, control de cámaras..."
               className="w-full rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 p-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Etiqueta>Encargado de empresa para este objetivo</Etiqueta>
+            <select value={encargadoId} onChange={e=>setEncargadoId(e.target.value)} className="w-full rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 p-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Sin encargado asignado</option>
+              {encargados.filter(e=>!e.id_empresa || e.id_empresa===idEmpresaActiva).map(e=><option key={e.id} value={e.id}>{e.nombre} {e.apellido}</option>)}
+            </select>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Solo se muestran cuentas activas con el rol Encargado de empresa. La cuenta debe existir previamente.</p>
           </div>
 
           {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
