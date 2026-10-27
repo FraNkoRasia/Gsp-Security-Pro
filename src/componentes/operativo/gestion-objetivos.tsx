@@ -40,7 +40,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
   const [provincia, setProvincia] = useState('Córdoba')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => { let vigente = true; void (async () => { if (!supabase) return; const q = supabase.from('perfiles').select('id,nombre,apellido,id_empresa').eq('rol','encargado_empresa').eq('activo',true); const {data,error:err}=await q; if(vigente && !err) setEncargados((data||[]) as {id:string;nombre:string;apellido:string;id_empresa:string|null}[]) })(); return () => { vigente=false } }, [])
+  useEffect(() => { let vigente = true; void (async () => { if (!supabase) return; const q = supabase.from('perfiles').select('id,nombre,apellido,email,telefono,id_empresa').eq('rol','encargado_empresa').eq('activo',true); const {data,error:err}=await q; if(vigente && !err) setEncargados((data||[]) as {id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}[]) })(); return () => { vigente=false } }, [])
 
   // Filtrar objetivos si es admin de empresa
   const idEmpresaActiva = idEmpresaSeleccionada || usuario?.id_empresa || empresas[0]?.id || 'emp-wall-01'
