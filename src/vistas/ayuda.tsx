@@ -27,7 +27,7 @@ export const VistaAyuda: React.FC<PropiedadesVistaAyuda> = ({ abierto, alCerrar 
       icono: <Key className="w-4 h-4 text-amber-400" />,
       titulo: '¿Cómo recupero mi contraseña?',
       contenido:
-        'En la pantalla de inicio presioná "¿Olvidaste tu contraseña?". Ingresá tu correo registrado y recibirás un enlace de un solo uso por Supabase Auth para restablecer tu clave de acceso.'
+        'Si no podés ingresar, comunicate con el administrador o supervisor de tu empresa para que restablezca tu contraseña. La aplicación no cuenta con un botón de recuperación automática en la pantalla de inicio.'
     },
     {
       id: 'instalacion',
