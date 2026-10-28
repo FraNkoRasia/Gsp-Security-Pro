@@ -287,6 +287,7 @@ export const VistaPanelControl: React.FC = () => {
                 const activa = pestanaRenderizada === p.id
                 return (
                   <button key={p.id} type="button" onClick={() => {
+                    window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
                     if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                       setPestanaPendiente(p.id)
                       setModalSalidaGrilla(true)
@@ -327,6 +328,7 @@ export const VistaPanelControl: React.FC = () => {
                       const activa = pestanaRenderizada === p.id
                       return (
                         <button key={p.id} type="button" onClick={() => {
+                          window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
                           if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                             setPestanaPendiente(p.id)
                             setModalSalidaGrilla(true)
