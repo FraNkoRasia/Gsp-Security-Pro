@@ -36,6 +36,15 @@ export const DisposicionPrincipal: React.FC<PropiedadesDisposicionPrincipal> = (
   }, [])
 
   useEffect(() => {
+    const abrirPerfil = () => {
+      subVistaRef.current = 'perfil'
+      setSubVista('perfil')
+    }
+    window.addEventListener('gsp:abrir-perfil', abrirPerfil)
+    return () => window.removeEventListener('gsp:abrir-perfil', abrirPerfil)
+  }, [])
+
+  useEffect(() => {
     const mostrarInicioOperativo = () => cerrarSubVista()
     window.addEventListener('gsp:mostrar-inicio-operativo', mostrarInicioOperativo)
     return () => window.removeEventListener('gsp:mostrar-inicio-operativo', mostrarInicioOperativo)
