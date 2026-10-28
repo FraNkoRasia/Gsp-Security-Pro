@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import React, { useState } from 'react'
 import {
   Users,
@@ -257,7 +258,7 @@ export const VistaPanelControl: React.FC = () => {
           </div>
         </>
       )}
-      {esVigilador && (
+      {esVigilador && createPortal((
         <>
           <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-[#080D17]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
             <div className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2 pt-2 pb-1">
@@ -301,7 +302,7 @@ export const VistaPanelControl: React.FC = () => {
             </div>
           )}
         </>
-      )}
+      ), document.body)}
       {modalSalidaGrilla && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="salida-grilla-titulo">
           <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
