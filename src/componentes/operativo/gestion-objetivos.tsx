@@ -6,8 +6,6 @@ import { Insignia } from '@/componentes/ui/insignia'
 import { Dialogo } from '@/componentes/ui/dialogo'
 import { Entrada } from '@/componentes/ui/entrada'
 import { Etiqueta } from '@/componentes/ui/etiqueta'
-import { Entrada } from '@/componentes/ui/entrada'
-import { Etiqueta } from '@/componentes/ui/etiqueta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Objetivo } from '@/tipos'
@@ -90,8 +88,8 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setGuardando(true)
     try {
       const errorGuardar = objetivoEditando
-        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
-        : await crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
+        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:null, id_supervisor:null, id_encargado_empresa:null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
+        : await crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:null, id_supervisor:null, id_encargado_empresa:null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
       if (errorGuardar) { setError(errorGuardar); return }
       setModalAbierto(false)
     } catch (err) {
