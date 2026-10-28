@@ -288,12 +288,15 @@ export const VistaPanelControl: React.FC = () => {
                 ? pestanas.filter((p) => ['miTurno', 'grilla', 'miMes'].includes(p.id))
                 : esAdmin
                 ? pestanas.filter((p) => ['objetivos', 'vigiladores', 'novedades'].includes(p.id))
+                : esEncargado
+                ? pestanas.filter((p) => ['asistenciaPersonal', 'personal'].includes(p.id))
                 : pestanas.slice(0, 1)
               ).map((p) => {
                 const activa = pestanaRenderizada === p.id
                 return (
                   <button key={p.id} type="button" onClick={() => {
                     window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
+                    if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
                     if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                       setPestanaPendiente(p.id)
                       setModalSalidaGrilla(true)
