@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from 'react'
-import { MapPin, Plus, Edit2, Shield, Users, CheckCircle2, XCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { MapPin, Plus, Shield, CheckCircle2, XCircle } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { Boton } from '@/componentes/ui/boton'
 import { Insignia } from '@/componentes/ui/insignia'
 import { Dialogo } from '@/componentes/ui/dialogo'
 import { Entrada } from '@/componentes/ui/entrada'
 import { Etiqueta } from '@/componentes/ui/etiqueta'
+import { Entrada } from '@/componentes/ui/entrada'
+import { Etiqueta } from '@/componentes/ui/etiqueta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Objetivo } from '@/tipos'
-import { supabase } from '@/servicios/supabase'
 
 export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) => void; idEmpresaSeleccionada?: string; modoConsulta?: boolean }> = ({ onSeleccionarObjetivo, idEmpresaSeleccionada, modoConsulta = false }) => {
-  const { objetivos, asignaciones, empresas, supervisores, crearObjetivo, editarObjetivo, cambiarEstadoObjetivo } = useOperativo()
+  const { objetivos, asignaciones, empresas, crearObjetivo, editarObjetivo, cambiarEstadoObjetivo } = useOperativo()
   const { usuario } = useAutenticacion()
 
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -24,24 +25,12 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [elementosACargo, setElementosACargo] = useState('')
-  const [supervisorNombre, setSupervisorNombre] = useState('')
-  const [encargadoId, setEncargadoId] = useState('')
-  const [crearEncargadoNuevo, setCrearEncargadoNuevo] = useState(true)
-  const [encargadoNombre, setEncargadoNombre] = useState('')
-  const [encargadoApellido, setEncargadoApellido] = useState('')
-  const [encargadoEmail, setEncargadoEmail] = useState('')
-  const [encargadoTelefono, setEncargadoTelefono] = useState('')
-  const [encargadoPassword, setEncargadoPassword] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [encargadoNuevaPassword, setEncargadoNuevaPassword] = useState('')
-  const [encargadoEditando, setEncargadoEditando] = useState<{id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}|null>(null)
-  const [encargados, setEncargados] = useState<{id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}[]>([])
   const [direccion, setDireccion] = useState('')
   const [localidad, setLocalidad] = useState('Río Cuarto')
   const [provincia, setProvincia] = useState('Córdoba')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => { let vigente = true; void (async () => { if (!supabase) return; const q = supabase.from('perfiles').select('id,nombre,apellido,email,telefono,id_empresa').eq('rol','encargado_empresa').eq('activo',true); const {data,error:err}=await q; if(vigente && !err) setEncargados((data||[]) as {id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}[]) })(); return () => { vigente=false } }, [])
 
   // Filtrar objetivos si es admin de empresa
   const idEmpresaActiva = idEmpresaSeleccionada || usuario?.id_empresa || empresas[0]?.id || 'emp-wall-01'
@@ -57,10 +46,6 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setNombre('')
     setDescripcion('')
     setElementosACargo('')
-    setSupervisorNombre('')
-    setEncargadoId('')
-    setCrearEncargadoNuevo(true)
-    setEncargadoNombre(''); setEncargadoApellido(''); setEncargadoEmail(''); setEncargadoTelefono(''); setEncargadoPassword('')
     setDireccion('')
     setLocalidad('Río Cuarto')
     setProvincia('Córdoba')
@@ -86,11 +71,6 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setNombre(obj.nombre)
     setDescripcion(obj.descripcion || '')
     setElementosACargo(obj.elementos_a_cargo || '')
-    const supervisorExistente = supervisores.find(s => s.id === obj.id_supervisor)
-    setSupervisorNombre(obj.supervisor_nombre || (supervisorExistente ? `${supervisorExistente.nombre} ${supervisorExistente.apellido}`.trim() : ''))
-    setEncargadoId(obj.id_encargado_empresa || '')
-    setCrearEncargadoNuevo(false)
-    setEncargadoNombre(''); setEncargadoApellido(''); setEncargadoEmail(''); setEncargadoTelefono(''); setEncargadoPassword('')
     setDireccion(obj.direccion)
     setLocalidad(obj.localidad)
     setProvincia(obj.provincia)
@@ -109,31 +89,13 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
 
     setGuardando(true)
     try {
-      let idEncargado = encargadoId || null
-      if (!objetivoEditando && crearEncargadoNuevo) {
-        if (!encargadoNombre.trim() || !encargadoApellido.trim() || !encargadoEmail.trim() || encargadoPassword.length < 8) {
-          setError('Completá nombre, apellido, correo y una contraseña inicial de al menos 8 caracteres para el encargado.')
-          return
-        }
-        if (!supabase) { setError('Supabase no está configurado.'); return }
-        const alta = await supabase.functions.invoke('gestionar-encargado-empresa', { body: { nombre: encargadoNombre.trim(), apellido: encargadoApellido.trim(), email: encargadoEmail.trim(), telefono: encargadoTelefono.trim(), password: encargadoPassword, id_empresa: idEmpresaActiva } })
-        if (alta.error || alta.data?.error || !alta.data?.encargado?.id) {
-          let mensaje = String(alta.data?.error || alta.error?.message || 'No se pudo crear la cuenta del encargado.')
-          const contexto = (alta.error as {context?:Response}|null)?.context
-          if (contexto) { try { const cuerpo = await contexto.clone().json() as {error?:string}; mensaje = cuerpo.error || mensaje } catch {} }
-          setError(mensaje); return
-        }
-        const nuevo = alta.data.encargado as {id:string;nombre:string;apellido:string;email:string;telefono:string|null;id_empresa:string|null}
-        idEncargado = nuevo.id
-        setEncargados(p => [...p.filter(x => x.id !== nuevo.id), nuevo])
-      }
       const errorGuardar = objetivoEditando
-        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
-        : await crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:supervisorNombre.trim()||null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim(), id_encargado_empresa:idEncargado })
+        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
+        : await crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
       if (errorGuardar) { setError(errorGuardar); return }
       setModalAbierto(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar el objetivo y su encargado.')
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el objetivo.')
     } finally { setGuardando(false) }
   }
 
@@ -262,29 +224,6 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
         </div>
       </Dialogo>
 
-      <Dialogo abierto={!!encargadoEditando} alCerrar={() => setEncargadoEditando(null)} titulo="Editar encargado del objetivo" subtitulo="Actualizá los datos de acceso del encargado asignado." icono={<Users className="w-5 h-5 text-emerald-500"/>}>
-        {encargadoEditando && <form className="space-y-4" onSubmit={async e => {
-          e.preventDefault()
-          if (!supabase || !encargadoEditando) return
-          setError(null)
-          try {
-            const r = await supabase.functions.invoke('gestionar-encargado-empresa', { body: { accion:'editar', id:encargadoEditando.id, id_empresa:encargadoEditando.id_empresa, nombre:encargadoEditando.nombre.trim(), apellido:encargadoEditando.apellido.trim(), email:encargadoEditando.email.trim(), telefono:encargadoEditando.telefono || '', password:encargadoNuevaPassword } })
-            if (r.error || r.data?.error) { setError(String(r.data?.error || r.error?.message || 'No se pudieron guardar los datos.')); return }
-            const actualizado = r.data.encargado
-            setEncargados(p => p.map(x => x.id === actualizado.id ? actualizado : x))
-            setEncargadoEditando(null)
-          } catch (err) { setError(err instanceof Error ? err.message : 'No se pudieron guardar los datos.') }
-        }}>
-          <div><Etiqueta requerido>Nombre</Etiqueta><Entrada value={encargadoEditando.nombre} onChange={e=>setEncargadoEditando(p=>p?{...p,nombre:e.target.value}:p)}/></div>
-          <div><Etiqueta requerido>Apellido</Etiqueta><Entrada value={encargadoEditando.apellido} onChange={e=>setEncargadoEditando(p=>p?{...p,apellido:e.target.value}:p)}/></div>
-          <div><Etiqueta requerido>Correo de acceso</Etiqueta><Entrada type="email" value={encargadoEditando.email} onChange={e=>setEncargadoEditando(p=>p?{...p,email:e.target.value}:p)}/></div>
-          <div><Etiqueta>Teléfono</Etiqueta><Entrada value={encargadoEditando.telefono||''} onChange={e=>setEncargadoEditando(p=>p?{...p,telefono:e.target.value}:p)}/></div>
-          <div><Etiqueta>Nueva contraseña (opcional)</Etiqueta><Entrada type="password" value={encargadoNuevaPassword} onChange={e=>setEncargadoNuevaPassword(e.target.value)} placeholder="Mínimo 8 caracteres"/><p className="mt-1 text-xs text-slate-500">Completala para restablecer el acceso si el encargado no puede iniciar sesión.</p></div>
-          {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
-          <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3"><Boton type="button" variante="secundario" onClick={()=>setEncargadoEditando(null)}>Cancelar</Boton><Boton type="submit" variante="primario">Guardar datos</Boton></div>
-        </form>}
-      </Dialogo>
-
       {/* Modal Crear / Editar Objetivo */}
       <Dialogo
         abierto={modalAbierto}
@@ -333,15 +272,6 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
           </div>
 
           <div>
-            <Etiqueta>Supervisor a Cargo</Etiqueta>
-            <Entrada
-              value={supervisorNombre}
-              onChange={(e) => setSupervisorNombre(e.target.value)}
-              placeholder="Nombre y apellido del supervisor (opcional)"
-            />
-          </div>
-
-          <div>
             <Etiqueta>Elementos a Cargo del Puesto</Etiqueta>
             <textarea
               value={elementosACargo}
@@ -362,19 +292,6 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
               placeholder="Ej: Control de acceso vehicular, rondas perimetrales cada 2 horas, control de cámaras..."
               className="w-full rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 p-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
             />
-          </div>
-
-          <div className="space-y-1.5">
-            <Etiqueta>Encargado de empresa para este objetivo</Etiqueta>
-            {!objetivoEditando && <label className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm text-slate-700 dark:text-slate-200"><input type="checkbox" checked={crearEncargadoNuevo} onChange={e=>setCrearEncargadoNuevo(e.target.checked)} className="mt-1 accent-emerald-600"/><span><strong>Crear una cuenta nueva para este objetivo</strong><span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Se creará el encargado y quedará asignado al objetivo al guardar.</span></span></label>}
-            {(!crearEncargadoNuevo || objetivoEditando) ? <select value={encargadoId} onChange={e=>setEncargadoId(e.target.value)} className="w-full rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 p-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"><option value="">Sin encargado asignado</option>{encargados.filter(e=>!e.id_empresa || e.id_empresa===idEmpresaActiva).map(e=><option key={e.id} value={e.id}>{e.nombre} {e.apellido}</option>)}</select> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><Etiqueta requerido>Nombre del encargado</Etiqueta><Entrada value={encargadoNombre} onChange={e=>setEncargadoNombre(e.target.value)} placeholder="Nombre"/></div>
-              <div><Etiqueta requerido>Apellido del encargado</Etiqueta><Entrada value={encargadoApellido} onChange={e=>setEncargadoApellido(e.target.value)} placeholder="Apellido"/></div>
-              <div><Etiqueta requerido>Correo de acceso</Etiqueta><Entrada value={encargadoEmail} onChange={e=>setEncargadoEmail(e.target.value)} placeholder="encargado@empresa.com" type="email"/></div>
-              <div><Etiqueta>Teléfono</Etiqueta><Entrada value={encargadoTelefono} onChange={e=>setEncargadoTelefono(e.target.value)} placeholder="Teléfono"/></div>
-              <div className="sm:col-span-2"><Etiqueta requerido>Contraseña inicial (mínimo 8 caracteres)</Etiqueta><Entrada value={encargadoPassword} onChange={e=>setEncargadoPassword(e.target.value)} placeholder="Contraseña inicial" type="password"/><p className="mt-1 text-[11px] text-slate-500">El encargado deberá cambiarla al ingresar por primera vez.</p></div>
-            </div>}
-            <p className="text-xs text-slate-500 dark:text-slate-400">Cada objetivo tendrá un encargado asignado; la cuenta se crea de forma segura en Supabase.</p>
           </div>
 
           {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
