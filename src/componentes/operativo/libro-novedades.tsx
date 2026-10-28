@@ -355,35 +355,51 @@ export const LibroNovedades: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Etiqueta requerido>Objetivo del Servicio</Etiqueta>
-              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
-                {objetivoActual ? `${objetivoActual.nombre}${objetivoActual.localidad ? ` (${objetivoActual.localidad})` : ''}` : 'No hay un objetivo asignado para este turno'}
-              </div>
+              {usuario?.rol === 'vigilador' ? (
+                <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
+                  {objetivoActual ? `${objetivoActual.nombre}${objetivoActual.localidad ? ` (${objetivoActual.localidad})` : ''}` : 'No hay un objetivo asignado para este turno'}
+                </div>
+              ) : (
+                <select value={idObjetivo} onChange={e => setIdObjetivo(e.target.value)} className="w-full min-h-[46px] rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 px-3 py-2.5 text-xs text-slate-900 dark:text-slate-100">
+                  {objetivos.map(o => <option key={o.id} value={o.id}>{o.nombre} {o.localidad ? `(${o.localidad})` : ''}</option>)}
+                </select>
+              )}
             </div>
 
             <div>
               <Etiqueta requerido>Turno Correspondiente</Etiqueta>
-              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
-                {turnoActualTexto || 'No se detectó un turno en servicio'}
-              </div>
+              {usuario?.rol === 'vigilador' ? (
+                <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
+                  {turnoActualTexto || 'No se detectó un turno en servicio'}
+                </div>
+              ) : (
+                <Entrada value={turno} onChange={e => setTurno(e.target.value)} placeholder="Turno correspondiente" />
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Etiqueta requerido>Fecha</Etiqueta>
-              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{fecha || 'Se registra automáticamente'}</div>
+              {usuario?.rol === 'vigilador' ? (
+                <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{fecha || 'Se registra automáticamente'}</div>
+              ) : <Entrada type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}
             </div>
             <div>
               <Etiqueta requerido>Hora</Etiqueta>
-              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{hora ? `${hora} hs` : 'Se registra automáticamente'}</div>
+              {usuario?.rol === 'vigilador' ? (
+                <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{hora ? `${hora} hs` : 'Se registra automáticamente'}</div>
+              ) : <Entrada type="time" value={hora} onChange={e => setHora(e.target.value)} />}
             </div>
           </div>
 
           <div>
             <Etiqueta requerido>Supervisor a Cargo</Etiqueta>
-            <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
-              {nombreSupervisorActual || 'El objetivo no tiene un supervisor asignado'}
-            </div>
+            {usuario?.rol === 'vigilador' ? (
+              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
+                {nombreSupervisorActual || 'El objetivo no tiene un supervisor asignado'}
+              </div>
+            ) : <Entrada value={nombreSupervisor} onChange={e => setNombreSupervisor(e.target.value)} placeholder="Supervisor a cargo" />}
           </div>
 
           <div>
