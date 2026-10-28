@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, Globe, Sun, Moon, Download } from 'lucide-react'
+import { Menu, X, Globe, Sun, Moon } from 'lucide-react'
 import { ModalInstalacion } from '@/componentes/pwa/modal-instalacion'
 import { obtenerEstadoDispositivo, type EstadoInstalacion } from '@/utilidades/deteccion-plataforma'
 import { Insignia } from '@/componentes/ui/insignia'
@@ -15,12 +15,11 @@ interface EventoInstalacionPWA extends Event {
 
 interface PropiedadesEncabezado {
   alIrAInicio?: () => void
-  alAbrirPerfil?: () => void
   ubicacionActual?: 'inicio' | 'perfil'
   alVolverAlInicioSesion?: () => void
 }
 
-export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVolverAlInicioSesion, alAbrirPerfil, ubicacionActual = 'inicio' }) => {
+export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVolverAlInicioSesion, ubicacionActual = 'inicio' }) => {
   const { usuario, estaAutenticado } = useAutenticacion()
   const { t, idioma, cambiarIdioma } = useTraduccion()
   const { temaActual, cambiarTema } = useTema()
@@ -31,7 +30,6 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVol
       ? (window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt ?? null
       : null)
   )
-  const [appInstalada, setAppInstalada] = useState(false)
   const [modalInstalacionAbierto, setModalInstalacionAbierto] = useState(false)
   const [mensajeInstalacion, setMensajeInstalacion] = useState<string | null>(null)
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoInstalacion>(() => obtenerEstadoDispositivo(null))
@@ -40,7 +38,6 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVol
     const verificarInstalacion = () => {
       const instalada = window.matchMedia('(display-mode: standalone)').matches
         || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-      setAppInstalada(instalada)
     }
 
     const manejarBeforeInstallPrompt = (event: Event) => {
@@ -54,7 +51,6 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVol
     const manejarAppInstalled = () => {
       setEventoInstalacion(null)
       ;(window as Window & { __gspInstallPrompt?: EventoInstalacionPWA }).__gspInstallPrompt = undefined
-      setAppInstalada(true)
       setModalInstalacionAbierto(false)
     }
 
@@ -98,7 +94,6 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVol
       setEstadoDispositivo(obtenerEstadoDispositivo(null))
 
       if (resultado.outcome === 'accepted') {
-        setAppInstalada(true)
       }
       setModalInstalacionAbierto(false)
     } catch (error) {
