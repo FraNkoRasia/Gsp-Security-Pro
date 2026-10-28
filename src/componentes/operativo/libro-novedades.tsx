@@ -13,9 +13,39 @@ import { useTraduccion } from '@/i18n'
 import { traducirTextoInterfaz } from '@/i18n/diccionario-interfaz'
 
 export const LibroNovedades: React.FC = () => {
-  const { novedades, objetivos, crearNovedad, editarNovedad, marcarNovedadLeida, novedadesLeidas } = useOperativo()
+  const { novedades, objetivos, crearNovedad, editarNovedad, marcarNovedadLeida, novedadesLeidas, turnos, supervisores, asignaciones } = useOperativo()
   const { usuario } = useAutenticacion()
   const { idioma } = useTraduccion()
+  const ahoraLocal = () => {
+    const ahora = new Date()
+    const fechaLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora)
+    const horaLocal = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(ahora)
+    return { fecha: fechaLocal, hora: horaLocal }
+  }
+  const formatoHoraTurno = (valor: string) => (valor || '').slice(0, 5)
+  const turnoEnServicio = usuario?.rol === 'vigilador' ? turnos
+    .filter(t => t.id_vigilador === usuario.id && t.horas_totales > 0 && t.estado !== 'ausente' && t.estado !== 'reemplazado')
+    .map(t => {
+      const inicio = new Date(`${t.fecha}T${formatoHoraTurno(t.hora_inicio)}:00-03:00`)
+      const fin = new Date(`${t.fecha}T${formatoHoraTurno(t.hora_fin)}:00-03:00`)
+      if (fin <= inicio) fin.setDate(fin.getDate() + 1)
+      const ahora = Date.now()
+      return { turno: t, inicio: inicio.getTime(), fin: fin.getTime(), vigente: ahora >= inicio.getTime() - 10 * 60_000 && ahora <= fin.getTime() + 10 * 60_000 }
+    })
+    .filter(x => x.vigente)
+    .sort((a, b) => b.inicio - a.inicio)[0]?.turno : undefined
+  const objetivoActual = usuario?.rol === 'vigilador'
+    ? objetivos.find(o => o.id === turnoEnServicio?.id_objetivo)
+    : objetivos.find(o => o.id === idObjetivo) || objetivos[0]
+  const turnoActualTexto = turnoEnServicio
+    ? `${turnoEnServicio.tipo === 'diurno' ? 'Diurno' : turnoEnServicio.tipo === 'nocturno' ? 'Nocturno' : turnoEnServicio.tipo} (${formatoHoraTurno(turnoEnServicio.hora_inicio)} - ${formatoHoraTurno(turnoEnServicio.hora_fin)})`
+    : turno
+  const supervisorActual = objetivoActual?.id_supervisor
+    ? supervisores.find(s => s.id === objetivoActual.id_supervisor)
+    : undefined
+  const nombreSupervisorActual = supervisorActual
+    ? `${supervisorActual.nombre} ${supervisorActual.apellido}`.trim()
+    : objetivoActual?.supervisor_nombre || ''
 
   const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false)
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false)
@@ -26,17 +56,13 @@ export const LibroNovedades: React.FC = () => {
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
 
-  // Formulario nueva novedad (Sección 32)
+  // Datos del registro: se calculan desde el turno asignado, no se inventan valores por defecto.
   const [idObjetivo, setIdObjetivo] = useState(objetivos[0]?.id || '')
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
-  const [hora, setHora] = useState(
-    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  )
-  const [turno, setTurno] = useState('12🌙 Nocturno (19:00 - 07:00)')
-  const [nombreSupervisor, setNombreSupervisor] = useState('Carlos Méndez')
-  const [elementosACargo, setElementosACargo] = useState(
-    'Handy Motorola VHF #12, Linterna LED táctica, Libro Tomo IV'
-  )
+  const [fecha, setFecha] = useState('')
+  const [hora, setHora] = useState('')
+  const [turno, setTurno] = useState('')
+  const [nombreSupervisor, setNombreSupervisor] = useState('')
+  const [elementosACargo, setElementosACargo] = useState('')
   const [informeNovedades, setInformeNovedades] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -45,9 +71,14 @@ export const LibroNovedades: React.FC = () => {
   const [motivoCorreccion, setMotivoCorreccion] = useState('')
 
   const abrirCrear = () => {
-    setIdObjetivo(objetivos[0]?.id || '')
-    setFecha(new Date().toISOString().split('T')[0])
-    setHora(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+    const ahora = ahoraLocal()
+    const objetivo = usuario?.rol === 'vigilador' ? objetivoActual : objetivos.find(o => o.id === idObjetivo) || objetivos[0]
+    setIdObjetivo(objetivo?.id || '')
+    setFecha(ahora.fecha)
+    setHora(ahora.hora)
+    setTurno(turnoEnServicio ? turnoActualTexto : '')
+    setNombreSupervisor(nombreSupervisorActual)
+    setElementosACargo(objetivo?.elementos_a_cargo || '')
     setInformeNovedades('')
     setError(null)
     setModalNuevoAbierto(true)
@@ -65,6 +96,11 @@ export const LibroNovedades: React.FC = () => {
     e.preventDefault()
     setError(null)
 
+    if (usuario?.rol === 'vigilador' && (!turnoEnServicio || !objetivoActual)) {
+      setError('No se detectó un turno asignado en servicio. Solo podés asentar novedades dentro del horario permitido.')
+      return
+    }
+
     if (!informeNovedades.trim()) {
       setError('El informe de novedades no puede estar vacío.')
       return
@@ -75,13 +111,13 @@ export const LibroNovedades: React.FC = () => {
       : 'Vigilador'
 
     const resultado = await crearNovedad({
-      id_objetivo: idObjetivo,
+      id_objetivo: objetivoActual?.id || idObjetivo,
       id_vigilador: usuario?.id || '',
       nombre_vigilante: nombreVigilante,
-      nombre_supervisor: nombreSupervisor,
+      nombre_supervisor: nombreSupervisorActual || nombreSupervisor,
       fecha,
       hora,
-      turno,
+      turno: turnoActualTexto || turno,
       elementos_a_cargo: elementosACargo,
       informe_novedades: informeNovedades.trim()
     })
@@ -319,55 +355,35 @@ export const LibroNovedades: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Etiqueta requerido>Objetivo del Servicio</Etiqueta>
-              <select
-                value={idObjetivo}
-                onChange={(e) => setIdObjetivo(e.target.value)}
-                className="w-full min-h-[46px] rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 px-3 py-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
-              >
-                {objetivos.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.nombre} ({o.localidad})
-                  </option>
-                ))}
-              </select>
+              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
+                {objetivoActual ? `${objetivoActual.nombre}${objetivoActual.localidad ? ` (${objetivoActual.localidad})` : ''}` : 'No hay un objetivo asignado para este turno'}
+              </div>
             </div>
 
             <div>
               <Etiqueta requerido>Turno Correspondiente</Etiqueta>
-              <Entrada
-                value={turno}
-                onChange={(e) => setTurno(e.target.value)}
-                placeholder="12🌙 Nocturno (19:00 - 07:00)"
-              />
+              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
+                {turnoActualTexto || 'No se detectó un turno en servicio'}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Etiqueta requerido>Fecha</Etiqueta>
-              <Entrada
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-              />
+              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{fecha || 'Se registra automáticamente'}</div>
             </div>
             <div>
               <Etiqueta requerido>Hora</Etiqueta>
-              <Entrada
-                type="time"
-                value={hora}
-                onChange={(e) => setHora(e.target.value)}
-              />
+              <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{hora ? `${hora} hs` : 'Se registra automáticamente'}</div>
             </div>
           </div>
 
           <div>
             <Etiqueta requerido>Supervisor a Cargo</Etiqueta>
-            <Entrada
-              value={nombreSupervisor}
-              onChange={(e) => setNombreSupervisor(e.target.value)}
-              placeholder="Carlos Méndez"
-            />
+            <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">
+              {nombreSupervisorActual || 'El objetivo no tiene un supervisor asignado'}
+            </div>
           </div>
 
           <div>
