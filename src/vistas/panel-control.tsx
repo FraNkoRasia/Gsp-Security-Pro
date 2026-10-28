@@ -262,17 +262,17 @@ export const VistaPanelControl: React.FC = () => {
       )}
       {createPortal((
         <>
-          <nav className="md:hidden fixed inset-x-0 bottom-0 z-[60] border-t border-slate-800 bg-[#080D17]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
+          <nav className="md:hidden fixed inset-x-0 bottom-0 z-[60] border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#080D17]/95 dark:shadow-none pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
             <div className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2 pt-2 pb-1">
               {esSuperAdmin && (
                 <>
                   <button type="button" onClick={() => { setEmpresaSeleccionadaId(null); setObjetivoSeleccionadoId(null); setMasAbierto(false) }}
-                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (!empresaSeleccionadaId ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
+                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (!empresaSeleccionadaId ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                     <Building2 className="h-5 w-5" />
                     <span>Empresas</span>
                   </button>
                   <button type="button" disabled={!empresaSeleccionadaId} onClick={() => { setObjetivoSeleccionadoId(null); setMasAbierto(false) }}
-                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (empresaSeleccionadaId ? 'text-slate-400 hover:text-white' : 'text-slate-600')}>
+                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (empresaSeleccionadaId ? 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' : 'text-slate-300 dark:text-slate-600')}>
                     <MapPin className="h-5 w-5" />
                     <span>Objetivos</span>
                   </button>
@@ -295,27 +295,27 @@ export const VistaPanelControl: React.FC = () => {
                       setMasAbierto(false)
                     }
                   }} aria-current={activa ? 'page' : undefined}
-                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (activa ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
+                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (activa ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                     {React.cloneElement(p.icono, { className: 'h-5 w-5' })}
                     <span className="max-w-full truncate">{p.label}</span>
                   </button>
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal']).includes(pestanaRenderizada) ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
+                className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
             </div>
           </nav>
           {masAbierto && (
-            <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-3 pt-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] backdrop-blur-md" onClick={() => setMasAbierto(false)}>
-              <section className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-600/60 bg-[#11151D]/95 p-2.5 shadow-2xl" role="dialog" aria-modal="true" aria-label="Más opciones de navegación" onClick={(e) => e.stopPropagation()}>
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(100,116,139,0.18),transparent_48%),radial-gradient(ellipse_at_bottom_right,rgba(37,99,235,0.34),transparent_38%),radial-gradient(ellipse_at_bottom_left,rgba(127,29,29,0.12),transparent_32%)]" />
+            <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center bg-slate-900/20 px-3 pt-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] backdrop-blur-md dark:bg-black/40" onClick={() => setMasAbierto(false)}>
+              <section className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white/98 p-2.5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] dark:border-slate-600/60 dark:bg-[#11151D]/95 dark:shadow-2xl" role="dialog" aria-modal="true" aria-label="Más opciones de navegación" onClick={(e) => e.stopPropagation()}>
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(148,163,184,0.12),transparent_48%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.12),transparent_38%),radial-gradient(ellipse_at_bottom_left,rgba(239,68,68,0.05),transparent_32%)] dark:bg-[radial-gradient(ellipse_at_top_left,rgba(100,116,139,0.18),transparent_48%),radial-gradient(ellipse_at_bottom_right,rgba(37,99,235,0.34),transparent_38%),radial-gradient(ellipse_at_bottom_left,rgba(127,29,29,0.12),transparent_32%)]" />
                 <div className="relative">
                   <div className="mb-2 flex items-center justify-between px-2">
-                    <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Más secciones</h2>
-                    <button type="button" onClick={() => setMasAbierto(false)} className="rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Cerrar opciones"><X className="h-4 w-4" /></button>
+                    <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Más secciones</h2>
+                    <button type="button" onClick={() => setMasAbierto(false)} className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white" aria-label="Cerrar opciones"><X className="h-4 w-4" /></button>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
                     {pestanas.filter((p) => !(esVigilador
@@ -335,7 +335,7 @@ export const VistaPanelControl: React.FC = () => {
                             setMasAbierto(false)
                           }
                         }}
-                          className={'flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left text-xs font-semibold transition-colors ' + (activa ? 'border-blue-400/50 bg-blue-500/20 text-blue-300' : 'border-white/[0.035] bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]')}>
+                          className={'flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left text-xs font-semibold transition-colors ' + (activa ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/[0.035] dark:bg-white/[0.045] dark:text-slate-300 dark:hover:bg-white/[0.08]')}>
                           <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{p.icono}</span><span className="min-w-0 flex-1 truncate">{p.label}</span>
                           {p.contador ? <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black text-white">{p.contador}</span> : null}
                         </button>
