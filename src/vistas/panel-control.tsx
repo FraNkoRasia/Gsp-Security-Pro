@@ -220,10 +220,6 @@ export const VistaPanelControl: React.FC = () => {
                     </div>
                     <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Supervisor a cargo</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">{objetivo.supervisor_nombre || 'No informado'}</p>
-                      </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Elementos a cargo</p>
                         <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">{objetivo.elementos_a_cargo || 'No informados'}</p>
                       </div>
