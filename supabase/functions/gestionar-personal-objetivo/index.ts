@@ -58,8 +58,8 @@ Deno.serve(async (req) => {
       const telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
       const idObjetivo = String(b.id_objetivo || "")
-      if (!nombre || !apellido || !email || !idObjetivo || dni.length < 7)
-        return json({ error: "Completá nombre, apellido, correo, DNI y objetivo. El DNI debe tener al menos 7 dígitos." }, 400)
+      if (!nombre || !apellido || !email || !idObjetivo || dni.length < 8)
+        return json({ error: "Completá nombre, apellido, correo, DNI y objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
       const password = dni
       const { data: objetivo } = await db.from("objetivos").select("id,id_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
       if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
@@ -79,6 +79,13 @@ Deno.serve(async (req) => {
     }
 
     if (!id) return json({ error: "Falta el identificador de la cuenta." }, 400)
+    if (accion === "historial") {
+      const { data: target } = await db.from("perfiles").select("id,id_empresa,rol").eq("id", id).eq("id_empresa", idEmpresa).single()
+      if (!target || target.rol !== rol) return json({ error: "La cuenta no pertenece a esta empresa o no coincide con el rol." }, 404)
+      const { data, error } = await db.from("auditoria").select("id,accion,entidad,detalle,fecha_hora").eq("id_empresa", idEmpresa).eq("entidad_id", id).order("fecha_hora", { ascending: false }).limit(100)
+      if (error) return json({ error: error.message }, 400)
+      return json({ historial: data || [] })
+    }
     const { data: target } = await db.from("perfiles").select("id,id_empresa,rol,activo,debe_cambiar_contrasena").eq("id", id).eq("id_empresa", idEmpresa).single()
     if (!target || target.rol !== rol) return json({ error: "La cuenta no pertenece a esta empresa o no coincide con el rol." }, 404)
 
