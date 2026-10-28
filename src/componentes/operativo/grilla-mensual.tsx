@@ -16,6 +16,7 @@ import { cargarFeriadosArgentina } from '@/utilidades/feriados-argentina'
 import type { Turno } from '@/tipos'
 import { supabase } from '@/servicios/supabase'
 import { useTraduccion } from '@/i18n'
+import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 
 const formatearHorasMinutos = (horas: number) => {
   const minutosTotales = Math.round(horas * 60)
@@ -43,6 +44,7 @@ type OperacionGrilla = { id_vigilador: string; fecha: string; codigo: string; id
 export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: boolean; onCambiosPendientesChange?: (pendientes: boolean) => void }> = ({ objetivoInicial = '', soloLectura = false, onCambiosPendientesChange }) => {
   const { objetivos, vigiladores, asignaciones, turnos, tiposTurno, guardarGrillaMensual } = useOperativo()
   const { idioma } = useTraduccion()
+  const { usuario } = useAutenticacion()
   const contenedorDesplazamientoRef = useRef<HTMLDivElement>(null)
   const arrastreRef = useRef({ activo: false, inicioX: 0, scrollInicial: 0, seMovio: false })
   const suprimirClickRef = useRef(false)
@@ -541,7 +543,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
             Grilla Mensual Operativa
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Visualizá y administrá los turnos del mes completo.
+            {usuario?.rol === 'vigilador' ? 'Consultá los turnos del mes completo.' : usuario?.rol === 'administrador' || usuario?.rol === 'supervisor' ? 'Visualizá y administrá los turnos del mes completo.' : 'Visualizá los turnos del mes completo.'}
           </p>
         </div>
 
