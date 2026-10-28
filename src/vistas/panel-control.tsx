@@ -103,7 +103,7 @@ export const VistaPanelControl: React.FC = () => {
     : pestanas[0]?.id || ''
 
   return (
-    <div className={"space-y-6 animate-fadeIn " + (esVigilador ? "pb-24 md:pb-0" : "")}>
+    <div className={"space-y-6 animate-fadeIn " + (!esSuperAdmin ? "pb-24 md:pb-0" : "")}>
       {/* Navegación y contenido operativo */}
       {esSuperAdmin ? (
         <div className="pt-1">
@@ -147,7 +147,7 @@ export const VistaPanelControl: React.FC = () => {
         </div>
       ) : (
         <>
-          {!esEncargado && <div className={(esVigilador ? "hidden md:grid" : "grid") + " grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pb-2 border-b border-slate-200 dark:border-slate-800/80"}>
+          {!esEncargado && <div className={(esVigilador || esAdmin ? "hidden md:grid" : "grid") + " grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pb-2 border-b border-slate-200 dark:border-slate-800/80"}>
             {pestanas.map((p) => {
               const estaActiva = pestanaRenderizada === p.id
               return (
@@ -259,22 +259,35 @@ export const VistaPanelControl: React.FC = () => {
           </div>
         </>
       )}
-      {esVigilador && createPortal((
+      {!esSuperAdmin && createPortal((
         <>
           <nav className="md:hidden fixed inset-x-0 bottom-0 z-[60] border-t border-slate-800 bg-[#080D17]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
             <div className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2 pt-2 pb-1">
-              {pestanas.filter((p) => ['miTurno', 'grilla', 'miMes'].includes(p.id)).map((p) => {
+              {(esVigilador
+                ? pestanas.filter((p) => ['miTurno', 'grilla', 'miMes'].includes(p.id))
+                : esAdmin
+                ? pestanas.filter((p) => ['objetivos', 'vigiladores', 'novedades'].includes(p.id))
+                : pestanas.slice(0, 1)
+              ).map((p) => {
                 const activa = pestanaRenderizada === p.id
                 return (
-                  <button key={p.id} type="button" onClick={() => { setPestanaActiva(p.id); setMasAbierto(false) }} aria-current={activa ? 'page' : undefined}
+                  <button key={p.id} type="button" onClick={() => {
+                    if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
+                      setPestanaPendiente(p.id)
+                      setModalSalidaGrilla(true)
+                    } else {
+                      setPestanaActiva(p.id)
+                      setMasAbierto(false)
+                    }
+                  }} aria-current={activa ? 'page' : undefined}
                     className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (activa ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
                     {React.cloneElement(p.icono, { className: 'h-5 w-5' })}
-                    <span>{p.label}</span>
+                    <span className="max-w-full truncate">{p.label}</span>
                   </button>
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (masAbierto || !['miTurno', 'grilla', 'miMes'].includes(pestanaRenderizada) ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
+                className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal']).includes(pestanaRenderizada) ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
@@ -290,10 +303,23 @@ export const VistaPanelControl: React.FC = () => {
                     <button type="button" onClick={() => setMasAbierto(false)} className="rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Cerrar opciones"><X className="h-4 w-4" /></button>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {pestanas.filter((p) => !['miTurno', 'grilla', 'miMes'].includes(p.id)).map((p) => {
+                    {pestanas.filter((p) => !(esVigilador
+                      ? ['miTurno', 'grilla', 'miMes'].includes(p.id)
+                      : esAdmin
+                      ? ['objetivos', 'vigiladores', 'novedades'].includes(p.id)
+                      : ['asistenciaPersonal'].includes(p.id)
+                    )).map((p) => {
                       const activa = pestanaRenderizada === p.id
                       return (
-                        <button key={p.id} type="button" onClick={() => { setPestanaActiva(p.id); setMasAbierto(false) }}
+                        <button key={p.id} type="button" onClick={() => {
+                          if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
+                            setPestanaPendiente(p.id)
+                            setModalSalidaGrilla(true)
+                          } else {
+                            setPestanaActiva(p.id)
+                            setMasAbierto(false)
+                          }
+                        }}
                           className={'flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left text-xs font-semibold transition-colors ' + (activa ? 'border-blue-400/50 bg-blue-500/20 text-blue-300' : 'border-white/[0.035] bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]')}>
                           <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{p.icono}</span><span className="min-w-0 flex-1 truncate">{p.label}</span>
                           {p.contador ? <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black text-white">{p.contador}</span> : null}
