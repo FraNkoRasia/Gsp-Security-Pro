@@ -288,15 +288,12 @@ export const VistaPanelControl: React.FC = () => {
                 ? pestanas.filter((p) => ['miTurno', 'grilla', 'miMes'].includes(p.id))
                 : esAdmin
                 ? pestanas.filter((p) => ['objetivos', 'vigiladores', 'novedades'].includes(p.id))
-                : esEncargado
-                ? pestanas.filter((p) => ['asistenciaPersonal', 'personal'].includes(p.id))
                 : pestanas.slice(0, 1)
               ).map((p) => {
                 const activa = pestanaRenderizada === p.id
                 return (
                   <button key={p.id} type="button" onClick={() => {
                     window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
-                    if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
                     if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                       setPestanaPendiente(p.id)
                       setModalSalidaGrilla(true)
@@ -312,7 +309,7 @@ export const VistaPanelControl: React.FC = () => {
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : esEncargado ? ['asistenciaPersonal', 'personal'] : ['asistenciaPersonal']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal', 'personal']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
