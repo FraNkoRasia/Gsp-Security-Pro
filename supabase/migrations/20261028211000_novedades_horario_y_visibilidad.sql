@@ -35,6 +35,8 @@ begin
     and t.id_objetivo = new.id_objetivo
     and t.id_empresa = new.id_empresa
     and t.estado not in ('ausente', 'reemplazado')
+    and coalesce(t.horas_totales, 0) > 0
+    and t.tipo <> 'franco'
     and t.hora_inicio is not null
     and t.hora_fin is not null
     and v_ahora between
