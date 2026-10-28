@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import {
   Users,
   MapPin,
+  Building2,
   Calendar,
   BookOpen,
   ArrowRightLeft,
@@ -103,7 +104,7 @@ export const VistaPanelControl: React.FC = () => {
     : pestanas[0]?.id || ''
 
   return (
-    <div className={"space-y-6 animate-fadeIn " + (!esSuperAdmin ? "pb-24 md:pb-0" : "")}>
+    <div className="space-y-6 animate-fadeIn pb-24 md:pb-0">
       {/* Navegación y contenido operativo */}
       {esSuperAdmin ? (
         <div className="pt-1">
@@ -259,10 +260,24 @@ export const VistaPanelControl: React.FC = () => {
           </div>
         </>
       )}
-      {!esSuperAdmin && createPortal((
+      {createPortal((
         <>
           <nav className="md:hidden fixed inset-x-0 bottom-0 z-[60] border-t border-slate-800 bg-[#080D17]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
             <div className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2 pt-2 pb-1">
+              {esSuperAdmin && (
+                <>
+                  <button type="button" onClick={() => { setEmpresaSeleccionadaId(null); setObjetivoSeleccionadoId(null); setMasAbierto(false) }}
+                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (!empresaSeleccionadaId ? 'text-blue-400' : 'text-slate-400 hover:text-white')}>
+                    <Building2 className="h-5 w-5" />
+                    <span>Empresas</span>
+                  </button>
+                  <button type="button" disabled={!empresaSeleccionadaId} onClick={() => { setObjetivoSeleccionadoId(null); setMasAbierto(false) }}
+                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (empresaSeleccionadaId ? 'text-slate-400 hover:text-white' : 'text-slate-600')}>
+                    <MapPin className="h-5 w-5" />
+                    <span>Objetivos</span>
+                  </button>
+                </>
+              )}
               {(esVigilador
                 ? pestanas.filter((p) => ['miTurno', 'grilla', 'miMes'].includes(p.id))
                 : esAdmin
