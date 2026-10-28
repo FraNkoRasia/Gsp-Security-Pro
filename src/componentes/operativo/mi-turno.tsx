@@ -8,7 +8,7 @@ import { SolicitarHorasExtra } from '@/componentes/operativo/solicitar-horas-ext
 import { useTraduccion } from '@/i18n'
 
 export const MiTurno: React.FC = () => {
-  const { turnos, objetivos, asignaciones, supervisores, tiposTurno, solicitudesHorasExtra } = useOperativo()
+  const { turnos, objetivos, asignaciones, supervisores, encargados, tiposTurno, solicitudesHorasExtra } = useOperativo()
   const { usuario } = useAutenticacion()
   const { idioma } = useTraduccion()
 
@@ -75,7 +75,9 @@ export const MiTurno: React.FC = () => {
   const asignacionActiva = asignaciones.find((a) => a.id_vigilador === idVig && a.activa)
   const objetivoActivo = objetivos.find((o) => o.id === asignacionActiva?.id_objetivo)
   const supervisorActivo = supervisores.find((s) => s.id === objetivoActivo?.id_supervisor)
-  const supervisorNombre = objetivoActivo?.supervisor_nombre?.trim() || (supervisorActivo ? `${supervisorActivo.nombre} ${supervisorActivo.apellido}`.trim() : '')
+  const supervisorNombre = supervisorActivo ? `${supervisorActivo.nombre} ${supervisorActivo.apellido}`.trim() : ''
+  const encargadoActivo = encargados.find((e) => e.id === objetivoActivo?.id_encargado_empresa)
+  const encargadoNombre = encargadoActivo ? `${encargadoActivo.nombre} ${encargadoActivo.apellido}`.trim() : ''
 
   // Última novedad registrada
   return (
@@ -85,7 +87,7 @@ export const MiTurno: React.FC = () => {
           Mi Turno Operativo
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Información de tu puesto, horario, supervisor y elementos asignados.
+          Información de tu puesto, horario, supervisor, encargado y elementos asignados.
         </p>
       </div>
 
@@ -141,6 +143,14 @@ export const MiTurno: React.FC = () => {
                 </span>
                 <span className="font-bold text-slate-900 dark:text-white text-sm break-words">
                   {supervisorNombre || (idioma === 'en' ? 'No supervisor assigned' : 'Sin supervisor asignado')}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">
+                  Encargado a Cargo:
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm break-words">
+                  {encargadoNombre || (idioma === 'en' ? 'No manager assigned' : 'Sin encargado asignado')}
                 </span>
               </div>
             </div>
