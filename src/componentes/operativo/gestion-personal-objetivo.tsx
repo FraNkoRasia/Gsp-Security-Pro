@@ -44,7 +44,18 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
   const ejecutar = useCallback(async (accion:string, extra:Record<string,unknown>={}) => {
     if(!supabase) throw new Error("Supabase no está configurado.")
     const {data,error:invokeError}=await supabase.functions.invoke("gestionar-personal-objetivo",{body:{accion,rol,id_empresa:idEmpresa,...extra}})
-    if(invokeError||data?.error) throw new Error(data?.error||invokeError?.message||"No se pudo completar la operación.")
+    if(invokeError){
+      let mensaje=invokeError.message||"No se pudo completar la operación."
+      const contexto=(invokeError as {context?:unknown}).context
+      if(contexto && typeof contexto==="object" && "json" in contexto && typeof (contexto as {json?:unknown}).json==="function"){
+        try{
+          const cuerpo=await (contexto as {json:()=>Promise<{error?:string;message?:string}>}).json()
+          mensaje=cuerpo?.error||cuerpo?.message||mensaje
+        }catch{/* La respuesta no contiene JSON legible; se conserva el mensaje original. */}
+      }
+      throw new Error(mensaje)
+    }
+    if(data?.error) throw new Error(data.error)
     return data
   },[rol,idEmpresa])
 
