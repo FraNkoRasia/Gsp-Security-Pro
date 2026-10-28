@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     if (accion === "restablecer_contrasena") {
       const { data: cred } = await db.from("credenciales_personal_objetivo").select("dni").eq("id_usuario", id).eq("id_empresa", idEmpresa).single()
       const dni = normDni(cred?.dni)
-      if (dni.length < 7) return json({ error: "No hay un DNI válido guardado para esta cuenta." }, 409)
+      if (dni.length < 8) return json({ error: "No hay un DNI válido de al menos 8 dígitos guardado para esta cuenta." }, 409)
       const { error: flagErr } = await db.from("perfiles").update({ debe_cambiar_contrasena: true }).eq("id", id)
       if (flagErr) return json({ error: flagErr.message }, 500)
       const { error: passErr } = await db.auth.admin.updateUserById(id, { password: dni })
@@ -107,12 +107,20 @@ Deno.serve(async (req) => {
       const email = String(b.email || "").trim().toLowerCase(), telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
       const idObjetivo = String(b.id_objetivo || "")
-      if (!nombre || !apellido || !email || dni.length < 7 || !idObjetivo) return json({ error: "Nombre, apellido, correo, DNI y objetivo son obligatorios." }, 400)
-      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
+      if (!nombre || !apellido || !email || dni.length < 8 || !idObjetivo) return json({ error: "Nombre, apellido, correo, DNI y objetivo son obligatorios." }, 400)
+      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
       if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
-      const { error: authUpdate } = await db.auth.admin.updateUserById(id, { email, email_confirm: true, password: dni })
+      if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== id) return json({ error: "Ese objetivo ya tiene una persona asignada en este rol." }, 409)
+      const { data: credActual } = await db.from("credenciales_personal_objetivo").select("dni").eq("id_usuario", id).eq("id_empresa", idEmpresa).single()
+      const dniAnterior = normDni(credActual?.dni)
+      const cambiaDni = dni !== dniAnterior
+      const authChanges: { email: string; email_confirm: boolean; password?: string } = { email, email_confirm: true }
+      if (cambiaDni) authChanges.password = dni
+      const { error: authUpdate } = await db.auth.admin.updateUserById(id, authChanges)
       if (authUpdate) return json({ error: authUpdate.message }, 400)
-      const { error: profileUpdate } = await db.from("perfiles").update({ nombre, apellido, email, telefono, debe_cambiar_contrasena: true }).eq("id", id)
+      const profileChanges: { nombre:string; apellido:string; email:string; telefono:string|null; debe_cambiar_contrasena?:boolean } = { nombre, apellido, email, telefono }
+      if (cambiaDni) profileChanges.debe_cambiar_contrasena = true
+      const { error: profileUpdate } = await db.from("perfiles").update(profileChanges).eq("id", id)
       if (profileUpdate) return json({ error: profileUpdate.message }, 400)
       const { error: credUpdate } = await db.from("credenciales_personal_objetivo").update({ dni, actualizado_en: new Date().toISOString() }).eq("id_usuario", id)
       if (credUpdate) return json({ error: credUpdate.message }, 400)
