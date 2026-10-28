@@ -36,6 +36,28 @@ export const CambiosTurnos: React.FC = () => {
   const [fechaReemplazo, setFechaReemplazo] = useState('2026-10-15')
 
   const esAdmin = usuario?.rol === 'super_administrador' || usuario?.rol === 'administrador'
+  const asignacionActivaUsuario = asignaciones.find((asignacion) =>
+    asignacion.id_vigilador === usuario?.id &&
+    asignacion.activa &&
+    asignacion.fecha_inicio <= new Date().toISOString().slice(0, 10) &&
+    (!asignacion.fecha_fin || asignacion.fecha_fin >= new Date().toISOString().slice(0, 10))
+  )
+  const idObjetivoUsuario = asignacionActivaUsuario?.id_objetivo
+  // Los vigiladores solo pueden solicitar cambios y buscar reemplazos dentro de su objetivo actual.
+  const vigiladoresDelObjetivo = esAdmin
+    ? vigiladores
+    : idObjetivoUsuario
+    ? vigiladores.filter((vigilador) =>
+        vigilador.id !== usuario?.id &&
+        asignaciones.some((asignacion) =>
+          asignacion.id_vigilador === vigilador.id &&
+          asignacion.id_objetivo === idObjetivoUsuario &&
+          asignacion.activa &&
+          asignacion.fecha_inicio <= new Date().toISOString().slice(0, 10) &&
+          (!asignacion.fecha_fin || asignacion.fecha_fin >= new Date().toISOString().slice(0, 10))
+        )
+      )
+    : []
 
   const solicitudesVisibles = solicitudesCambio.filter((sol) => {
     const autorizado = esAdmin || sol.id_solicitante === usuario?.id || sol.id_destinatario === usuario?.id
@@ -52,7 +74,7 @@ export const CambiosTurnos: React.FC = () => {
   )
 
   const abrirSolicitud = () => {
-    setIdDestinatario(vigiladores[1]?.id || '')
+    setIdDestinatario(vigiladoresDelObjetivo[0]?.id || '')
     setFechaTurno('2026-10-15')
     setMotivo('')
     setError(null)
@@ -88,7 +110,7 @@ export const CambiosTurnos: React.FC = () => {
   }
 
   // Detectar vigiladores disponibles para reemplazo (Sección 30)
-  const vigiladoresDisponibles = vigiladores.map((v) => {
+  const vigiladoresDisponibles = vigiladoresDelObjetivo.map((v) => {
     const turnoEnFecha = turnos.find((t) => t.id_vigilador === v.id && t.fecha === fechaReemplazo)
     const tieneConflicto = turnoEnFecha && turnoEnFecha.tipo !== 'franco' && turnoEnFecha.horas_totales > 0
     return {
@@ -307,13 +329,15 @@ export const CambiosTurnos: React.FC = () => {
               className="w-full min-h-[46px] rounded-xl bg-white dark:bg-[#0A0F1A] border border-slate-300 dark:border-slate-700/80 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
             >
               <option value="">Seleccioná un vigilador...</option>
-              {vigiladores
-                .filter((v) => v.id !== usuario?.id)
-                .map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nombre} {v.apellido} ({v.email})
-                  </option>
-                ))}
+              {vigiladoresDelObjetivo.length === 0 ? (
+                <option value="" disabled>
+                  {idObjetivoUsuario ? 'No hay colegas asignados a tu objetivo' : 'No tenés un objetivo activo asignado'}
+                </option>
+              ) : vigiladoresDelObjetivo.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nombre} {v.apellido} ({v.email})
+                </option>
+              ))}
             </select>
           </div>
 
@@ -361,7 +385,11 @@ export const CambiosTurnos: React.FC = () => {
           </div>
 
           <div className="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
-            {vigiladoresDisponibles.map(({ vigilador, disponible, turnoActual }) => (
+            {vigiladoresDisponibles.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-500">
+                {idObjetivoUsuario ? 'No hay otros vigiladores asignados a tu objetivo.' : 'No tenés un objetivo activo asignado.'}
+              </p>
+            ) : vigiladoresDisponibles.map(({ vigilador, disponible, turnoActual }) => (
               <div key={vigilador.id} className="py-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="font-bold text-slate-900 dark:text-white text-sm">
