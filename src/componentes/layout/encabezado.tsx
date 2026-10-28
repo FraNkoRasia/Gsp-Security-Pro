@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { LogOut, Menu, X, Globe, Sun, Moon, UserRound, Download } from 'lucide-react'
+import { Menu, X, Globe, Sun, Moon, UserRound, Download } from 'lucide-react'
 import { ModalInstalacion } from '@/componentes/pwa/modal-instalacion'
 import { obtenerEstadoDispositivo, type EstadoInstalacion } from '@/utilidades/deteccion-plataforma'
 import { Insignia } from '@/componentes/ui/insignia'
-import { Boton } from '@/componentes/ui/boton'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTema } from '@/contextos/contexto-tema'
 import { useTraduccion } from '@/i18n'
@@ -18,10 +17,11 @@ interface PropiedadesEncabezado {
   alIrAInicio?: () => void
   alAbrirPerfil?: () => void
   ubicacionActual?: 'inicio' | 'perfil'
+  alVolverAlInicioSesion?: () => void
 }
 
-export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbrirPerfil, ubicacionActual = 'inicio' }) => {
-  const { usuario, estaAutenticado, cerrarSesion } = useAutenticacion()
+export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVolverAlInicioSesion, alAbrirPerfil, ubicacionActual = 'inicio' }) => {
+  const { usuario, estaAutenticado } = useAutenticacion()
   const { t, idioma, cambiarIdioma } = useTraduccion()
   const { temaActual, cambiarTema } = useTema()
 
@@ -238,7 +238,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
                     type="button"
                     onClick={() => {
                       setMenuMovilAbierto(false)
-                      alIrAInicio()
+                      ;(alVolverAlInicioSesion ?? alIrAInicio)?.()
                     }}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer shadow-sm ${ubicacionActual === 'inicio'
                       ? 'bg-slate-500/10 dark:bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-400/70 dark:border-slate-600 hover:bg-slate-500/20 hover:border-slate-500'
@@ -366,23 +366,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alAbr
 
             </div>
 
-            {/* Pie del menú móvil con Cierre de Sesión */}
-            {estaAutenticado && (
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-                <Boton
-                  variante="fantasma"
-                  tamano="medio"
-                  className="w-full bg-red-500/10 dark:bg-red-500/10 border border-red-500/80 dark:border-red-500/80 text-red-500 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/20 hover:border-red-400 transition-colors"
-                  onClick={() => {
-                    setMenuMovilAbierto(false)
-                    cerrarSesion()
-                  }}
-                  icono={<LogOut className="w-4 h-4" />}
-                >
-                  Cerrar Sesión
-                </Boton>
-              </div>
-            )}
+
           </div>
         </div>,
         document.body
