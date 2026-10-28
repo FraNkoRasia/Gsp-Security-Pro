@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, Globe, Sun, Moon, UserRound, Download } from 'lucide-react'
+import { Menu, X, Globe, Sun, Moon, Download } from 'lucide-react'
 import { ModalInstalacion } from '@/componentes/pwa/modal-instalacion'
 import { obtenerEstadoDispositivo, type EstadoInstalacion } from '@/utilidades/deteccion-plataforma'
 import { Insignia } from '@/componentes/ui/insignia'
@@ -252,46 +252,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVol
                 </div>
               )}
 
-              {/* Acceso al perfil */}
-              {estaAutenticado && usuario && alAbrirPerfil && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuMovilAbierto(false)
-                      alAbrirPerfil()
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer shadow-sm ${ubicacionActual === 'perfil'
-                      ? 'bg-slate-500/10 dark:bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-400/70 dark:border-slate-600 hover:bg-slate-500/20 hover:border-slate-500'
-                      : 'bg-blue-500/10 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/70 hover:bg-blue-500/20 hover:border-blue-400'}`}
-                  >
-                    <span className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                      <UserRound className="w-4 h-4" />
-                    </span>
-                    <span className="text-sm font-bold">Perfil</span>
-                  </button>
-                </div>
-              )}
 
-              {/* Instalación de la PWA */}
-              {!appInstalada && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuMovilAbierto(false)
-                      void instalarAplicacion()
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/70 hover:bg-blue-500/20 hover:border-blue-400 transition-colors cursor-pointer shadow-sm"
-                    title="Instalar GSP Security Pro"
-                  >
-                    <span className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                      <Download className="w-4 h-4" />
-                    </span>
-                    <span className="text-sm font-bold">Instalar aplicación</span>
-                  </button>
-                </div>
-              )}
 
               {/* Preferencias de Idioma y Tema en Menú Móvil */}
               <div className="space-y-3 pt-2">
