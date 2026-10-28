@@ -75,6 +75,11 @@ export const AsistenciaPersonal: React.FC = () => {
   const [categoriaAEliminar,setCategoriaAEliminar] = useState<Categoria|null>(null)
   const [confirmacionEliminarCategoria,setConfirmacionEliminarCategoria] = useState(false)
   const [modalAltaAbierto,setModalAltaAbierto] = useState(false)
+  useEffect(() => {
+    const abrirAltaPersonal = () => { setError(''); setModalAltaAbierto(true) }
+    window.addEventListener('gsp:abrir-alta-personal', abrirAltaPersonal)
+    return () => window.removeEventListener('gsp:abrir-alta-personal', abrirAltaPersonal)
+  }, [])
   const [cargando,setCargando] = useState(true)
   const [guardando,setGuardando] = useState(false)
   const [error,setError] = useState('')
