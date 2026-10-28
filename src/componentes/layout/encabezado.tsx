@@ -18,7 +18,7 @@ interface PropiedadesEncabezado {
   ubicacionActual?: 'inicio' | 'perfil'
 }
 
-export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, ubicacionActual = 'inicio' }) => {
+export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio }) => {
   const { usuario, estaAutenticado, cerrarSesion } = useAutenticacion()
   const { t, idioma, cambiarIdioma } = useTraduccion()
   const { temaActual, cambiarTema } = useTema()
