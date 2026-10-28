@@ -7,7 +7,6 @@ import { DisposicionPrincipal } from '@/componentes/layout/disposicion-principal
 import { VistaInicioSesion } from '@/vistas/inicio-sesion'
 import { VistaPanelControl } from '@/vistas/panel-control'
 import { CambioContrasenaObligatorio } from '@/componentes/autenticacion/cambio-contrasena-obligatorio'
-import { InstalacionPwa } from '@/componentes/pwa/instalacion-pwa'
 import './App.css'
 
 const ContenidoAplicacion: React.FC = () => {
@@ -56,18 +55,7 @@ const AplicacionConDatosOperativos: React.FC = () => {
   return <ContenidoAplicacion />
 }
 
-const AplicacionCompleta: React.FC = () => {
-  const { estaAutenticado } = useAutenticacion()
-
-  return (
-    <>
-      <AplicacionConDatosOperativos />
-      {/* En login, el instalador se muestra dentro de la tarjeta original.
-          En sesión iniciada, queda disponible sin alterar esa ubicación. */}
-      {estaAutenticado && <InstalacionPwa />}
-    </>
-  )
-}
+const AplicacionCompleta: React.FC = () => <AplicacionConDatosOperativos />
 
 export function App() {
   return (
