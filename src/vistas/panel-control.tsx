@@ -261,7 +261,7 @@ export const VistaPanelControl: React.FC = () => {
       )}
       {esVigilador && createPortal((
         <>
-          <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-[#080D17]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
+          <nav className="md:hidden fixed inset-x-0 bottom-0 z-[60] border-t border-slate-800 bg-[#080D17]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
             <div className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2 pt-2 pb-1">
               {pestanas.filter((p) => ['miTurno', 'grilla', 'miMes'].includes(p.id)).map((p) => {
                 const activa = pestanaRenderizada === p.id
@@ -281,29 +281,29 @@ export const VistaPanelControl: React.FC = () => {
             </div>
           </nav>
           {masAbierto && (
-            <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center bg-black/45 px-3 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] backdrop-blur-md" onClick={() => setMasAbierto(false)}>
-              <section className="relative w-full max-w-xl overflow-hidden rounded-[2rem] border border-slate-600/60 bg-[#11151D]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.6)]" role="dialog" aria-modal="true" aria-label="Más opciones de navegación" onClick={(e) => e.stopPropagation()}>
+            <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-3 pt-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] backdrop-blur-md" onClick={() => setMasAbierto(false)}>
+              <section className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-600/60 bg-[#11151D]/95 p-2.5 shadow-2xl" role="dialog" aria-modal="true" aria-label="Más opciones de navegación" onClick={(e) => e.stopPropagation()}>
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(100,116,139,0.18),transparent_48%),radial-gradient(ellipse_at_bottom_right,rgba(37,99,235,0.34),transparent_38%),radial-gradient(ellipse_at_bottom_left,rgba(127,29,29,0.12),transparent_32%)]" />
                 <div className="relative">
-                  <div className="mb-4 flex items-center justify-between px-1">
-                    <h2 className="text-base font-bold uppercase tracking-wide text-slate-400">Más secciones</h2>
-                    <button type="button" onClick={() => setMasAbierto(false)} className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Cerrar opciones"><X className="h-5 w-5" /></button>
+                  <div className="mb-2 flex items-center justify-between px-2">
+                    <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Más secciones</h2>
+                    <button type="button" onClick={() => setMasAbierto(false)} className="rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Cerrar opciones"><X className="h-4 w-4" /></button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {pestanas.filter((p) => !['miTurno', 'grilla', 'miMes'].includes(p.id)).map((p) => {
                       const activa = pestanaRenderizada === p.id
                       return (
                         <button key={p.id} type="button" onClick={() => { setPestanaActiva(p.id); setMasAbierto(false) }}
-                          className={'flex min-h-[4.25rem] items-center gap-3 rounded-[1.4rem] border px-3.5 py-3 text-left text-sm font-semibold transition-all ' + (activa ? 'border-blue-400/50 bg-blue-500/20 text-blue-300' : 'border-white/[0.035] bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]')}>
-                          <span className="shrink-0 [&>svg]:h-5 [&>svg]:w-5">{p.icono}</span><span className="min-w-0 flex-1">{p.label}</span>
+                          className={'flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left text-xs font-semibold transition-colors ' + (activa ? 'border-blue-400/50 bg-blue-500/20 text-blue-300' : 'border-white/[0.035] bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]')}>
+                          <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{p.icono}</span><span className="min-w-0 flex-1 truncate">{p.label}</span>
                           {p.contador ? <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black text-white">{p.contador}</span> : null}
                         </button>
                       )
                     })}
                   </div>
-                  <div className="my-4 border-t border-white/10" />
-                  <button type="button" onClick={async () => { setMasAbierto(false); await cerrarSesion() }} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl px-4 py-3 text-base font-bold text-red-400 transition hover:bg-red-500/10 active:bg-red-500/15">
-                    <LogOut className="h-6 w-6" />
+                  <div className="mt-2 border-t border-white/10 pt-2" />
+                  <button type="button" onClick={async () => { setMasAbierto(false); await cerrarSesion() }} className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-red-400 transition hover:bg-red-500/10 active:bg-red-500/15">
+                    <LogOut className="h-4 w-4" />
                     <span>Cerrar sesión</span>
                   </button>
                 </div>
