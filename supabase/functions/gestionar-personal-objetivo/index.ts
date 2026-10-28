@@ -61,8 +61,9 @@ Deno.serve(async (req) => {
       if (!nombre || !apellido || !email || !idObjetivo || dni.length < 8)
         return json({ error: "Completá nombre, apellido, correo, DNI y objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
       const password = dni
-      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
+      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
       if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
+      if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== "") return json({ error: "Ese objetivo ya tiene una persona asignada en este rol." }, 409)
       const { data: created, error: createErr } = await db.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre, apellido } })
       if (createErr || !created.user) return json({ error: createErr?.message || "No se pudo crear la cuenta." }, 400)
       const uid = created.user.id
@@ -109,9 +110,9 @@ Deno.serve(async (req) => {
       if (!nombre || !apellido || !email || dni.length < 7 || !idObjetivo) return json({ error: "Nombre, apellido, correo, DNI y objetivo son obligatorios." }, 400)
       const { data: objetivo } = await db.from("objetivos").select("id,id_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
       if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
-      const { error: authUpdate } = await db.auth.admin.updateUserById(id, { email, email_confirm: true })
+      const { error: authUpdate } = await db.auth.admin.updateUserById(id, { email, email_confirm: true, password: dni })
       if (authUpdate) return json({ error: authUpdate.message }, 400)
-      const { error: profileUpdate } = await db.from("perfiles").update({ nombre, apellido, email, telefono }).eq("id", id)
+      const { error: profileUpdate } = await db.from("perfiles").update({ nombre, apellido, email, telefono, debe_cambiar_contrasena: true }).eq("id", id)
       if (profileUpdate) return json({ error: profileUpdate.message }, 400)
       const { error: credUpdate } = await db.from("credenciales_personal_objetivo").update({ dni, actualizado_en: new Date().toISOString() }).eq("id_usuario", id)
       if (credUpdate) return json({ error: credUpdate.message }, 400)
