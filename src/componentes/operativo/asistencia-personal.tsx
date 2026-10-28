@@ -310,7 +310,7 @@ export const AsistenciaPersonal: React.FC = () => {
           </label>
         </div>
         <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
-        {objetivoId && <button type="button" onClick={()=>{setError('');setModalAltaAbierto(true)}} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-400 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-600 transition hover:bg-emerald-500/15 dark:text-emerald-300"><Plus className="h-5 w-5"/>Agregar personal</button>}
+        
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
           {['Todas',...categorias.map(cat=>cat.nombre)].map(nombreCategoria=><button key={nombreCategoria} type="button" onClick={()=>setCategoriaFiltro(nombreCategoria)} aria-pressed={categoriaFiltro===nombreCategoria} className={`shrink-0 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition ${categoriaFiltro===nombreCategoria?'border-emerald-400 bg-emerald-500/10 text-emerald-500':'border-slate-300 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300'}`}>{nombreCategoria}</button>)}
         </div>
