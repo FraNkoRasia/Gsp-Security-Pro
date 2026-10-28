@@ -302,7 +302,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio }) => 
                     setMenuMovilAbierto(false)
                     void cerrarSesion()
                   }}
-                  className="mt-5 w-full flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 shadow-sm transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/60"
+                  className="mt-5 w-full flex items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 shadow-sm transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/60"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/40">
                     <LogOut className="h-5 w-5" />
