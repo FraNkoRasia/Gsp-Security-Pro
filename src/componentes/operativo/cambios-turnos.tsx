@@ -14,6 +14,7 @@ export const CambiosTurnos: React.FC = () => {
     solicitudesCambio,
     turnos,
     vigiladores,
+    asignaciones,
     solicitarCambioTurno,
     responderSolicitudCambio,
     aprobarCambioAdmin
