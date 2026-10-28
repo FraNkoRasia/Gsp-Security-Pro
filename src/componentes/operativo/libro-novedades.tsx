@@ -273,7 +273,7 @@ export const LibroNovedades: React.FC = () => {
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-900/50">
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">{nov.hora} hs</span>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{(nov.hora || '').slice(0, 5)} hs</span>
                             <Insignia variante="azul">{idioma === 'en' ? traducirTextoInterfaz(nov.turno) : nov.turno}</Insignia>
                             {noLeida && <Insignia variante="verde">Nueva</Insignia>}
                           </div>
@@ -312,7 +312,7 @@ export const LibroNovedades: React.FC = () => {
                       {nov.id_vigilador !== usuario?.id && !novedadesLeidas.includes(nov.id) ? <Insignia variante="verde">Nueva</Insignia> : null}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="font-mono">{nov.fecha} — {nov.hora} hs</span>
+                      <span className="font-mono">{nov.fecha} — {(nov.hora || '').slice(0, 5)} hs</span>
                       {usuario?.rol !== 'administrador' && usuario?.rol !== 'vigilador' && (
                         <button type="button" onClick={() => abrirEditar(nov)} className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors" title="Corregir novedad (asienta auditoría)">
                           <Edit2 className="w-4 h-4" />
@@ -327,7 +327,7 @@ export const LibroNovedades: React.FC = () => {
                   </div>
                   {usuario && (usuario.rol === 'administrador' || usuario.rol === 'supervisor' || nov.id_vigilador !== usuario.id) && (
                     <div className="pt-2 flex items-center justify-between text-xs border-t border-slate-200 dark:border-slate-800">
-                      <span className="text-[11px] text-slate-400 font-mono">{nov.fecha} — {nov.hora} hs</span>
+                      <span className="text-[11px] text-slate-400 font-mono">{nov.fecha} — {(nov.hora || '').slice(0, 5)} hs</span>
                       {novedadesLeidas.includes(nov.id) ? (
                         <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><span>Leído ✓</span></span>
                       ) : (
