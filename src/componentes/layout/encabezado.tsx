@@ -36,8 +36,7 @@ export const Encabezado: React.FC<PropiedadesEncabezado> = ({ alIrAInicio, alVol
 
   useEffect(() => {
     const verificarInstalacion = () => {
-      const instalada = window.matchMedia('(display-mode: standalone)').matches
-        || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+      // El estado de instalación se refleja mediante el evento y el modal PWA.
     }
 
     const manejarBeforeInstallPrompt = (event: Event) => {
