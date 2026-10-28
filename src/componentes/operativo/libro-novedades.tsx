@@ -61,7 +61,7 @@ export const LibroNovedades: React.FC = () => {
     setModalEditarAbierto(true)
   }
 
-  const manejarGuardar = (e: React.FormEvent) => {
+  const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -72,11 +72,11 @@ export const LibroNovedades: React.FC = () => {
 
     const nombreVigilante = usuario
       ? `${usuario.nombre} ${usuario.apellido}`
-      : 'Franco Rasia'
+      : 'Vigilador'
 
-    crearNovedad({
+    const resultado = await crearNovedad({
       id_objetivo: idObjetivo,
-      id_vigilador: usuario?.id || 'usr-vig-01',
+      id_vigilador: usuario?.id || '',
       nombre_vigilante: nombreVigilante,
       nombre_supervisor: nombreSupervisor,
       fecha,
@@ -85,6 +85,11 @@ export const LibroNovedades: React.FC = () => {
       elementos_a_cargo: elementosACargo,
       informe_novedades: informeNovedades.trim()
     })
+
+    if (resultado) {
+      setError(resultado)
+      return
+    }
 
     setModalNuevoAbierto(false)
   }
@@ -306,7 +311,7 @@ export const LibroNovedades: React.FC = () => {
         abierto={modalNuevoAbierto}
         alCerrar={() => setModalNuevoAbierto(false)}
         titulo="Asentar Novedad en Libro Digital"
-        subtitulo="Registro formal de hechos y relevo operativo del puesto de vigilancia."
+        subtitulo={usuario?.rol === 'vigilador' ? 'Podés registrar novedades desde 10 minutos antes del inicio hasta 10 minutos después de finalizar tu turno.' : 'Registro formal de hechos y relevo operativo del puesto de vigilancia.'}
         icono={<BookOpen className="w-5 h-5 text-blue-500" />}
         tamano="grande"
       >
