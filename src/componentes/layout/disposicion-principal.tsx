@@ -6,6 +6,7 @@ import { VistaTerminos } from '@/vistas/terminos'
 import { VistaPrivacidad } from '@/vistas/privacidad'
 import { VistaAcercaDe } from '@/vistas/acerca-de'
 import { VistaPerfil } from '@/vistas/perfil'
+import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 
 interface PropiedadesDisposicionPrincipal {
   children: React.ReactNode
@@ -14,6 +15,8 @@ interface PropiedadesDisposicionPrincipal {
 export type SubVista = 'ninguna' | 'ayuda' | 'terminos' | 'privacidad' | 'acercaDe' | 'perfil'
 
 export const DisposicionPrincipal: React.FC<PropiedadesDisposicionPrincipal> = ({ children }) => {
+  const { usuario } = useAutenticacion()
+  const esVigilador = usuario?.rol === 'vigilador'
   const [subVista, setSubVista] = useState<SubVista>('ninguna')
   const historialInternoRef = useRef<SubVista[]>(['ninguna'])
   const subVistaRef = useRef<SubVista>('ninguna')
@@ -76,7 +79,7 @@ export const DisposicionPrincipal: React.FC<PropiedadesDisposicionPrincipal> = (
       </main>
 
       {/* Pie de Página Global */}
-      <PieDePagina alNavegar={(vista) => navegarA(vista)} />
+      <PieDePagina alNavegar={(vista) => navegarA(vista)} reservarEspacioInferior={esVigilador} />
 
       {/* Modales informativos de Ayuda, Términos, Privacidad, Acerca de */}
       <VistaAyuda
