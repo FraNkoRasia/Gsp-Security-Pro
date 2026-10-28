@@ -263,16 +263,16 @@ export const VistaPanelControl: React.FC = () => {
       {createPortal((
         <>
           <nav className="md:hidden fixed inset-x-0 bottom-0 z-[60] border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#080D17]/95 dark:shadow-none pb-[env(safe-area-inset-bottom)]" aria-label="Navegación principal">
-            <div className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2 pt-2 pb-1">
+            <div className="mx-auto flex w-full items-stretch justify-between gap-1 px-2 pt-2 pb-1">
               {esSuperAdmin && (
                 <>
                   <button type="button" onClick={() => { setEmpresaSeleccionadaId(null); setObjetivoSeleccionadoId(null); setMasAbierto(false) }}
-                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (!empresaSeleccionadaId ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                    className={'flex min-w-0 flex-1 min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (!empresaSeleccionadaId ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                     <Building2 className="h-5 w-5" />
                     <span>Empresas</span>
                   </button>
                   <button type="button" disabled={!empresaSeleccionadaId} onClick={() => { setObjetivoSeleccionadoId(null); setMasAbierto(false) }}
-                    className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (empresaSeleccionadaId ? 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' : 'text-slate-300 dark:text-slate-600')}>
+                    className={'flex min-w-0 flex-1 min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors ' + (empresaSeleccionadaId ? 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' : 'text-slate-300 dark:text-slate-600')}>
                     <MapPin className="h-5 w-5" />
                     <span>Objetivos</span>
                   </button>
