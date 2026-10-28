@@ -85,7 +85,7 @@ export const DisposicionPrincipal: React.FC<PropiedadesDisposicionPrincipal> = (
 
       {/* Contenido Principal con soporte desde 320px */}
       <main className="flex-1 flex flex-col w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        {subVista === 'perfil' ? <VistaPerfil /> : children}
+        {subVista === 'perfil' ? <><div className="hidden">{children}</div><VistaPerfil /></> : children}
       </main>
 
       {/* Pie de Página Global */}
