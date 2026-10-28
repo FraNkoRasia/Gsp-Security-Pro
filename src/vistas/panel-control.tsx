@@ -62,6 +62,7 @@ export const VistaPanelControl: React.FC = () => {
   const { asignaciones, objetivos, solicitudesHorasExtra, solicitudesCambio, avisos, novedades, novedadesLeidas } = useOperativo()
   const asignacionActiva = asignaciones.find((a) => a.id_vigilador === usuario.id && a.activa)
   const objetivoVigiladorId = asignacionActiva?.id_objetivo || null
+  const objetivoEncargado = esEncargado ? objetivos.find((objetivo) => objetivo.id_encargado_empresa === usuario.id && objetivo.activo) : undefined
   const avisosNoLeidos = avisos.filter((a) => !a.leido).length
   const novedadesNoLeidas = novedades.filter((n) => n.id_vigilador !== usuario?.id && !novedadesLeidas.includes(n.id)).length
   const solicitudesCambioNoLeidas = solicitudesCambio.filter((s) =>
@@ -126,7 +127,7 @@ export const VistaPanelControl: React.FC = () => {
     : usuario.rol === 'supervisor'
     ? { titulo: 'Panel de Supervisión Operativa', subtitulo: usuario.empresa_nombre || 'Control y seguimiento del servicio de seguridad' }
     : esEncargado
-    ? { titulo: 'Gestión Operativa del Personal', subtitulo: usuario.empresa_nombre || 'Organización y asistencia del personal asignado' }
+    ? { titulo: 'Gestión Operativa del Personal', subtitulo: objetivoEncargado?.nombre || 'Objetivo sin asignar' }
     : { titulo: 'Panel del Vigilador', subtitulo: 'Mi servicio · Mis turnos · Mi asistencia' }
 
   return (
