@@ -89,7 +89,6 @@ export const DisposicionPrincipal: React.FC<PropiedadesDisposicionPrincipal> = (
       {/* Encabezado Principal */}
       <Encabezado
         alIrAInicio={() => navegarA('ninguna')}
-        alAbrirPerfil={() => navegarA('perfil')}
         ubicacionActual={subVista === 'perfil' ? 'perfil' : 'inicio'}
       />
 
