@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const { data: perfil, error: perfilError } = await admin.from("perfiles")
       .select("id,rol,debe_cambiar_contrasena,activo").eq("id", authData.user.id).single()
     if (perfilError || !perfil?.activo) return json({ error: "No se encontró un perfil activo." }, 403)
-    if (!["vigilador", "administrador", "encargado_empresa"].includes(perfil.rol)) {
+    if (!["vigilador", "administrador", "encargado_empresa", "supervisor"].includes(perfil.rol)) {
       return json({ error: "El cambio obligatorio no está habilitado para este tipo de cuenta." }, 403)
     }
     if (perfil.debe_cambiar_contrasena !== true) {
@@ -52,6 +52,20 @@ Deno.serve(async (req) => {
       const dniNormalizado = String(ficha?.dni || "").replace(/\D/g, "")
       if (dniNormalizado.length < 8) {
         return json({ error: "La ficha del vigilador no tiene un DNI válido. Contactá al administrador para corregirla." }, 409)
+      }
+      if (nueva === dniNormalizado) {
+        return json({ error: "La nueva contraseña no puede ser el DNI. Elegí una contraseña personal." }, 400)
+      }
+    }
+
+    // Supervisores nuevos guardan el DNI normalizado en la tabla privada de credenciales.
+    if (perfil.rol === "supervisor") {
+      const { data: credencial, error: credencialError } = await admin.from("credenciales_personal_objetivo")
+        .select("dni").eq("id_usuario", authData.user.id).maybeSingle()
+      if (credencialError) return json({ error: "No se pudo validar la contraseña inicial." }, 500)
+      const dniNormalizado = String(credencial?.dni || "").replace(/\D/g, "")
+      if (dniNormalizado.length < 8) {
+        return json({ error: "La cuenta de supervisor no tiene un DNI válido registrado. Contactá al administrador." }, 409)
       }
       if (nueva === dniNormalizado) {
         return json({ error: "La nueva contraseña no puede ser el DNI. Elegí una contraseña personal." }, 400)
