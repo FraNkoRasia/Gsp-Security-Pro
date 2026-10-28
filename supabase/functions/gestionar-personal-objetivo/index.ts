@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       if (cambiaDni) profileChanges.debe_cambiar_contrasena = true
       const { error: profileUpdate } = await db.from("perfiles").update(profileChanges).eq("id", id)
       if (profileUpdate) return json({ error: profileUpdate.message }, 400)
-      const { error: credUpdate } = await db.from("credenciales_personal_objetivo").update({ dni, actualizado_en: new Date().toISOString() }).eq("id_usuario", id)
+      const { error: credUpdate } = await db.from("credenciales_personal_objetivo").upsert({ id_usuario: id, id_empresa: idEmpresa, dni, actualizado_en: new Date().toISOString() }, { onConflict: "id_usuario" })
       if (credUpdate) return json({ error: credUpdate.message }, 400)
       const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
       if (unassignErr) return json({ error: unassignErr.message }, 400)
