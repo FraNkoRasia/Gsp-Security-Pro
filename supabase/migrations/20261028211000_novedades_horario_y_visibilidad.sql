@@ -1,6 +1,6 @@
 -- Limita el registro de novedades del vigilador al turno asignado
 -- (con 10 minutos de tolerancia) y retrasa su visibilidad para gestión
--- hasta 15 minutos después de la salida programada.
+-- hasta la salida programada; durante los 10 minutos posteriores se publica al instante.
 alter table public.novedades_libro
   add column if not exists visible_para_gestion_desde timestamptz not null default now();
 
@@ -53,7 +53,7 @@ begin
 
   new.fecha := v_ahora::date;
   new.hora := v_ahora::time;
-  new.visible_para_gestion_desde := (v_fin + interval '15 minutes') at time zone 'America/Argentina/Buenos_Aires';
+  new.visible_para_gestion_desde := greatest(v_ahora, v_fin) at time zone 'America/Argentina/Buenos_Aires';
   return new;
 end;
 $$;
@@ -75,6 +75,7 @@ using (
   or private."current_role"() = 'super_administrador'
   or (
     private."current_role"() = 'vigilador'
+    and (visible_para_gestion_desde <= now() or creado_por = auth.uid())
     and exists (
       select 1
       from public.asignaciones a
