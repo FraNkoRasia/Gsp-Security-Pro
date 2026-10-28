@@ -27,6 +27,8 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
   const [detalle,setDetalle] = useState<Persona|null>(null)
   const [historialPersona,setHistorialPersona] = useState<Persona|null>(null)
   const [historial,setHistorial] = useState<Historial[]>([])
+  const [confirmacion,setConfirmacion] = useState<{persona:Persona; accion:"restablecer"|"baja"|"reactivar"}|null>(null)
+  const [procesandoConfirmacion,setProcesandoConfirmacion] = useState(false)
   const [guardando,setGuardando] = useState(false)
   const [nombre,setNombre] = useState("")
   const [apellido,setApellido] = useState("")
@@ -63,8 +65,9 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
     }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar la cuenta.")}
     finally{setGuardando(false)}
   }
-  const restablecer=async(p:Persona)=>{if(!window.confirm("La contraseña volverá a ser el DNI y deberá cambiarla al ingresar. ¿Continuar?"))return;try{await ejecutar("restablecer_contrasena",{id:p.id});await cargar();window.alert("Contraseña restablecida correctamente. El cambio será obligatorio al ingresar.")}catch(e){setError(e instanceof Error?e.message:"No se pudo restablecer la contraseña.")}}
-  const cambiarEstado=async(p:Persona)=>{const accion=p.activo?"dar_baja":"reactivar";if(!window.confirm(p.activo?"¿Dar de baja esta cuenta?":"¿Reactivar esta cuenta?"))return;try{await ejecutar(accion,{id:p.id});await cargar()}catch(e){setError(e instanceof Error?e.message:"No se pudo cambiar el estado.")}}
+  const confirmarAccion=async()=>{if(!confirmacion)return;setProcesandoConfirmacion(true);setError("");try{const {persona,accion}=confirmacion;if(accion==="restablecer"){await ejecutar("restablecer_contrasena",{id:persona.id})}else{await ejecutar(accion==="baja"?"dar_baja":"reactivar",{id:persona.id})}setConfirmacion(null);await cargar()}catch(e){setError(e instanceof Error?e.message:"No se pudo completar la operación.")}finally{setProcesandoConfirmacion(false)}}
+  const restablecer=(p:Persona)=>setConfirmacion({persona:p,accion:"restablecer"})
+  const cambiarEstado=(p:Persona)=>setConfirmacion({persona:p,accion:p.activo?"baja":"reactivar"})
   const verHistorial=async(p:Persona)=>{setHistorialPersona(p);setHistorial([]);try{const d=await ejecutar("historial",{id:p.id});setHistorial(d.historial||[])}catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el historial.")}}
   const visibles=personal.filter(p=>(filtro==="activos")===p.activo&&(!idObjetivoSeleccionado||p.objetivo?.id===idObjetivoSeleccionado)&&[p.nombre,p.apellido,p.email,p.dni,p.telefono||""].some(x=>x.toLowerCase().includes(busqueda.toLowerCase().trim())))
   const fmt=(fecha:string)=>{try{return new Date(fecha).toLocaleString("es-AR")}catch{return fecha}}
@@ -96,6 +99,9 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
         {error&&<p className="text-sm text-red-500">{error}</p>}
         <div className="flex justify-end gap-2 pt-3"><Boton type="button" variante="secundario" onClick={()=>setDialogo(false)}>Cancelar</Boton><Boton type="submit" variante="primario" disabled={guardando}>{guardando?"Guardando…":editando?"Guardar cambios":"Crear cuenta"}</Boton></div>
       </form>
+    </Dialogo>
+    <Dialogo abierto={!!confirmacion} alCerrar={()=>{if(!procesandoConfirmacion)setConfirmacion(null)}} titulo={confirmacion?.accion==="restablecer"?"Restablecer contraseña":confirmacion?.accion==="baja"?"Dar de baja la cuenta":"Reactivar la cuenta"} subtitulo={confirmacion?`${confirmacion.persona.nombre} ${confirmacion.persona.apellido}`:"Confirmar acción"}>
+      {confirmacion&&<div className="space-y-4"><div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">{confirmacion.accion==="restablecer"?"La contraseña volverá a ser el DNI y la persona deberá cambiarla obligatoriamente al ingresar.":confirmacion.accion==="baja"?"La persona perderá el acceso a su cuenta. Podrás reactivarla más adelante.":"La cuenta volverá a estar activa y podrá acceder al sistema."}</div><div className="flex justify-end gap-2"><Boton type="button" variante="secundario" disabled={procesandoConfirmacion} onClick={()=>setConfirmacion(null)}>Cancelar</Boton><Boton type="button" variante="primario" disabled={procesandoConfirmacion} onClick={()=>void confirmarAccion()}>{procesandoConfirmacion?"Procesando…":confirmacion.accion==="restablecer"?"Restablecer contraseña":confirmacion.accion==="baja"?"Dar de baja":"Reactivar cuenta"}</Boton></div></div>}
     </Dialogo>
     <Dialogo abierto={!!detalle} alCerrar={()=>setDetalle(null)} titulo="Ficha técnica" subtitulo={titulo.slice(0,-1)}>
       {detalle&&<div className="space-y-2 text-sm"><p><strong>Nombre:</strong> {detalle.nombre} {detalle.apellido}</p><p><strong>DNI:</strong> {detalle.dni||"No registrado"}</p><p><strong>Correo:</strong> {detalle.email}</p><p><strong>Teléfono:</strong> {detalle.telefono||"No registrado"}</p><p><strong>Empresa:</strong> {empresas.find(e=>e.id===detalle.id_empresa)?.nombre||"Empresa"}</p><p><strong>Objetivo:</strong> {detalle.objetivo?.nombre||"Sin objetivo"}</p><p><strong>Alta:</strong> {fmt(detalle.creado_en)}</p><p><strong>Estado:</strong> {detalle.activo?"Activo":"Inactivo"}</p><p><strong>Contraseña:</strong> {detalle.debe_cambiar_contrasena?"Cambio obligatorio pendiente":"Contraseña personal establecida"}</p></div>}
