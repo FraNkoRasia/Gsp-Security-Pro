@@ -75,7 +75,13 @@ Deno.serve(async (req) => {
       }).eq("id", uid)
       if (profileErr) { await db.auth.admin.deleteUser(uid); return json({ error: profileErr.message }, 400) }
       const { error: credErr } = await db.from("credenciales_personal_objetivo").insert({ id_usuario: uid, id_empresa: idEmpresa, dni })
-      if (credErr) { await db.auth.admin.deleteUser(uid); return json({ error: credErr.message }, 400) }
+      if (credErr) {
+        await db.auth.admin.deleteUser(uid)
+        if (credErr.code === "23505" || credErr.message.includes("credenciales_personal_objetivo_dni_empresa_unique")) {
+          return json({ error: "Ya existe este DNI registrado en la empresa." }, 409)
+        }
+        return json({ error: credErr.message }, 400)
+      }
       const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: uid }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
       if (assignErr) { await db.auth.admin.deleteUser(uid); return json({ error: assignErr.message }, 400) }
       await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "CREAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: uid, detalle: { texto: "Creó cuenta con DNI como contraseña inicial y objetivo exclusivo" }, fecha_hora: new Date().toISOString() })
@@ -126,7 +132,12 @@ Deno.serve(async (req) => {
       const { error: profileUpdate } = await db.from("perfiles").update(profileChanges).eq("id", id)
       if (profileUpdate) return json({ error: profileUpdate.message }, 400)
       const { error: credUpdate } = await db.from("credenciales_personal_objetivo").upsert({ id_usuario: id, id_empresa: idEmpresa, dni, actualizado_en: new Date().toISOString() }, { onConflict: "id_usuario" })
-      if (credUpdate) return json({ error: credUpdate.message }, 400)
+      if (credUpdate) {
+        if (credUpdate.code === "23505" || credUpdate.message.includes("credenciales_personal_objetivo_dni_empresa_unique")) {
+          return json({ error: "Ya existe este DNI registrado en la empresa." }, 409)
+        }
+        return json({ error: credUpdate.message }, 400)
+      }
       const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
       if (unassignErr) return json({ error: unassignErr.message }, 400)
       const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: id }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
