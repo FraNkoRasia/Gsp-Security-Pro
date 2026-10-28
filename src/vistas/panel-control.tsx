@@ -17,6 +17,7 @@ import { Boton } from '@/componentes/ui/boton'
 import { GestionEmpresas } from '@/componentes/operativo/gestion-empresas'
 import { GestionObjetivos } from '@/componentes/operativo/gestion-objetivos'
 import { GestionVigiladores } from '@/componentes/operativo/gestion-vigiladores'
+import { GestionPersonalObjetivo } from '@/componentes/operativo/gestion-personal-objetivo'
 import { GrillaMensual } from '@/componentes/operativo/grilla-mensual'
 import { LibroNovedades } from '@/componentes/operativo/libro-novedades'
 import { CambiosTurnos } from '@/componentes/operativo/cambios-turnos'
@@ -36,7 +37,7 @@ export const VistaPanelControl: React.FC = () => {
 
   const [pestanaActiva, setPestanaActiva] = useState<string>('objetivos')
   const [objetivoGrillaId, setObjetivoGrillaId] = useState<string | null>(null)
-  const [vistaObjetivo, setVistaObjetivo] = useState<'detalle' | 'vigiladores' | 'grilla'>('detalle')
+  const [vistaObjetivo, setVistaObjetivo] = useState<'detalle' | 'vigiladores' | 'encargados' | 'supervisores' | 'grilla'>('detalle')
   const [volverDetallePendiente, setVolverDetallePendiente] = useState(false)
   const [empresaSeleccionadaId, setEmpresaSeleccionadaId] = useState<string | null>(null)
   const [objetivoSeleccionadoId, setObjetivoSeleccionadoId] = useState<string | null>(null)
@@ -81,6 +82,8 @@ export const VistaPanelControl: React.FC = () => {
     ? [
         { id: 'objetivos', label: 'Objetivos', icono: <MapPin className="w-4 h-4" /> },
         { id: 'vigiladores', label: 'Vigiladores', icono: <Users className="w-4 h-4" /> },
+        { id: 'encargados', label: 'Encargados', icono: <Users className="w-4 h-4" /> },
+        { id: 'supervisores', label: 'Supervisores', icono: <Shield className="w-4 h-4" /> },
         { id: 'novedades', label: 'Libro de Novedades', contador: novedadesNoLeidas, icono: <BookOpen className="w-4 h-4" /> },
         { id: 'cambios', label: 'Cambios y Reemplazos', contador: solicitudesCambioNoLeidas, icono: <ArrowRightLeft className="w-4 h-4" /> },
         { id: 'avisos', label: 'Avisos', contador: avisosNoLeidos, icono: <Bell className="w-4 h-4" /> },
@@ -182,6 +185,15 @@ export const VistaPanelControl: React.FC = () => {
                   <GestionVigiladores idEmpresaSeleccionada={objetivo.id_empresa} idObjetivoSeleccionado={objetivo.id} modoConsulta />
                 </div>
               )
+              if (vistaObjetivo === 'encargados' || vistaObjetivo === 'supervisores') return (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Boton variante="secundario" tamano="chico" onClick={() => setVistaObjetivo('detalle')} icono={<ArrowLeft className="w-4 h-4" />}>Volver al objetivo</Boton>
+                    <Insignia variante="azul">{vistaObjetivo === 'encargados' ? 'Encargados del objetivo' : 'Supervisores del objetivo'}</Insignia>
+                  </div>
+                  <GestionPersonalObjetivo rol={vistaObjetivo === 'encargados' ? 'encargado_empresa' : 'supervisor'} idEmpresaSeleccionada={objetivo.id_empresa} idObjetivoSeleccionado={objetivo.id} modoConsulta />
+                </div>
+              )
               if (vistaObjetivo === 'grilla') return (
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -222,6 +234,8 @@ export const VistaPanelControl: React.FC = () => {
                     </div>
                     <div className="flex flex-col gap-3 border-t border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:p-6">
                       <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('vigiladores')} icono={<Users className="h-4 w-4" />}>Vigiladores</Boton>
+                      <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('encargados')} icono={<Users className="h-4 w-4" />}>Encargados</Boton>
+                      <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('supervisores')} icono={<Shield className="h-4 w-4" />}>Supervisores</Boton>
                       <Boton variante="primario" className="w-full sm:flex-1" onClick={() => { setGrillaConCambios(false); setVistaObjetivo('grilla') }} icono={<Calendar className="h-4 w-4" />}>Grilla de Vigiladores</Boton>
                     </div>
                   </section>
@@ -229,6 +243,8 @@ export const VistaPanelControl: React.FC = () => {
               )
             })()}
             {pestanaRenderizada === 'vigiladores' && esAdmin && <GestionVigiladores />}
+            {pestanaRenderizada === 'encargados' && esAdmin && <GestionPersonalObjetivo rol="encargado_empresa" />}
+            {pestanaRenderizada === 'supervisores' && esAdmin && <GestionPersonalObjetivo rol="supervisor" />}
             {pestanaRenderizada === 'novedades' && (esAdmin || esVigilador) && <LibroNovedades />}
             {pestanaRenderizada === 'cambios' && (esAdmin || esVigilador) && <CambiosTurnos />}
             {pestanaRenderizada === 'avisos' && (esAdmin || esVigilador) && <AvisosComunicacion />}
