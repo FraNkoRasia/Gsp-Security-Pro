@@ -13,9 +13,19 @@ import { useTraduccion } from '@/i18n'
 import { traducirTextoInterfaz } from '@/i18n/diccionario-interfaz'
 
 export const LibroNovedades: React.FC = () => {
-  const { novedades, objetivos, crearNovedad, editarNovedad, marcarNovedadLeida, novedadesLeidas, turnos, supervisores, asignaciones } = useOperativo()
+  const { novedades, objetivos, crearNovedad, editarNovedad, marcarNovedadLeida, novedadesLeidas, turnos, supervisores } = useOperativo()
   const { usuario } = useAutenticacion()
   const { idioma } = useTraduccion()
+  // Datos del registro: se calculan desde el turno asignado, no se inventan valores por defecto.
+  const [idObjetivo, setIdObjetivo] = useState(objetivos[0]?.id || '')
+  const [fecha, setFecha] = useState('')
+  const [hora, setHora] = useState('')
+  const [turno, setTurno] = useState('')
+  const [nombreSupervisor, setNombreSupervisor] = useState('')
+  const [elementosACargo, setElementosACargo] = useState('')
+  const [informeNovedades, setInformeNovedades] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
   const ahoraLocal = () => {
     const ahora = new Date()
     const fechaLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora)
@@ -55,16 +65,6 @@ export const LibroNovedades: React.FC = () => {
   const [busqueda, setBusqueda] = useState('')
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
-
-  // Datos del registro: se calculan desde el turno asignado, no se inventan valores por defecto.
-  const [idObjetivo, setIdObjetivo] = useState(objetivos[0]?.id || '')
-  const [fecha, setFecha] = useState('')
-  const [hora, setHora] = useState('')
-  const [turno, setTurno] = useState('')
-  const [nombreSupervisor, setNombreSupervisor] = useState('')
-  const [elementosACargo, setElementosACargo] = useState('')
-  const [informeNovedades, setInformeNovedades] = useState('')
-  const [error, setError] = useState<string | null>(null)
 
   // Corrección con motivo obligatorio (Sección 32)
   const [informeCorregido, setInformeCorregido] = useState('')
