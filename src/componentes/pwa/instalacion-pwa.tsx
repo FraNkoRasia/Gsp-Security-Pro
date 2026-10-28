@@ -62,7 +62,7 @@ export const InstalacionPwa: React.FC = () => {
     }
   }, [])
 
-  if (cargando || estadoDispositivo.estaInstalada) return null
+  if (cargando || estaAutenticado || estadoDispositivo.estaInstalada) return null
 
   const manejarClickInstalar = () => {
     setMensajeInstalacion(null)
@@ -105,21 +105,7 @@ export const InstalacionPwa: React.FC = () => {
 
   return (
     <>
-      {estaAutenticado ? (
-        <div className="fixed bottom-4 right-4 z-40">
-          <Boton
-            type="button"
-            variante="primario"
-            tamano="medio"
-            onClick={manejarClickInstalar}
-            className="rounded-full border border-sky-400/40 bg-sky-700 px-4 text-white shadow-xl shadow-black/30 hover:bg-sky-600"
-            icono={<Download className="h-4 w-4" />}
-          >
-            Instalar GSP
-          </Boton>
-        </div>
-      ) : (
-        <div className="w-full mt-6 pt-6 border-t border-slate-800/80 text-center">
+      <div className="w-full mt-6 pt-6 border-t border-slate-800/80 text-center">
           <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             <Smartphone className="w-4 h-4 text-sky-400" />
             <span>{t.pwa.tituloInstalar}</span>
@@ -138,7 +124,6 @@ export const InstalacionPwa: React.FC = () => {
             {t.pwa.botonInstalar}
           </Boton>
         </div>
-      )}
 
       <ModalInstalacion
         abierto={modalAbierto}
