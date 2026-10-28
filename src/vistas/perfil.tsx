@@ -143,6 +143,8 @@ export const VistaPerfil: React.FC<PropiedadesPerfil> = ({
         return { texto: t.roles.admin, variante: 'azul' as const }
       case 'supervisor':
         return { texto: t.roles.supervisor, variante: 'morado' as const }
+      case 'encargado_empresa':
+        return { texto: 'Encargado de Empresa', variante: 'verde' as const }
       default:
         return { texto: t.roles.vigilador, variante: 'verde' as const }
     }
