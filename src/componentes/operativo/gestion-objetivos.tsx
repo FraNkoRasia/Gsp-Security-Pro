@@ -88,7 +88,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
     setGuardando(true)
     try {
       const errorGuardar = objetivoEditando
-        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:null, id_supervisor:null, id_encargado_empresa:null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
+        ? await editarObjetivo(objetivoEditando.id, { nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
         : await crearObjetivo({ id_empresa:idEmpresaActiva, nombre:nombre.trim(), descripcion:descripcion.trim(), elementos_a_cargo:elementosACargo.trim(), supervisor_nombre:null, id_supervisor:null, id_encargado_empresa:null, direccion:direccion.trim(), localidad:localidad.trim(), provincia:provincia.trim() })
       if (errorGuardar) { setError(errorGuardar); return }
       setModalAbierto(false)
