@@ -4,9 +4,10 @@ import { useTraduccion } from '@/i18n'
 
 interface PropiedadesPieDePagina {
   alNavegar?: (vista: 'terminos' | 'ayuda' | 'privacidad' | 'acercaDe') => void
+  reservarEspacioInferior?: boolean
 }
 
-export const PieDePagina: React.FC<PropiedadesPieDePagina> = ({ alNavegar }) => {
+export const PieDePagina: React.FC<PropiedadesPieDePagina> = ({ alNavegar, reservarEspacioInferior = false }) => {
   const { t } = useTraduccion()
   const anioActual = new Date().getFullYear()
 
@@ -19,7 +20,7 @@ export const PieDePagina: React.FC<PropiedadesPieDePagina> = ({ alNavegar }) => 
   }
 
   return (
-    <footer className="w-full mt-auto border-t border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-[#070B12]/80 backdrop-blur-md py-6 px-4 text-xs text-slate-500 dark:text-slate-400 select-none transition-colors">
+    <footer className={`w-full mt-auto border-t border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-[#070B12]/80 backdrop-blur-md py-6 px-4 text-xs text-slate-500 dark:text-slate-400 select-none transition-colors ${reservarEspacioInferior ? "pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-6" : ""}`}>
       <div className="max-w-5xl mx-auto flex flex-col items-center justify-between gap-4 sm:flex-row text-center sm:text-left">
         {/* Identidad de la aplicación */}
         <div className="flex items-center gap-2">
