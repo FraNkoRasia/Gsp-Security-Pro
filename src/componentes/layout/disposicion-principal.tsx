@@ -36,6 +36,12 @@ export const DisposicionPrincipal: React.FC<PropiedadesDisposicionPrincipal> = (
   }, [])
 
   useEffect(() => {
+    const mostrarInicioOperativo = () => cerrarSubVista()
+    window.addEventListener('gsp:mostrar-inicio-operativo', mostrarInicioOperativo)
+    return () => window.removeEventListener('gsp:mostrar-inicio-operativo', mostrarInicioOperativo)
+  }, [cerrarSubVista])
+
+  useEffect(() => {
     // Mantiene un estado interno en el historial para interceptar Atrás
     // sin sacar al usuario de la aplicación cuando navega por sus vistas.
     if (!window.history.state?.gspVistaInterna) {
