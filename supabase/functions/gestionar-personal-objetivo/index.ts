@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== "") return json({ error: "Ese objetivo ya tiene una persona asignada en este rol. Elegí otro objetivo o editá la asignación existente." }, 409)
       const { data: dniExistente } = await db.from("credenciales_personal_objetivo")
         .select("id_usuario").eq("id_empresa", idEmpresa).eq("dni", dni).maybeSingle()
-      if (dniExistente) return json({ error: "Ya existe una cuenta de encargado o supervisor con ese DNI en esta empresa. Buscala en la sección correspondiente o verificá el DNI ingresado." }, 409)
+      if (dniExistente) return json({ error: "Ya existe este DNI registrado en la empresa. Verificá el DNI ingresado o buscá la cuenta existente." }, 409)
       const { data: created, error: createErr } = await db.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre, apellido } })
       if (createErr || !created.user) return json({ error: createErr?.message || "No se pudo crear la cuenta." }, 400)
       const uid = created.user.id
