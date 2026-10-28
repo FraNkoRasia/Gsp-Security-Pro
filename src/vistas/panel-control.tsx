@@ -16,6 +16,7 @@ import {
   Menu,
   LogOut,
   UserRound,
+  UserRoundPlus,
   X
 } from 'lucide-react'
 import { Insignia } from '@/componentes/ui/insignia'
@@ -84,7 +85,10 @@ export const VistaPanelControl: React.FC = () => {
     : esSuperAdmin
     ? []
     : esEncargado
-    ? [{ id: 'asistenciaPersonal', label: 'Asistencia del personal', icono: <ClipboardCheck className="w-4 h-4" /> }]
+    ? [
+        { id: 'asistenciaPersonal', label: 'Asistencia', icono: <ClipboardCheck className="w-4 h-4" /> },
+        { id: 'personal', label: 'Personal', icono: <UserRoundPlus className="w-4 h-4" /> }
+      ]
     : esAdmin
     ? [
         { id: 'objetivos', label: 'Objetivos', icono: <MapPin className="w-4 h-4" /> },
@@ -156,7 +160,8 @@ export const VistaPanelControl: React.FC = () => {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => { if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) { setPestanaPendiente(p.id); setModalSalidaGrilla(true) } else setPestanaActiva(p.id) }}
+                  onClick={() => { if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
+                    if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) { setPestanaPendiente(p.id); setModalSalidaGrilla(true) } else setPestanaActiva(p.id) }}
                   className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl font-bold text-[11px] sm:text-xs text-center transition-all cursor-pointer select-none min-w-0 ${
                     estaActiva
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
@@ -257,7 +262,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'grilla' && esVigilador && !objetivoVigiladorId && <div className="rounded-2xl border border-slate-800 bg-[#0C121E] p-6 text-center text-sm text-slate-400">No tenés un objetivo activo asignado actualmente.</div>}
             {pestanaRenderizada === 'miMes' && esVigilador && <MiMes />}
             {pestanaRenderizada === 'historialLaboral' && esVigilador && <HistorialLaboral />}
-            {pestanaRenderizada === 'asistenciaPersonal' && (esVigilador || esEncargado) && <AsistenciaPersonal />}
+            {(pestanaRenderizada === 'asistenciaPersonal' || pestanaRenderizada === 'personal') && (esVigilador || esEncargado) && <AsistenciaPersonal />}
           </div>
         </>
       )}
@@ -304,7 +309,7 @@ export const VistaPanelControl: React.FC = () => {
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal', 'personal']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
@@ -324,12 +329,13 @@ export const VistaPanelControl: React.FC = () => {
                       ? ['miTurno', 'grilla', 'miMes'].includes(p.id)
                       : esAdmin
                       ? ['objetivos', 'vigiladores', 'novedades'].includes(p.id)
-                      : ['asistenciaPersonal'].includes(p.id)
+                      : ['asistenciaPersonal', 'personal'].includes(p.id)
                     )).map((p) => {
                       const activa = pestanaRenderizada === p.id
                       return (
                         <button key={p.id} type="button" onClick={() => {
                           window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
+                          if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
                           if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                             setPestanaPendiente(p.id)
                             setModalSalidaGrilla(true)
