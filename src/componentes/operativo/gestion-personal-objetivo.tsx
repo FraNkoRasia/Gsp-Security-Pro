@@ -35,7 +35,6 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
   const [dni,setDni] = useState("")
   const [objetivoId,setObjetivoId] = useState(idObjetivoSeleccionado||"")
 
-  const esSuperAdmin = usuario?.rol === "super_administrador"
   const idEmpresa = idEmpresaSeleccionada || usuario?.id_empresa || empresas[0]?.id || ""
   const objetivosEmpresa = useMemo(()=>objetivos.filter(o=>o.id_empresa===idEmpresa&&o.activo),[objetivos,idEmpresa])
   const titulo = rol === "supervisor" ? "Supervisores" : "Encargados"
@@ -91,7 +90,7 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
         <div><Etiqueta requerido>Nombre</Etiqueta><Entrada value={nombre} onChange={e=>setNombre(e.target.value)} required/></div>
         <div><Etiqueta requerido>Apellido</Etiqueta><Entrada value={apellido} onChange={e=>setApellido(e.target.value)} required/></div>
         <div><Etiqueta requerido>Correo de acceso</Etiqueta><Entrada value={email} onChange={e=>setEmail(e.target.value)} type="email" required/></div>
-        <div><Etiqueta requerido>DNI</Etiqueta><Entrada value={dni} onChange={e=>setDni(e.target.value)} inputMode="numeric" required/><p className="mt-1 text-xs text-slate-500">Se usarán los dígitos del DNI como contraseña. Debe contener al menos 8 dígitos.</p></div>
+        <div><Etiqueta requerido>DNI</Etiqueta><Entrada value={dni} onChange={e=>setDni(e.target.value)} required/><p className="mt-1 text-xs text-slate-500">Se usarán los dígitos del DNI como contraseña. Debe contener al menos 8 dígitos.</p></div>
         <div><Etiqueta>Teléfono</Etiqueta><Entrada value={telefono} onChange={e=>setTelefono(e.target.value)}/></div>
         <div><Etiqueta requerido>Objetivo exclusivo</Etiqueta><select value={objetivoId} onChange={e=>setObjetivoId(e.target.value)} required disabled={!!idObjetivoSeleccionado} className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-[#0A0F1A]"><option value="">Seleccionar objetivo</option>{objetivosEmpresa.map(o=><option key={o.id} value={o.id}>{o.nombre}</option>)}</select></div>
         {error&&<p className="text-sm text-red-500">{error}</p>}
