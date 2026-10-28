@@ -108,8 +108,40 @@ export const VistaPanelControl: React.FC = () => {
     ? pestanaActiva
     : pestanas[0]?.id || ''
 
+  // El título principal se muestra únicamente en la vista inicial de cada rol.
+  const mostrarTituloPrincipal = esSuperAdmin
+    ? !empresaSeleccionadaId
+    : esAdmin
+    ? pestanaRenderizada === 'objetivos' && !objetivoGrillaId
+    : esVigilador
+    ? pestanaRenderizada === 'miTurno'
+    : esEncargado
+    ? pestanaRenderizada === 'asistenciaPersonal'
+    : usuario.rol === 'supervisor'
+
+  const tituloPrincipal = esSuperAdmin
+    ? { titulo: 'Panel de Administración Global', subtitulo: 'Gestión de empresas y plataforma GSP Security Pro' }
+    : esAdmin
+    ? { titulo: 'Panel Administrativo', subtitulo: usuario.empresa_nombre || 'Gestión de la empresa de seguridad' }
+    : usuario.rol === 'supervisor'
+    ? { titulo: 'Panel de Supervisión Operativa', subtitulo: usuario.empresa_nombre || 'Control y seguimiento del servicio de seguridad' }
+    : esEncargado
+    ? { titulo: 'Gestión Operativa del Personal', subtitulo: usuario.empresa_nombre || 'Organización y asistencia del personal asignado' }
+    : { titulo: 'Panel del Vigilador', subtitulo: 'Mi servicio · Mis turnos · Mi asistencia' }
+
   return (
     <div className="space-y-6 animate-fadeIn pb-24 md:pb-0">
+      {mostrarTituloPrincipal && (
+        <section className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-slate-800 dark:bg-[#0C121E] sm:px-5 sm:py-5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-900/70 dark:bg-blue-950/50 dark:text-blue-400 sm:h-12 sm:w-12">
+            <Shield className="h-5 w-5 sm:h-6 sm:w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-black leading-tight tracking-tight text-slate-900 dark:text-white sm:text-2xl">{tituloPrincipal.titulo}</h1>
+            <p className="mt-1 break-words text-sm font-medium text-slate-500 dark:text-slate-400 sm:text-base">{tituloPrincipal.subtitulo}</p>
+          </div>
+        </section>
+      )}
       {/* Navegación y contenido operativo */}
       {esSuperAdmin ? (
         <div className="pt-1">
