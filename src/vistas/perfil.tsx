@@ -184,6 +184,16 @@ export const VistaPerfil: React.FC<PropiedadesPerfil> = ({
   }
 
   const rol = obtenerEtiquetaRol()
+  const camposPersonales: readonly (readonly [string, string])[] = [
+    ['DNI', 'dni'], ['Fecha de nacimiento', 'fecha_nacimiento'], ['Domicilio', 'domicilio'],
+    ['Nombre del contacto de emergencia', 'contacto_emergencia_nombre'], ['Teléfono del contacto de emergencia', 'contacto_emergencia_telefono']
+  ]
+  const camposLaborales: readonly (readonly [string, string])[] = [
+    ['Fecha de ingreso', 'fecha_ingreso'], ['Categoría laboral', 'categoria'], ['Tipo de contrato', 'tipo_contrato'],
+    ['Fin de contrato', 'fecha_fin_contrato'], ['Notas administrativas', 'notas_administrativas']
+  ]
+  const hayDatosPersonales = camposPersonales.some(([, clave]) => Boolean(fichaTecnica[clave]))
+  const hayDatosLaborales = camposLaborales.some(([, clave]) => Boolean(fichaTecnica[clave]))
 
   return (
     <div className="space-y-5 animate-fadeIn">
@@ -196,52 +206,46 @@ export const VistaPerfil: React.FC<PropiedadesPerfil> = ({
         </p>
       </div>
 
-      <section className="rounded-2xl bg-white dark:bg-[#0C121E] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Datos de la ficha técnica</h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Información personal y laboral registrada en el sistema.</p>
-        </div>
-        {cargandoFicha ? (
-          <p className="p-5 text-sm text-slate-500">Cargando datos de la ficha técnica…</p>
-        ) : (
-          <div className="p-5 sm:p-6 space-y-5">
-            <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Datos personales</h4>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {([
-                  ['DNI', 'dni'],
-                  ['Fecha de nacimiento', 'fecha_nacimiento'],
-                  ['Domicilio', 'domicilio'],
-                  ['Nombre del contacto de emergencia', 'contacto_emergencia_nombre'],
-                  ['Teléfono del contacto de emergencia', 'contacto_emergencia_telefono']
-                ] as const).map(([etiqueta, clave]) => (
-                  <div key={clave} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{etiqueta}</p>
-                    <p className="mt-2 break-words text-sm font-semibold text-slate-800 dark:text-slate-200">{fichaTecnica[clave] ? (clave.includes('fecha') ? new Date(`${fichaTecnica[clave]}T00:00:00`).toLocaleDateString('es-AR') : fichaTecnica[clave]) : 'Sin datos registrados'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Datos laborales</h4>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {([
-                  ['Fecha de ingreso', 'fecha_ingreso'],
-                  ['Categoría laboral', 'categoria'],
-                  ['Tipo de contrato', 'tipo_contrato'],
-                  ['Fin de contrato', 'fecha_fin_contrato'],
-                  ['Notas administrativas', 'notas_administrativas']
-                ] as const).map(([etiqueta, clave]) => (
-                  <div key={clave} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{etiqueta}</p>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold text-slate-800 dark:text-slate-200">{fichaTecnica[clave] ? (clave.includes('fecha') ? new Date(`${fichaTecnica[clave]}T00:00:00`).toLocaleDateString('es-AR') : fichaTecnica[clave]) : 'Sin datos registrados'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {(cargandoFicha || hayDatosPersonales || hayDatosLaborales) && (
+        <section className="rounded-2xl bg-white dark:bg-[#0C121E] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Datos de la ficha técnica</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Información personal y laboral registrada en el sistema.</p>
           </div>
-        )}
-      </section>
+          {cargandoFicha ? (
+            <p className="p-5 text-sm text-slate-500">Cargando datos de la ficha técnica…</p>
+          ) : (
+            <div className="p-5 sm:p-6 space-y-5">
+              {hayDatosPersonales && (
+                <div>
+                  <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Datos personales</h4>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {camposPersonales.filter(([, clave]) => fichaTecnica[clave]).map(([etiqueta, clave]) => (
+                      <div key={clave} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{etiqueta}</p>
+                        <p className="mt-2 break-words text-sm font-semibold text-slate-800 dark:text-slate-200">{clave.includes('fecha') ? new Date(`${fichaTecnica[clave]}T00:00:00`).toLocaleDateString('es-AR') : fichaTecnica[clave]}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {hayDatosLaborales && (
+                <div>
+                  <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Datos laborales</h4>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {camposLaborales.filter(([, clave]) => fichaTecnica[clave]).map(([etiqueta, clave]) => (
+                      <div key={clave} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{etiqueta}</p>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold text-slate-800 dark:text-slate-200">{clave.includes('fecha') ? new Date(`${fichaTecnica[clave]}T00:00:00`).toLocaleDateString('es-AR') : fichaTecnica[clave]}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="rounded-2xl bg-white dark:bg-[#0C121E] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -268,21 +272,25 @@ export const VistaPerfil: React.FC<PropiedadesPerfil> = ({
               <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200 break-all">{usuario.email}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                <Phone className="w-4 h-4" />
-                Teléfono
+            {usuario.telefono && (
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  <Phone className="w-4 h-4" />
+                  Teléfono
+                </div>
+                <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">{usuario.telefono}</p>
               </div>
-              <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">{usuario.telefono || 'No informado'}</p>
-            </div>
+            )}
 
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                <Shield className="w-4 h-4" />
-                Empresa
+            {usuario.empresa_nombre && (
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  <Shield className="w-4 h-4" />
+                  Empresa
+                </div>
+                <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">{usuario.empresa_nombre}</p>
               </div>
-              <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">{usuario.empresa_nombre || 'GSP Plataforma Global'}</p>
-            </div>
+            )}
 
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
