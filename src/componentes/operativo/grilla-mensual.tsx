@@ -424,8 +424,17 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
           const estiloExtra = turno.horas_extra > 0 ? ' turno-con-extra' : ''
           return `<td><span class="turno-casillero ${claseTurno}${estiloExtra}"><strong>${escaparHtml(codigo)}</strong>${icono}</span></td>`
         }).join('')
-        const totalesMes = calcularTotalesVigilador(vigilador.id)
-        return `<tr><th scope="row"><span class="avatar">●</span><span class="nombre-vigilador">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</span></th>${celdas}<td class="total"><strong>${formatearHorasMinutos(totalesMes.horasTotales)} hs</strong><span class="francos">Francos: ${totalesMes.francos}</span><span class="nocturnas">Nocturnas: ${formatearHorasMinutos(totalesMes.horasNocturnas)} hs</span></td></tr>`
+        const turnosQuincena = turnosVisibles.filter((turno) => {
+          const diaTurno = Number(turno.fecha.slice(8, 10))
+          return turno.id_vigilador === vigilador.id &&
+            turno.id_objetivo === objetivoSeleccionado &&
+            turno.fecha.startsWith(mesSeleccionado) &&
+            diaTurno >= quincena.inicio && diaTurno <= quincena.fin
+        })
+        const horasQuincena = turnosQuincena.reduce((total, turno) => total + turno.horas_totales + turno.horas_extra, 0)
+        const francosQuincena = turnosQuincena.filter((turno) => turno.tipo === 'franco').length
+        const nocturnasQuincena = turnosQuincena.reduce((total, turno) => total + turno.horas_nocturnas, 0)
+        return `<tr><th scope="row"><span class="avatar">●</span><span class="nombre-vigilador">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</span></th>${celdas}<td class="total"><strong>${formatearHorasMinutos(horasQuincena)} hs</strong><span class="francos">Francos: ${francosQuincena}</span><span class="nocturnas">Nocturnas: ${formatearHorasMinutos(nocturnasQuincena)} hs</span></td></tr>`
       }).join('')
       const filasVacias = vigiladoresMostrados.length === 0
         ? `<tr><td colspan="${dias.length + 2}" class="vacio">No hay vigiladores asignados a este objetivo.</td></tr>`
@@ -440,14 +449,14 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     ventana.opener = null
     ventana.document.open()
     ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Grilla ${escaparHtml(objetivoActual?.nombre || 'objetivo')} - ${escaparHtml(nombreMes)}</title><style>
-@page{size:297mm 210mm;margin:4mm}
+@page{size:A4 landscape;margin:4mm}
 *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 html,body{width:100%;height:100%;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;color:#082f63;background:#fff}
-.documento{width:289mm;height:202mm;max-width:none;margin:0 auto;padding:0;display:flex;flex-direction:column;gap:2mm;overflow:hidden;background:#fff}
+.documento{width:289mm;height:202mm;max-width:none;margin:0 auto;padding:0;display:grid;grid-template-rows:20mm 17mm minmax(0,1fr) minmax(0,1fr) 18mm;gap:2mm;overflow:hidden;background:#fff}
 .titulo{height:20mm;flex:none;display:grid;grid-template-columns:1.08fr 1.35fr .9fr;align-items:center;padding:1.5mm 5mm;border:.35mm solid #174a7d;border-radius:2.5mm;background:linear-gradient(105deg,#0b315f 0%,#164b7c 55%,#0b315f 100%);box-shadow:0 1mm 2mm rgba(3,35,73,.2),inset 0 .35mm .6mm rgba(255,255,255,.2);color:#fff}
 .identidad{height:100%;display:flex;align-items:center;gap:3mm}
-.escudo{width:14mm;height:15mm;flex:none;display:flex;align-items:center;justify-content:center;color:#f4faff;font-size:27px;font-weight:900;line-height:1;text-shadow:0 1px 2px #071f3c}
+.escudo{width:14mm;height:15mm;flex:none;display:flex;align-items:center;justify-content:center;color:#f4faff;filter:drop-shadow(0 1px 2px #071f3c)}.escudo svg{display:block;width:100%;height:100%;overflow:visible}
 .marca{display:block;color:#fff;font-size:19px;line-height:1.05;font-weight:900;letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.2)}
 .titulo h1{margin:1mm 0 0;color:#c8e5ff;font-size:13px;line-height:1.1;font-weight:700}
 .objetivo{height:14mm;display:flex;align-items:center;justify-content:center;gap:3mm;padding:0 4mm;border-left:.45mm solid #c3def8;border-right:.45mm solid #c3def8;color:#fff;font-size:17px;font-weight:900;white-space:nowrap;text-align:center}
@@ -463,7 +472,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#082f63;background:#fff}
 .muestra.feriado{background:linear-gradient(145deg,#ff5576,#e92c53);color:#fff}
 .muestra.franco{background:linear-gradient(145deg,#55a977,#318354);color:#fff}
 .horas-globales{min-width:48mm;padding:2mm 3mm;border:.3mm solid #c3e1fa;border-radius:2mm;background:linear-gradient(145deg,#dff1ff,#c5e4fc);color:#082f63;font-size:12px;font-weight:900;text-align:center;white-space:nowrap;box-shadow:inset 0 .3mm .5mm #fff}
-.quincena{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;border:.35mm solid #83b9e8;border-radius:2.3mm;background:#fff;box-shadow:0 .5mm 1.2mm rgba(15,65,110,.1)}
+.quincena{min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden;border:.35mm solid #83b9e8;border-radius:2.3mm;background:#fff;box-shadow:0 .5mm 1.2mm rgba(15,65,110,.1)}
 .encabezado-quincena{height:8mm;flex:none;display:flex;justify-content:space-between;align-items:center;padding:1mm 3mm;background:linear-gradient(100deg,#0b3564,#164b7e 58%,#0d3767)}
 h2{margin:0;color:#fff;font-size:13px;font-weight:900;text-shadow:0 .3mm .5mm rgba(0,0,0,.18)}
 .encabezado-quincena p{margin:0;color:#fff;font-size:10px;font-weight:800}
@@ -497,7 +506,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
 .total span{margin-top:.4mm;font-size:8px;font-weight:600}
 .total .francos{color:#16865c}.total .nocturnas{color:#5b50d5}
 .vacio{padding:3mm;color:#475569}
-.resumen-mensual{height:18mm;flex:none;display:grid;grid-template-columns:.9fr repeat(\${Math.max(vigiladoresMostrados.length,1)},minmax(0,1fr));gap:1.7mm}
+.resumen-mensual{height:18mm;flex:none;display:grid;grid-template-columns:.9fr repeat(${Math.max(vigiladoresMostrados.length,1)},minmax(0,1fr));gap:1.7mm}
 .titulo-resumen{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:1mm;border:.3mm solid #8fc6f5;border-radius:2.2mm;background:linear-gradient(145deg,#f1f9ff,#dceefa);text-align:center;box-shadow:0 .5mm 1mm rgba(30,90,145,.1),inset 0 .3mm .5mm #fff}
 .titulo-resumen strong{color:#082f63;font-size:11px;font-weight:900}
 .titulo-resumen span{margin-top:1mm;color:#315d88;font-size:8px;font-weight:700}
@@ -510,8 +519,8 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
 .metricas span{margin-top:.5mm;color:#315d88;font-size:7px;font-weight:700;white-space:nowrap}
 .metricas .horas{color:#0872c5}.metricas .francos{color:#16865c}.metricas .nocturnas{color:#5b50d5}
 @media screen{body{background:#e9eef5;padding:10px}.documento{box-shadow:0 12px 32px rgba(15,45,80,.2)}}
-@media print{html,body{width:289mm;height:202mm;margin:0;padding:0}.documento{width:289mm;height:202mm;margin:0;page-break-inside:avoid;break-inside:avoid}.quincena,.resumen-mensual,.titulo,.leyenda{break-inside:avoid;page-break-inside:avoid}tr{break-inside:avoid}}
-</style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo">⬡</div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo"><span class="icono-encabezado">📍</span>${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes"><span class="icono-encabezado">▦</span><span>${escaparHtml(nombreMes)}<small>Primera y segunda quincena<br>1 al ${totalDiasMes} de ${escaparHtml(nombreMes)}</small></span></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · ${formatearHorasMinutos(horasGlobales)} hs</div></section>${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>`)
+@media print{@page{size:A4 landscape;margin:4mm}html,body{width:289mm;height:202mm;min-width:289mm;max-width:289mm;margin:0;padding:0}.documento{width:289mm;height:202mm;min-width:289mm;max-width:289mm;margin:0;page-break-inside:avoid;break-inside:avoid}.quincena,.resumen-mensual,.titulo,.leyenda{break-inside:avoid;page-break-inside:avoid}tr{break-inside:avoid}}
+</style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo"><svg viewBox="0 0 100 110" role="img" aria-label="Escudo GPS Security Pro"><path d="M50 5 91 20v31c0 25-15 43-41 54C24 94 9 76 9 51V20L50 5Z" fill="none" stroke="#f5fbff" stroke-width="8" stroke-linejoin="round"/><path d="M50 17 80 28v23c0 19-10 33-30 42-20-9-30-23-30-42V28l30-11Z" fill="#123f70" stroke="#d8edff" stroke-width="2.5"/></svg></div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo"><span class="icono-encabezado">⌖</span>${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes"><span class="icono-encabezado">▦</span><span>${escaparHtml(nombreMes)}<small>Primera y segunda quincena<br>1 al ${totalDiasMes} de ${escaparHtml(nombreMes)}</small></span></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · ${formatearHorasMinutos(horasGlobales)} hs</div></section>${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>`)
     ventana.document.close()
     ventana.focus()
     window.setTimeout(() => ventana.print(), 250)
