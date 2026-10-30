@@ -424,11 +424,6 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
           const estiloExtra = turno.horas_extra > 0 ? ' turno-con-extra' : ''
           return `<td><span class="turno-casillero ${claseTurno}${estiloExtra}"><strong>${escaparHtml(codigo)}</strong>${icono}</span></td>`
         }).join('')
-        const horasQuincena = turnosVisibles.filter((turno) => {
-          const dia = Number(turno.fecha.slice(8, 10))
-          return turno.id_vigilador === vigilador.id && turno.id_objetivo === objetivoSeleccionado &&
-            turno.fecha.startsWith(mesSeleccionado) && dia >= quincena.inicio && dia <= quincena.fin
-        }).reduce((total, turno) => total + turno.horas_totales + turno.horas_extra, 0)
         const totalesMes = calcularTotalesVigilador(vigilador.id)
         return `<tr><th scope="row"><span class="avatar">●</span><span class="nombre-vigilador">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</span></th>${celdas}<td class="total"><strong>${formatearHorasMinutos(totalesMes.horasTotales)} hs</strong><span class="francos">Francos: ${totalesMes.francos}</span><span class="nocturnas">Nocturnas: ${formatearHorasMinutos(totalesMes.horasNocturnas)} hs</span></td></tr>`
       }).join('')
