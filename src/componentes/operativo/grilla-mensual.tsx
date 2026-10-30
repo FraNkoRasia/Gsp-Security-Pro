@@ -506,7 +506,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
 .total span{margin-top:.4mm;font-size:8px;font-weight:600}
 .total .francos{color:#16865c}.total .nocturnas{color:#5b50d5}
 .vacio{padding:3mm;color:#475569}
-.resumen-mensual{height:18mm;flex:none;display:grid;grid-template-columns:.9fr repeat(\${Math.max(vigiladoresMostrados.length,1)},minmax(0,1fr));gap:1.7mm}
+.resumen-mensual{height:18mm;flex:none;display:grid;grid-template-columns:.9fr repeat(${Math.max(vigiladoresMostrados.length,1)},minmax(0,1fr));gap:1.7mm}
 .titulo-resumen{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:1mm;border:.3mm solid #8fc6f5;border-radius:2.2mm;background:linear-gradient(145deg,#f1f9ff,#dceefa);text-align:center;box-shadow:0 .5mm 1mm rgba(30,90,145,.1),inset 0 .3mm .5mm #fff}
 .titulo-resumen strong{color:#082f63;font-size:11px;font-weight:900}
 .titulo-resumen span{margin-top:1mm;color:#315d88;font-size:8px;font-weight:700}
