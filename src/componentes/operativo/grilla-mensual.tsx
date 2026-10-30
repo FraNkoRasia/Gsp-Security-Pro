@@ -424,17 +424,13 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
           const estiloExtra = turno.horas_extra > 0 ? ' turno-con-extra' : ''
           return `<td><span class="turno-casillero ${claseTurno}${estiloExtra}"><strong>${escaparHtml(codigo)}</strong>${icono}</span></td>`
         }).join('')
-        const horasQuincena = turnosVisibles.filter((turno) => {
-          const dia = Number(turno.fecha.slice(8, 10))
-          return turno.id_vigilador === vigilador.id && turno.id_objetivo === objetivoSeleccionado &&
-            turno.fecha.startsWith(mesSeleccionado) && dia >= quincena.inicio && dia <= quincena.fin
-        }).reduce((total, turno) => total + turno.horas_totales + turno.horas_extra, 0)
-        return `<tr><th scope="row"><span class="avatar">●</span><span class="nombre-vigilador">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</span></th>${celdas}<td class="total">${formatearHorasMinutos(horasQuincena)} hs</td></tr>`
+        const totalesMes = calcularTotalesVigilador(vigilador.id)
+        return `<tr><th scope="row"><span class="avatar">●</span><span class="nombre-vigilador">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</span></th>${celdas}<td class="total"><strong>${formatearHorasMinutos(totalesMes.horasTotales)} hs</strong><span class="francos">Francos: ${totalesMes.francos}</span><span class="nocturnas">Nocturnas: ${formatearHorasMinutos(totalesMes.horasNocturnas)} hs</span></td></tr>`
       }).join('')
       const filasVacias = vigiladoresMostrados.length === 0
         ? `<tr><td colspan="${dias.length + 2}" class="vacio">No hay vigiladores asignados a este objetivo.</td></tr>`
         : filas
-      return `<section class="quincena"><header class="encabezado-quincena"><h2>${quincena.titulo}</h2><p>${quincena.inicio} al ${quincena.fin} de ${escaparHtml(nombreMes)}</p></header><table><thead><tr><th class="col-vigilador">Vigilador</th>${encabezados}<th class="col-total">◷ Horas</th></tr></thead><tbody>${filasVacias}</tbody></table></section>`
+      return `<section class="quincena"><header class="encabezado-quincena"><h2>${quincena.titulo}</h2><p>${quincena.inicio} al ${quincena.fin} de ${escaparHtml(nombreMes)}</p></header><table><thead><tr><th class="col-vigilador">Vigilador</th>${encabezados}<th class="col-total">◷ Totales</th></tr></thead><tbody>${filasVacias}</tbody></table></section>`
     }).join('')
     const resumenMensual = vigiladoresMostrados.map((vigilador) => {
       const totales = calcularTotalesVigilador(vigilador.id)
@@ -444,72 +440,78 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     ventana.opener = null
     ventana.document.open()
     ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Grilla ${escaparHtml(objetivoActual?.nombre || 'objetivo')} - ${escaparHtml(nombreMes)}</title><style>
-@page{size:A4 landscape;orientation:landscape;margin:5mm}
+@page{size:297mm 210mm;margin:4mm}
 *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-html,body{width:100%;min-height:100%;margin:0;padding:0}
-body{color:#082f63;background:#fff;font-family:Arial,Helvetica,sans-serif}
-.documento{width:100%;height:198mm;display:flex;flex-direction:column;gap:2mm;overflow:hidden}
-.titulo{flex:none;min-height:18mm;display:grid;grid-template-columns:1.05fr 1.2fr .85fr;align-items:center;padding:2mm 5mm;border:.3mm solid #1d4d80;border-radius:2.5mm;color:#fff;background:linear-gradient(110deg,#092e59 0%,#164a7c 52%,#0a315f 100%);box-shadow:0 1.2mm 2.2mm rgba(5,35,70,.22),inset 0 .3mm .5mm rgba(255,255,255,.2)}
-.identidad{display:flex;align-items:center;gap:3mm}
-.escudo{width:13mm;height:13mm;display:grid;place-items:center;border:1mm solid #e5f2ff;border-radius:45% 45% 48% 48%;color:#fff;font-size:19px;font-weight:900;text-shadow:0 .4mm .8mm rgba(0,0,0,.25);box-shadow:inset 0 0 0 .6mm rgba(255,255,255,.2)}
-.marca{display:block;color:#fff;font-size:17px;line-height:1;font-weight:900;letter-spacing:.45px;text-shadow:0 .3mm .7mm rgba(0,0,0,.22)}
-.titulo h1{margin:1.2mm 0 0;color:#c9e4ff;font-size:11px;font-weight:700}
-.objetivo{min-height:12mm;display:flex;align-items:center;justify-content:center;padding:0 5mm;border-left:.45mm solid #c3def8;border-right:.45mm solid #c3def8;color:#fff;font-size:14px;font-weight:900;text-align:center;text-shadow:0 .3mm .6mm rgba(0,0,0,.2)}
-.mes{color:#fff;font-size:15px;font-weight:900;text-align:right;text-transform:capitalize}
-.mes small{display:block;margin-top:1mm;color:#d8eaff;font-size:8px;font-weight:600}
-.leyenda{flex:none;min-height:13mm;display:flex;align-items:center;justify-content:space-between;gap:2mm;padding:1.2mm 4mm;border:.3mm solid #8fc6f5;border-radius:2.5mm;background:linear-gradient(110deg,#f8fcff,#eaf5ff 55%,#f7fbff);box-shadow:0 .5mm 1.3mm rgba(30,90,145,.1),inset 0 .3mm .5mm #fff}
-.leyenda-item{display:flex;align-items:center;gap:2mm;color:#082f63;font-size:8px;font-weight:800;white-space:nowrap}
-.muestra{width:10mm;height:9mm;display:grid;place-items:center;border-radius:1.8mm;font-size:15px;font-weight:900;box-shadow:0 .6mm 1mm rgba(8,47,99,.14),inset 0 .4mm .5mm rgba(255,255,255,.35)}
+html,body{width:100%;height:100%;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;color:#082f63;background:#fff}
+.documento{width:289mm;height:202mm;max-width:none;margin:0 auto;padding:0;display:flex;flex-direction:column;gap:2mm;overflow:hidden;background:#fff}
+.titulo{height:20mm;flex:none;display:grid;grid-template-columns:1.08fr 1.35fr .9fr;align-items:center;padding:1.5mm 5mm;border:.35mm solid #174a7d;border-radius:2.5mm;background:linear-gradient(105deg,#0b315f 0%,#164b7c 55%,#0b315f 100%);box-shadow:0 1mm 2mm rgba(3,35,73,.2),inset 0 .35mm .6mm rgba(255,255,255,.2);color:#fff}
+.identidad{height:100%;display:flex;align-items:center;gap:3mm}
+.escudo{width:14mm;height:15mm;flex:none;display:flex;align-items:center;justify-content:center;color:#f4faff;font-size:27px;font-weight:900;line-height:1;text-shadow:0 1px 2px #071f3c}
+.marca{display:block;color:#fff;font-size:19px;line-height:1.05;font-weight:900;letter-spacing:.2px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.2)}
+.titulo h1{margin:1mm 0 0;color:#c8e5ff;font-size:13px;line-height:1.1;font-weight:700}
+.objetivo{height:14mm;display:flex;align-items:center;justify-content:center;gap:3mm;padding:0 4mm;border-left:.45mm solid #c3def8;border-right:.45mm solid #c3def8;color:#fff;font-size:17px;font-weight:900;white-space:nowrap;text-align:center}
+.mes{display:flex;align-items:center;justify-content:flex-end;gap:3mm;color:#fff;font-size:17px;font-weight:900;text-align:right;white-space:nowrap}
+.mes small{display:block;margin-top:1mm;color:#d8eaff;font-size:10px;line-height:1.45;font-weight:600}
+.icono-encabezado{font-size:27px;line-height:1}
+.leyenda{height:17mm;flex:none;display:flex;align-items:center;justify-content:space-between;gap:2mm;padding:1.2mm 4mm;border:.35mm solid #8fc6f5;border-radius:2.5mm;background:linear-gradient(110deg,#f8fcff,#eaf5ff 55%,#f7fbff);box-shadow:0 .5mm 1.3mm rgba(30,90,145,.1),inset 0 .3mm .5mm #fff}
+.leyenda-item{height:12mm;flex:1;display:flex;align-items:center;justify-content:center;gap:2.5mm;border-right:.3mm solid #a9d2f2;color:#082f63;font-size:10px;font-weight:800;white-space:nowrap}
+.leyenda-item:last-of-type{border:0}
+.muestra{width:13mm;height:11mm;flex:none;display:grid;place-items:center;border-radius:2mm;font-size:19px;font-weight:900;box-shadow:0 .6mm 1mm rgba(8,47,99,.14),inset 0 .4mm .5mm rgba(255,255,255,.35)}
 .muestra.diurno{background:linear-gradient(145deg,#ffe77a,#ffc928);color:#082f63}
 .muestra.nocturno{background:linear-gradient(145deg,#6b5be9,#4335bd);color:#fff}
 .muestra.feriado{background:linear-gradient(145deg,#ff5576,#e92c53);color:#fff}
 .muestra.franco{background:linear-gradient(145deg,#55a977,#318354);color:#fff}
-.horas-globales{padding:2mm 4mm;border:.3mm solid #c3e1fa;border-radius:2mm;background:linear-gradient(145deg,#dff1ff,#c5e4fc);color:#082f63;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:inset 0 .3mm .5mm #fff}
-.quincena{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;border:.3mm solid #83b9e8;border-radius:2.3mm;background:#fff;box-shadow:0 .5mm 1.2mm rgba(15,65,110,.1)}
-.encabezado-quincena{flex:none;display:flex;justify-content:space-between;align-items:center;min-height:8mm;padding:1.3mm 3mm;background:linear-gradient(100deg,#0b3564,#164b7e 58%,#0d3767)}
-h2{margin:0;color:#fff;font-size:11px;font-weight:900;text-shadow:0 .3mm .5mm rgba(0,0,0,.18)}
-.encabezado-quincena p{margin:0;color:#fff;font-size:8.5px;font-weight:800}
-table{width:100%;height:100%;border-collapse:separate;border-spacing:.55mm;table-layout:fixed;font-size:7px}
-th,td{padding:.45mm;text-align:center;vertical-align:middle;line-height:1.05}
+.horas-globales{min-width:48mm;padding:2mm 3mm;border:.3mm solid #c3e1fa;border-radius:2mm;background:linear-gradient(145deg,#dff1ff,#c5e4fc);color:#082f63;font-size:12px;font-weight:900;text-align:center;white-space:nowrap;box-shadow:inset 0 .3mm .5mm #fff}
+.quincena{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;border:.35mm solid #83b9e8;border-radius:2.3mm;background:#fff;box-shadow:0 .5mm 1.2mm rgba(15,65,110,.1)}
+.encabezado-quincena{height:8mm;flex:none;display:flex;justify-content:space-between;align-items:center;padding:1mm 3mm;background:linear-gradient(100deg,#0b3564,#164b7e 58%,#0d3767)}
+h2{margin:0;color:#fff;font-size:13px;font-weight:900;text-shadow:0 .3mm .5mm rgba(0,0,0,.18)}
+.encabezado-quincena p{margin:0;color:#fff;font-size:10px;font-weight:800}
+table{width:100%;height:100%;border-collapse:separate;border-spacing:.65mm;table-layout:fixed;font-size:8px}
+th,td{padding:.4mm;text-align:center;vertical-align:middle;line-height:1.05}
 thead th{height:10mm;border:.2mm solid #a9cbea;background:linear-gradient(180deg,#1a578c,#0b3c70);color:#fff;font-weight:900;text-shadow:0 .2mm .4mm rgba(0,0,0,.18)}
 thead th span,thead th strong{display:block}
-thead th span{font-size:7px;font-weight:700;text-transform:capitalize}
-thead th strong{margin-top:.5mm;font-size:10px}
-thead th.col-vigilador{width:18%;text-align:left;padding-left:3mm;background:linear-gradient(120deg,#eff8ff,#dceefa);color:#082f63;text-shadow:none}
-thead th.col-total{width:7%;background:linear-gradient(180deg,#1a578c,#0b3c70);font-size:8px}
+thead th span{font-size:8px;font-weight:700;text-transform:capitalize}
+thead th strong{margin-top:.5mm;font-size:11px}
+thead th.col-vigilador{width:18%;text-align:left;padding-left:3mm;background:linear-gradient(120deg,#eff8ff,#dceefa);color:#082f63;text-shadow:none;font-size:11px}
+thead th.col-total{width:9%;background:linear-gradient(180deg,#1a578c,#0b3c70);font-size:10px}
 thead th.fin-de-semana{background:linear-gradient(180deg,#205c91,#124575)}
 thead th.feriado,thead th.feriado.fin-de-semana{background:linear-gradient(145deg,#ff5274,#e92852);color:#fff;border-color:#ff9db0}
 tbody tr{height:9mm}
-tbody th{padding-left:2mm;border-bottom:.2mm solid #c5e2f8;background:linear-gradient(100deg,#f8fcff,#eaf5fd);color:#082f63;text-align:left;font-size:8px;font-weight:900}
-.avatar{width:7mm;height:7mm;display:inline-grid;place-items:center;margin-right:1.5mm;border:.4mm solid #d5eaff;border-radius:50%;background:linear-gradient(145deg,#1a568c,#082f63);color:#fff;font-size:10px;vertical-align:middle;box-shadow:0 .4mm .8mm rgba(8,47,99,.2)}
+tbody th{padding-left:2mm;border-bottom:.2mm solid #c5e2f8;background:linear-gradient(100deg,#f8fcff,#eaf5fd);color:#082f63;text-align:left;font-size:10px;font-weight:900;white-space:nowrap}
+.avatar{width:8mm;height:8mm;display:inline-grid;place-items:center;margin-right:1.5mm;border:.4mm solid #d5eaff;border-radius:50%;background:linear-gradient(145deg,#1a568c,#082f63);color:#fff;font-size:13px;vertical-align:middle;box-shadow:0 .4mm .8mm rgba(8,47,99,.2)}
 .nombre-vigilador{display:inline-block;max-width:80%;overflow:hidden;vertical-align:middle;white-space:nowrap;text-overflow:ellipsis}
 tbody td{border-bottom:.2mm solid #c5e2f8;background:#fff}
-.turno-casillero{min-height:8mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5mm;border:.3mm solid transparent;border-radius:1.6mm;font-size:8px;line-height:1;box-shadow:0 .45mm .8mm rgba(8,47,99,.13),inset 0 .35mm .4mm rgba(255,255,255,.45)}
-.turno-casillero strong{font-size:8.5px;font-weight:900}
-.icono-turno{font-size:11px;line-height:1}
+.turno-casillero{min-height:8mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5mm;border:.3mm solid transparent;border-radius:1.6mm;font-size:9px;line-height:1;box-shadow:0 .45mm .8mm rgba(8,47,99,.13),inset 0 .35mm .4mm rgba(255,255,255,.45)}
+.turno-casillero strong{font-size:10px;font-weight:900}
+.icono-turno{font-size:13px;line-height:1}
 .turno-casillero.turno-diurno{border-color:#f4c52e;background:linear-gradient(145deg,#ffe77a,#ffd13e);color:#082f63}
 .turno-casillero.turno-nocturno{border-color:#5146d8;background:linear-gradient(145deg,#6b5be9,#4537c2);color:#fff}
 .turno-casillero.turno-franco{border-color:#65bf8e;background:linear-gradient(145deg,#a4e5c1,#7acb9e);color:#075b3e}
 .turno-casillero.turno-especial{border-color:#8b79eb;background:linear-gradient(145deg,#f0edff,#dcd6ff);color:#4338a8}
 .turno-casillero.turno-con-extra strong{color:#087b55}
-td.sin-turno{border-radius:1.5mm;background:linear-gradient(145deg,#a4e5c1,#7acb9e);color:#075b3e;font-size:10px;font-weight:900}
-td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faff,#e4f2fc);color:#082f63;font-size:8px;font-weight:900;white-space:nowrap}
+td.sin-turno{border-radius:1.5mm;background:linear-gradient(145deg,#a4e5c1,#7acb9e);color:#075b3e;font-size:12px;font-weight:900}
+td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faff,#e4f2fc);color:#082f63;font-size:9px;font-weight:900;white-space:nowrap;text-align:left;padding-left:1.5mm}
+.total strong,.total span{display:block}
+.total strong{font-size:10px}
+.total span{margin-top:.4mm;font-size:8px;font-weight:600}
+.total .francos{color:#16865c}.total .nocturnas{color:#5b50d5}
 .vacio{padding:3mm;color:#475569}
-.resumen-mensual{flex:none;min-height:26mm;display:grid;grid-template-columns:.8fr repeat(${Math.max(vigiladoresMostrados.length, 1)},minmax(0,1fr));gap:1.7mm}
-.titulo-resumen{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:2mm;border:.3mm solid #8fc6f5;border-radius:2.2mm;background:linear-gradient(145deg,#f1f9ff,#dceefa);text-align:center;box-shadow:0 .5mm 1mm rgba(30,90,145,.1),inset 0 .3mm .5mm #fff}
-.titulo-resumen strong{color:#082f63;font-size:10px;font-weight:900}
-.titulo-resumen span{margin-top:1mm;color:#315d88;font-size:7px;font-weight:700}
-.tarjeta-resumen{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:2mm;border:.3mm solid #8fc6f5;border-radius:2.2mm;background:linear-gradient(145deg,#f7fcff,#e8f4fd);box-shadow:0 .5mm 1mm rgba(30,90,145,.12),inset 0 .3mm .5mm #fff}
-.tarjeta-resumen h3{margin:0 0 2mm;overflow:hidden;color:#082f63;font-size:8px;font-weight:900;text-align:center;text-overflow:ellipsis;white-space:nowrap}
+.resumen-mensual{height:18mm;flex:none;display:grid;grid-template-columns:.9fr repeat(\${Math.max(vigiladoresMostrados.length,1)},minmax(0,1fr));gap:1.7mm}
+.titulo-resumen{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:1mm;border:.3mm solid #8fc6f5;border-radius:2.2mm;background:linear-gradient(145deg,#f1f9ff,#dceefa);text-align:center;box-shadow:0 .5mm 1mm rgba(30,90,145,.1),inset 0 .3mm .5mm #fff}
+.titulo-resumen strong{color:#082f63;font-size:11px;font-weight:900}
+.titulo-resumen span{margin-top:1mm;color:#315d88;font-size:8px;font-weight:700}
+.tarjeta-resumen{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:1mm 1.5mm;border:.3mm solid #8fc6f5;border-radius:2.2mm;background:linear-gradient(145deg,#f7fcff,#e8f4fd);box-shadow:0 .5mm 1mm rgba(30,90,145,.12),inset 0 .3mm .5mm #fff}
+.tarjeta-resumen h3{margin:0 0 1mm;overflow:hidden;color:#082f63;font-size:9px;font-weight:900;text-align:center;text-overflow:ellipsis;white-space:nowrap}
 .metricas{display:grid;grid-template-columns:1.15fr .8fr 1.15fr;align-items:center}
 .metricas div{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 .5mm}
 .metricas div+div{border-left:.2mm solid #b8d8f3}
-.metricas strong{font-size:11px;line-height:1.1;font-weight:900;white-space:nowrap}
-.metricas span{margin-top:1mm;color:#315d88;font-size:6px;font-weight:700;white-space:nowrap}
+.metricas strong{font-size:12px;line-height:1.1;font-weight:900;white-space:nowrap}
+.metricas span{margin-top:.5mm;color:#315d88;font-size:7px;font-weight:700;white-space:nowrap}
 .metricas .horas{color:#0872c5}.metricas .francos{color:#16865c}.metricas .nocturnas{color:#5b50d5}
-@media screen{body{background:#e9eef5;padding:8px}.documento{max-width:1120px;margin:0 auto;background:#fff;box-shadow:0 12px 32px rgba(15,45,80,.2)}}
-@media print{html,body{width:287mm;height:200mm;margin:0;padding:0}.documento{width:287mm;height:200mm;page-break-inside:avoid;break-inside:avoid}.quincena,.resumen-mensual,.titulo,.leyenda{break-inside:avoid;page-break-inside:avoid}tr{break-inside:avoid}}
-</style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo">S</div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo">⌖ ${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes">${escaparHtml(nombreMes)}<small>Primera y segunda quincena · 1 al ${totalDiasMes} de ${escaparHtml(nombreMes)}</small></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · ${formatearHorasMinutos(horasGlobales)} hs</div></section>${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>`)
+@media screen{body{background:#e9eef5;padding:10px}.documento{box-shadow:0 12px 32px rgba(15,45,80,.2)}}
+@media print{html,body{width:289mm;height:202mm;margin:0;padding:0}.documento{width:289mm;height:202mm;margin:0;page-break-inside:avoid;break-inside:avoid}.quincena,.resumen-mensual,.titulo,.leyenda{break-inside:avoid;page-break-inside:avoid}tr{break-inside:avoid}}
+</style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo">⬡</div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo"><span class="icono-encabezado">📍</span>${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes"><span class="icono-encabezado">▦</span><span>${escaparHtml(nombreMes)}<small>Primera y segunda quincena<br>1 al ${totalDiasMes} de ${escaparHtml(nombreMes)}</small></span></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · ${formatearHorasMinutos(horasGlobales)} hs</div></section>${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>`)
     ventana.document.close()
     ventana.focus()
     window.setTimeout(() => ventana.print(), 250)
