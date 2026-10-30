@@ -410,40 +410,40 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
         const finDeSemana = fecha.getDay() === 0 || fecha.getDay() === 6
         const feriado = nombreFeriadoEnFecha(fechaClave(fecha))
         const clases = [finDeSemana ? 'fin-de-semana' : '', feriado ? 'feriado' : ''].filter(Boolean).join(' ')
-        return \`<th class="\${clases}"\${feriado ? \` title="\${escaparHtml(feriado)}"\` : ''}><span>\${escaparHtml(diaSemana.replace('.', ''))}</span><strong>\${dia}</strong></th>\`
+        return `<th class="${clases}"${feriado ? ` title="${escaparHtml(feriado)}"` : ''}><span>${escaparHtml(diaSemana.replace('.', ''))}</span><strong>${dia}</strong></th>`
       }).join('')
       const filas = vigiladoresMostrados.map((vigilador) => {
         const celdas = dias.map((dia) => {
-          const fecha = \`\${mesSeleccionado}-\${String(dia).padStart(2, '0')}\`
+          const fecha = `${mesSeleccionado}-${String(dia).padStart(2, '0')}`
           const turno = turnosVisibles.find((item) => item.id_vigilador === vigilador.id && item.id_objetivo === objetivoSeleccionado && item.fecha === fecha)
           if (!turno) return '<td class="sin-turno">O</td>'
-          const codigo = turno.tipo === 'franco' ? 'F' : turno.horas_extra > 0 ? formatearHorasCasillero(turno) : \`\${turno.horas_totales}h\`
+          const codigo = turno.tipo === 'franco' ? 'F' : turno.horas_extra > 0 ? formatearHorasCasillero(turno) : `${turno.horas_totales}h`
           const iconoTurno = turno.tipo === 'diurno' ? '☀' : turno.tipo === 'nocturno' ? '☾' : turno.tipo === 'franco' ? '' : '◆'
           const claseTurno = turno.tipo === 'diurno' ? 'turno-diurno' : turno.tipo === 'nocturno' ? 'turno-nocturno' : turno.tipo === 'franco' ? 'turno-franco' : 'turno-especial'
-          const icono = iconoTurno ? \`<span class="icono-turno">\${iconoTurno}</span>\` : ''
+          const icono = iconoTurno ? `<span class="icono-turno">${iconoTurno}</span>` : ''
           const estiloExtra = turno.horas_extra > 0 ? ' turno-con-extra' : ''
-          return \`<td><span class="turno-casillero \${claseTurno}\${estiloExtra}"><strong>\${escaparHtml(codigo)}</strong>\${icono}</span></td>\`
+          return `<td><span class="turno-casillero ${claseTurno}${estiloExtra}"><strong>${escaparHtml(codigo)}</strong>${icono}</span></td>`
         }).join('')
         const horasQuincena = turnosVisibles.filter((turno) => {
           const dia = Number(turno.fecha.slice(8, 10))
           return turno.id_vigilador === vigilador.id && turno.id_objetivo === objetivoSeleccionado &&
             turno.fecha.startsWith(mesSeleccionado) && dia >= quincena.inicio && dia <= quincena.fin
         }).reduce((total, turno) => total + turno.horas_totales + turno.horas_extra, 0)
-        return \`<tr><th scope="row">\${escaparHtml(\`\${vigilador.apellido}, \${vigilador.nombre}\`)}</th>\${celdas}<td class="total">\${formatearHorasMinutos(horasQuincena)} hs</td></tr>\`
+        return `<tr><th scope="row">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</th>${celdas}<td class="total">${formatearHorasMinutos(horasQuincena)} hs</td></tr>`
       }).join('')
       const filasVacias = vigiladoresMostrados.length === 0
-        ? \`<tr><td colspan="\${dias.length + 2}" class="vacio">No hay vigiladores asignados a este objetivo.</td></tr>\`
+        ? `<tr><td colspan="${dias.length + 2}" class="vacio">No hay vigiladores asignados a este objetivo.</td></tr>`
         : filas
-      return \`<section class="quincena"><header class="encabezado-quincena"><h2>\${quincena.titulo}</h2><p>\${quincena.inicio} al \${quincena.fin} de \${escaparHtml(nombreMes)}</p></header><table><thead><tr><th class="col-vigilador">Vigilador</th>\${encabezados}<th class="col-total">◷ Horas</th></tr></thead><tbody>\${filasVacias}</tbody></table></section>\`
+      return `<section class="quincena"><header class="encabezado-quincena"><h2>${quincena.titulo}</h2><p>${quincena.inicio} al ${quincena.fin} de ${escaparHtml(nombreMes)}</p></header><table><thead><tr><th class="col-vigilador">Vigilador</th>${encabezados}<th class="col-total">◷ Horas</th></tr></thead><tbody>${filasVacias}</tbody></table></section>`
     }).join('')
     const resumenMensual = vigiladoresMostrados.map((vigilador) => {
       const totales = calcularTotalesVigilador(vigilador.id)
-      return \`<article class="tarjeta-resumen"><h3>\${escaparHtml(\`\${vigilador.apellido}, \${vigilador.nombre}\`)}</h3><div class="metricas"><div><strong class="horas">\${formatearHorasMinutos(totales.horasTotales)} hs</strong><span>Horas totales</span></div><div><strong class="francos">\${totales.francos}</strong><span>Francos</span></div><div><strong class="nocturnas">\${formatearHorasMinutos(totales.horasNocturnas)} hs</strong><span>Nocturnas</span></div></div></article>\`
+      return `<article class="tarjeta-resumen"><h3>${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</h3><div class="metricas"><div><strong class="horas">${formatearHorasMinutos(totales.horasTotales)} hs</strong><span>Horas totales</span></div><div><strong class="francos">${totales.francos}</strong><span>Francos</span></div><div><strong class="nocturnas">${formatearHorasMinutos(totales.horasNocturnas)} hs</strong><span>Nocturnas</span></div></div></article>`
     }).join('')
     const horasGlobales = vigiladoresMostrados.reduce((total, vigilador) => total + calcularTotalesVigilador(vigilador.id).horasTotales, 0)
     ventana.opener = null
     ventana.document.open()
-    ventana.document.write(\`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Grilla \${escaparHtml(objetivoActual?.nombre || 'objetivo')} - \${escaparHtml(nombreMes)}</title><style>
+    ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Grilla ${escaparHtml(objetivoActual?.nombre || 'objetivo')} - ${escaparHtml(nombreMes)}</title><style>
       @page { size: A4 landscape; margin: 6mm; }
       * { box-sizing: border-box; } html, body { margin: 0; padding: 0; }
       body { color: #082f63; font-family: Arial, Helvetica, sans-serif; background: #fff; }
@@ -496,7 +496,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
       .metricas span { margin-top: 1mm; color: #315d88; font-size: 6px; white-space: nowrap; }
       .metricas .horas { color: #0872c5; } .metricas .francos { color: #16865c; } .metricas .nocturnas { color: #5b50d5; }
       @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } html, body { width: 100%; height: 100%; } .documento { page-break-inside: avoid; } tr { break-inside: avoid; } }
-    </style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo">S</div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo">⌖ \${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes">\${escaparHtml(nombreMes)}<small>Primera y segunda quincena · 1 al \${totalDiasMes} de \${escaparHtml(nombreMes)}</small></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · \${formatearHorasMinutos(horasGlobales)} hs</div></section>\${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>\${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>\`)
+    </style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo">S</div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo">⌖ ${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes">${escaparHtml(nombreMes)}<small>Primera y segunda quincena · 1 al ${totalDiasMes} de ${escaparHtml(nombreMes)}</small></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · ${formatearHorasMinutos(horasGlobales)} hs</div></section>${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>`)
     ventana.document.close()
     ventana.focus()
     window.setTimeout(() => ventana.print(), 250)
