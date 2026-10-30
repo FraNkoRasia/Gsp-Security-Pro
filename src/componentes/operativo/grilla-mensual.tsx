@@ -387,19 +387,14 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
 
   const descargarGrilla = () => {
     if (!objetivoSeleccionado) return
-
     const ventana = window.open('', '_blank')
     if (!ventana) {
       window.alert('El navegador bloqueó la ventana de impresión. Permití las ventanas emergentes e intentá nuevamente.')
       return
     }
-
     const escaparHtml = (valor: string) => valor
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
     const [anio, numeroMes] = mesSeleccionado.split('-').map(Number)
     const fechaMes = new Date(anio, numeroMes - 1, 1)
     const nombreMes = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(fechaMes)
@@ -407,127 +402,101 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
       { titulo: 'Primera quincena', inicio: 1, fin: 15 },
       { titulo: 'Segunda quincena', inicio: 16, fin: totalDiasMes }
     ]
-
     const paginas = quincenas.map((quincena) => {
-      const dias = Array.from(
-        { length: quincena.fin - quincena.inicio + 1 },
-        (_, indice) => quincena.inicio + indice
-      )
+      const dias = Array.from({ length: quincena.fin - quincena.inicio + 1 }, (_, indice) => quincena.inicio + indice)
       const encabezados = dias.map((dia) => {
         const fecha = new Date(anio, numeroMes - 1, dia)
         const diaSemana = new Intl.DateTimeFormat('es-AR', { weekday: 'short' }).format(fecha)
         const finDeSemana = fecha.getDay() === 0 || fecha.getDay() === 6
         const feriado = nombreFeriadoEnFecha(fechaClave(fecha))
         const clases = [finDeSemana ? 'fin-de-semana' : '', feriado ? 'feriado' : ''].filter(Boolean).join(' ')
-        return `<th class="${clases}"${feriado ? ` title="${escaparHtml(feriado)}"` : ''}><span>${escaparHtml(diaSemana)}</span><strong>${dia}</strong>${feriado ? '<small>Feriado</small>' : ''}</th>`
+        return `<th class="${clases}"${feriado ? ` title="${escaparHtml(feriado)}"` : ''}><span>${escaparHtml(diaSemana.replace('.', ''))}</span><strong>${dia}</strong></th>`
       }).join('')
       const filas = vigiladoresMostrados.map((vigilador) => {
         const celdas = dias.map((dia) => {
           const fecha = `${mesSeleccionado}-${String(dia).padStart(2, '0')}`
-          const turno = turnosVisibles.find((item) =>
-            item.id_vigilador === vigilador.id &&
-            item.id_objetivo === objetivoSeleccionado &&
-            item.fecha === fecha
-          )
-          if (!turno) return '<td class="sin-turno">—</td>'
-
-          const codigo = turno.tipo === 'franco'
-            ? 'F'
-            : turno.horas_extra > 0
-              ? formatearHorasCasillero(turno)
-              : `${turno.horas_totales}h`
-          const iconoTurno = turno.tipo === 'diurno'
-            ? '☀️'
-            : turno.tipo === 'nocturno'
-              ? '🌙'
-              : turno.tipo === 'franco'
-                ? ''
-                : '◆'
-          const extra = ''
-          const claseTurno = turno.tipo === 'diurno'
-            ? 'turno-diurno'
-            : turno.tipo === 'nocturno'
-              ? 'turno-nocturno'
-              : turno.tipo === 'franco'
-                ? 'turno-franco'
-                : 'turno-especial'
+          const turno = turnosVisibles.find((item) => item.id_vigilador === vigilador.id && item.id_objetivo === objetivoSeleccionado && item.fecha === fecha)
+          if (!turno) return '<td class="sin-turno">O</td>'
+          const codigo = turno.tipo === 'franco' ? 'F' : turno.horas_extra > 0 ? formatearHorasCasillero(turno) : `${turno.horas_totales}h`
+          const iconoTurno = turno.tipo === 'diurno' ? '☀' : turno.tipo === 'nocturno' ? '☾' : turno.tipo === 'franco' ? '' : '◆'
+          const claseTurno = turno.tipo === 'diurno' ? 'turno-diurno' : turno.tipo === 'nocturno' ? 'turno-nocturno' : turno.tipo === 'franco' ? 'turno-franco' : 'turno-especial'
           const icono = iconoTurno ? `<span class="icono-turno">${iconoTurno}</span>` : ''
           const estiloExtra = turno.horas_extra > 0 ? ' turno-con-extra' : ''
-          return `<td><span class="turno-casillero ${claseTurno}${estiloExtra}"><strong>${escaparHtml(codigo)}</strong>${icono}</span>${extra}</td>`
+          return `<td><span class="turno-casillero ${claseTurno}${estiloExtra}"><strong>${escaparHtml(codigo)}</strong>${icono}</span></td>`
         }).join('')
-        const horasQuincena = turnos
-          .filter((turno) => {
-            const dia = Number(turno.fecha.slice(8, 10))
-            return turno.id_vigilador === vigilador.id &&
-              turno.id_objetivo === objetivoSeleccionado &&
-              turno.fecha.startsWith(mesSeleccionado) &&
-              dia >= quincena.inicio && dia <= quincena.fin
-          })
-          .reduce((total, turno) => total + turno.horas_totales + turno.horas_extra, 0)
-
+        const horasQuincena = turnosVisibles.filter((turno) => {
+          const dia = Number(turno.fecha.slice(8, 10))
+          return turno.id_vigilador === vigilador.id && turno.id_objetivo === objetivoSeleccionado &&
+            turno.fecha.startsWith(mesSeleccionado) && dia >= quincena.inicio && dia <= quincena.fin
+        }).reduce((total, turno) => total + turno.horas_totales + turno.horas_extra, 0)
         return `<tr><th scope="row">${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</th>${celdas}<td class="total">${formatearHorasMinutos(horasQuincena)} hs</td></tr>`
       }).join('')
       const filasVacias = vigiladoresMostrados.length === 0
         ? `<tr><td colspan="${dias.length + 2}" class="vacio">No hay vigiladores asignados a este objetivo.</td></tr>`
         : filas
-      const totalesDiarios = dias.map((dia) => `<td>${formatearTotalDiario(calcularTotalDiario(dia))}h</td>`).join('')
-
-      return `<section class="quincena"><header><h2>${quincena.titulo}</h2><p>${quincena.inicio} al ${quincena.fin} de ${escaparHtml(nombreMes)}</p></header><table><thead><tr><th>Vigilador</th>${encabezados}<th>Horas</th></tr></thead><tbody>${filasVacias}</tbody><tfoot><tr><th>Total Día</th>${totalesDiarios}<td>Total</td></tr></tfoot></table></section>`
+      return `<section class="quincena"><header class="encabezado-quincena"><h2>${quincena.titulo}</h2><p>${quincena.inicio} al ${quincena.fin} de ${escaparHtml(nombreMes)}</p></header><table><thead><tr><th class="col-vigilador">Vigilador</th>${encabezados}<th class="col-total">◷ Horas</th></tr></thead><tbody>${filasVacias}</tbody></table></section>`
     }).join('')
-
+    const resumenMensual = vigiladoresMostrados.map((vigilador) => {
+      const totales = calcularTotalesVigilador(vigilador.id)
+      return `<article class="tarjeta-resumen"><h3>${escaparHtml(`${vigilador.apellido}, ${vigilador.nombre}`)}</h3><div class="metricas"><div><strong class="horas">${formatearHorasMinutos(totales.horasTotales)} hs</strong><span>Horas totales</span></div><div><strong class="francos">${totales.francos}</strong><span>Francos</span></div><div><strong class="nocturnas">${formatearHorasMinutos(totales.horasNocturnas)} hs</strong><span>Nocturnas</span></div></div></article>`
+    }).join('')
+    const horasGlobales = vigiladoresMostrados.reduce((total, vigilador) => total + calcularTotalesVigilador(vigilador.id).horasTotales, 0)
     ventana.opener = null
     ventana.document.open()
     ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Grilla ${escaparHtml(objetivoActual?.nombre || 'objetivo')} - ${escaparHtml(nombreMes)}</title><style>
-      @page { size: 297mm 210mm; margin: 8mm; }
-      * { box-sizing: border-box; }
-      body { margin: 0; color: #0f172a; font-family: Arial, sans-serif; }
-      body { height: 194mm; display: flex; flex-direction: column; }
-      .titulo { flex: none; display: flex; justify-content: space-between; align-items: center; margin: 0 0 2mm; padding: 0 1mm 2mm; border-bottom: 2px solid #2563eb; }
-      .titulo h1 { margin: 1px 0; font-size: 17px; font-weight: 800; }
-      .marca { color: #2563eb; font-size: 7px; font-weight: 800; letter-spacing: 1px; }
-      .titulo p { margin: 0; font-size: 9px; color: #475569; }
-      .mes { padding: 5px 9px; border: 1px solid #93c5fd; border-radius: 7px; color: #1d4ed8; background: #eff6ff; font-size: 10px; text-transform: capitalize; }
-      .quincena { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-      .quincena + .quincena { margin-top: 2mm; }
-      .quincena header { flex: none; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1mm; padding: 1mm 2mm; border-left: 3px solid #2563eb; border-radius: 0 5px 5px 0; background: #eff6ff; }
-      h2 { margin: 0; color: #1e3a8a; font-size: 11px; font-weight: 800; }
-      .quincena header p { margin: 0; color: #475569; font-size: 8px; }
-      table { flex: 1 1 auto; width: 100%; height: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 8px; }
-      th, td { border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 1px; text-align: center; overflow-wrap: anywhere; line-height: 1.1; }
-      thead th { border-top: 1px solid #94a3b8; background: #e2e8f0; color: #334155; }
-      thead th:first-child, tbody th:first-child, tfoot th:first-child { border-left: 1px solid #94a3b8; }
-      thead th:first-child { border-radius: 6px 0 0 0; }
-      thead th:last-child { border-radius: 0 6px 0 0; }
-      thead th:first-child, tbody th { width: 20%; text-align: left; }
-      thead th:last-child, tbody td:last-child, tfoot td:last-child { width: 7%; font-weight: 700; }
-      thead th span, thead th strong { display: block; }
-      thead th span { font-size: 7px; font-weight: 600; }
-      thead th strong { font-size: 10px; }
-      thead th.fin-de-semana { background: #dbeafe; color: #1e40af; }
-      thead th.feriado { background: #fef3c7; color: #92400e; }
-      thead th.feriado.fin-de-semana { background: #fde68a; color: #78350f; }
-      thead th small { display: block; font-size: 5px; font-weight: 700; }
-      tbody th { padding-left: 2mm; background: #f8fafc; font-size: 8px; font-weight: 700; }
-      .turno-casillero { min-height: 23px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border: 1.5px solid; border-radius: 6px; font-size: 8px; line-height: 1; }
-      .turno-casillero strong { font-size: 8px; }
-      .icono-turno { font-size: 9px; }
-      td small { display: block; margin-top: 1px; color: #047857; font-size: 6px; font-weight: 700; }
-      .turno-casillero.turno-diurno { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
-      .turno-casillero.turno-nocturno { border-color: #3b82f6; background: #dbeafe; color: #1e40af; }
-      .turno-casillero.turno-franco { border-color: #22c55e; background: #dcfce7; color: #166534; }
-      .turno-casillero.turno-especial { border-color: #8b5cf6; background: #ede9fe; color: #5b21b6; }
-      .turno-casillero.turno-con-extra strong { color: #047857; }
-      tfoot th, tfoot td { border-top: 2px solid #64748b; background: #f1f5f9; color: #1e293b; font-weight: 800; }
-      tfoot th { border-radius: 0 0 0 5px; text-align: left; }
-      tfoot td { color: #1d4ed8; font-family: Arial, sans-serif; }
-      tfoot td:last-child { border-radius: 0 0 5px 0; }
-      .vacio { padding: 3px; color: #475569; }
-      @media print {
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        thead { display: table-header-group; }
-        tr { break-inside: avoid; }
-      }
-    </style></head><body><header class="titulo"><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1><p>${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</p></div><strong class="mes">${escaparHtml(nombreMes)}</strong></header>${paginas}</body></html>`)
+      @page { size: A4 landscape; margin: 6mm; }
+      * { box-sizing: border-box; } html, body { margin: 0; padding: 0; }
+      body { color: #082f63; font-family: Arial, Helvetica, sans-serif; background: #fff; }
+      .documento { height: 198mm; display: flex; flex-direction: column; gap: 2mm; }
+      .titulo { flex: none; min-height: 17mm; display: flex; justify-content: space-between; align-items: center; padding: 2mm 5mm; border-radius: 3mm; color: #fff; background: #103f70; }
+      .identidad { display: flex; align-items: center; gap: 3mm; }
+      .escudo { width: 12mm; height: 12mm; display: grid; place-items: center; border: 1mm solid #dbeafe; border-radius: 50%; color: #fff; font-size: 17px; font-weight: 900; }
+      .marca { display: block; color: #fff; font-size: 16px; line-height: 1; font-weight: 900; letter-spacing: .4px; }
+      .titulo h1 { margin: 1mm 0 0; color: #c7e2ff; font-size: 11px; font-weight: 700; }
+      .objetivo { padding: 0 7mm; border-left: .5mm solid #bfdbfe; border-right: .5mm solid #bfdbfe; color: #fff; font-size: 13px; font-weight: 800; text-align: center; }
+      .mes { color: #fff; font-size: 14px; font-weight: 800; text-align: right; text-transform: capitalize; }
+      .mes small { display: block; margin-top: 1mm; color: #dbeafe; font-size: 8px; font-weight: 500; }
+      .leyenda { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: 10mm; padding: 1mm 4mm; border: .3mm solid #93c5fd; border-radius: 2mm; background: #f0f8ff; }
+      .leyenda-item { display: flex; align-items: center; gap: 2mm; color: #082f63; font-size: 8px; font-weight: 700; }
+      .muestra { width: 8mm; height: 7mm; display: grid; place-items: center; border-radius: 1.5mm; font-size: 12px; font-weight: 900; }
+      .muestra.diurno { background: #ffd84d; color: #082f63; } .muestra.nocturno { background: #5146d8; color: #fff; }
+      .muestra.feriado { background: #f2355b; color: #fff; } .muestra.franco { background: #419768; color: #fff; }
+      .horas-globales { padding: 1.5mm 4mm; border-radius: 2mm; background: #d8edff; color: #082f63; font-size: 9px; font-weight: 800; }
+      .quincena { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+      .encabezado-quincena { flex: none; display: flex; justify-content: space-between; align-items: center; padding: 1.3mm 3mm; border-radius: 2mm 2mm 0 0; color: #fff; background: #103f70; }
+      h2 { margin: 0; color: #fff; font-size: 10px; font-weight: 800; } .encabezado-quincena p { margin: 0; color: #fff; font-size: 8px; font-weight: 700; }
+      table { width: 100%; height: 100%; border-collapse: separate; border-spacing: .5mm; table-layout: fixed; font-size: 7px; }
+      th, td { padding: .5mm; text-align: center; vertical-align: middle; line-height: 1.05; }
+      thead th { height: 10mm; border: .2mm solid #b8d8f3; background: #10477c; color: #fff; font-weight: 800; }
+      thead th span, thead th strong { display: block; } thead th span { font-size: 6.5px; font-weight: 600; text-transform: capitalize; }
+      thead th strong { margin-top: .5mm; font-size: 9px; }
+      thead th.col-vigilador { width: 18%; text-align: left; padding-left: 3mm; background: #e4f2fc; color: #082f63; }
+      thead th.col-total { width: 7%; background: #10477c; font-size: 8px; }
+      thead th.fin-de-semana { background: #164d80; }
+      thead th.feriado, thead th.feriado.fin-de-semana { background: #f2355b; color: #fff; border-color: #ff9db0; }
+      tbody tr { height: 9mm; } tbody th { padding-left: 3mm; border-bottom: .2mm solid #c5e2f8; background: #f1f8fd; color: #082f63; text-align: left; font-size: 8px; font-weight: 800; }
+      .nombre-vigilador { white-space: nowrap; } tbody td { border-bottom: .2mm solid #c5e2f8; background: #fff; }
+      .turno-casillero { min-height: 8mm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5mm; border: .3mm solid transparent; border-radius: 1.5mm; font-size: 8px; line-height: 1; }
+      .turno-casillero strong { font-size: 8px; } .icono-turno { font-size: 10px; line-height: 1; }
+      .turno-casillero.turno-diurno { border-color: #f4c52e; background: #ffdf61; color: #082f63; }
+      .turno-casillero.turno-nocturno { border-color: #5146d8; background: #5146d8; color: #fff; }
+      .turno-casillero.turno-franco { border-color: #65bf8e; background: #91d9b2; color: #075b3e; }
+      .turno-casillero.turno-especial { border-color: #8b79eb; background: #e8e4ff; color: #4338a8; }
+      .turno-casillero.turno-con-extra strong { color: #087b55; } td.sin-turno { background: #91d9b2; color: #075b3e; font-size: 9px; font-weight: 800; }
+      td.total { border-left: .3mm solid #9cc9ee; background: #edf7ff; color: #082f63; font-size: 8px; font-weight: 900; white-space: nowrap; }
+      .vacio { padding: 3mm; color: #475569; }
+      .resumen-mensual { flex: none; min-height: 24mm; display: grid; grid-template-columns: .85fr repeat(5, 1fr); gap: 2mm; }
+      .titulo-resumen { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2mm; border: .3mm solid #93c5fd; border-radius: 2mm; background: #e4f2fc; text-align: center; }
+      .titulo-resumen strong { color: #082f63; font-size: 10px; } .titulo-resumen span { margin-top: 1mm; color: #315d88; font-size: 7px; }
+      .tarjeta-resumen { min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 2mm; border: .3mm solid #93c5fd; border-radius: 2mm; background: #f1f8fd; }
+      .tarjeta-resumen h3 { margin: 0 0 2mm; overflow: hidden; color: #082f63; font-size: 8px; font-weight: 800; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+      .metricas { display: grid; grid-template-columns: 1.15fr .8fr 1.15fr; align-items: center; }
+      .metricas div { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 .5mm; }
+      .metricas div + div { border-left: .2mm solid #b8d8f3; } .metricas strong { font-size: 11px; line-height: 1.1; white-space: nowrap; }
+      .metricas span { margin-top: 1mm; color: #315d88; font-size: 6px; white-space: nowrap; }
+      .metricas .horas { color: #0872c5; } .metricas .francos { color: #16865c; } .metricas .nocturnas { color: #5b50d5; }
+      @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } html, body { width: 100%; height: 100%; } .documento { page-break-inside: avoid; } tr { break-inside: avoid; } }
+    </style></head><body><main class="documento"><header class="titulo"><div class="identidad"><div class="escudo">S</div><div><span class="marca">GPS SECURITY PRO</span><h1>Grilla de turnos</h1></div></div><div class="objetivo">⌖ ${escaparHtml(objetivoActual?.nombre || 'Objetivo')}</div><div class="mes">${escaparHtml(nombreMes)}<small>Primera y segunda quincena · 1 al ${totalDiasMes} de ${escaparHtml(nombreMes)}</small></div></header><section class="leyenda"><div class="leyenda-item"><span class="muestra diurno">☀</span><span>Turno diurno<br>8h / 10h / 12h</span></div><div class="leyenda-item"><span class="muestra nocturno">☾</span><span>Turno nocturno<br>12h</span></div><div class="leyenda-item"><span class="muestra feriado">F</span><span>Feriado<br>Solo encabezado</span></div><div class="leyenda-item"><span class="muestra franco">O</span><span>Sin turno<br>Franco u otro</span></div><div class="horas-globales">◷ Horas totales · ${formatearHorasMinutos(horasGlobales)} hs</div></section>${paginas}<section class="resumen-mensual"><div class="titulo-resumen"><strong>▦ Total del mes</strong><span>Ambas quincenas</span></div>${resumenMensual || '<div class="tarjeta-resumen">No hay vigiladores asignados a este objetivo.</div>'}</section></main></body></html>`)
     ventana.document.close()
     ventana.focus()
     window.setTimeout(() => ventana.print(), 250)
