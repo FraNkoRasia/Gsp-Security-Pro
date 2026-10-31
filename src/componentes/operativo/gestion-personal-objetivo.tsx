@@ -82,6 +82,34 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
   const verHistorial=async(p:Persona)=>{setHistorialPersona(p);setHistorial([]);try{const d=await ejecutar("historial",{id:p.id});setHistorial(d.historial||[])}catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el historial.")}}
   const visibles=personal.filter(p=>(filtro==="activos")===p.activo&&(!idObjetivoSeleccionado||p.objetivo?.id===idObjetivoSeleccionado)&&[p.nombre,p.apellido,p.email,p.dni,p.telefono||""].some(x=>x.toLowerCase().includes(busqueda.toLowerCase().trim())))
   const fmt=(fecha:string)=>{try{return new Date(fecha).toLocaleString("es-AR")}catch{return fecha}}
+  const etiquetaAccion=(accion:string)=>{
+    const etiquetas:Record<string,string>={
+      RESTABLECER_CONTRASENA_PERSONAL:"Restableció la contraseña",
+      REACTIVAR_PERSONAL_OBJETIVO:"Reactivó la cuenta",
+      DAR_BAJA_PERSONAL_OBJETIVO:"Dio de baja la cuenta",
+      CREAR_PERSONAL_OBJETIVO:"Creó la cuenta",
+      EDITAR_PERSONAL_OBJETIVO:"Actualizó los datos",
+      ASIGNAR_OBJETIVO_PERSONAL:"Asignó un objetivo",
+    }
+    return etiquetas[accion]||accion.toLowerCase().replace(/_/g," ").replace(/^./,letra=>letra.toUpperCase())
+  }
+  const textoDetalle=(detalle:unknown):string=>{
+    if(detalle===null||detalle===undefined||detalle==="") return ""
+    let valor=detalle
+    if(typeof valor==="string"){
+      try{valor=JSON.parse(valor)}catch{return valor}
+    }
+    if(typeof valor==="object"){
+      const objeto=valor as Record<string,unknown>
+      if(typeof objeto.texto==="string") return objeto.texto
+      return Object.entries(objeto).map(([clave,dato])=>{
+        const nombre=clave.replace(/_/g," ").replace(/^./,letra=>letra.toUpperCase())
+        const contenido=typeof dato==="string"?dato:typeof dato==="object"?JSON.stringify(dato):String(dato)
+        return nombre+": "+contenido
+      }).join(" · ")
+    }
+    return String(valor)
+  }
 
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -118,7 +146,7 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
       {detalle&&<div className="space-y-2 text-sm"><p><strong>Nombre:</strong> {detalle.nombre} {detalle.apellido}</p><p><strong>DNI:</strong> {detalle.dni||"No registrado"}</p><p><strong>Correo:</strong> {detalle.email}</p><p><strong>Teléfono:</strong> {detalle.telefono||"No registrado"}</p><p><strong>Empresa:</strong> {empresas.find(e=>e.id===detalle.id_empresa)?.nombre||"Empresa"}</p><p><strong>Objetivo:</strong> {detalle.objetivo?.nombre||"Sin objetivo"}</p><p><strong>Alta:</strong> {fmt(detalle.creado_en)}</p><p><strong>Estado:</strong> {detalle.activo?"Activo":"Inactivo"}</p><p><strong>Contraseña:</strong> {detalle.debe_cambiar_contrasena?"Cambio obligatorio pendiente":"Contraseña personal establecida"}</p></div>}
     </Dialogo>
     <Dialogo abierto={!!historialPersona} alCerrar={()=>setHistorialPersona(null)} titulo="Historial de actividad" subtitulo={historialPersona?historialPersona.nombre+" "+historialPersona.apellido:""}>
-      <div className="max-h-[60vh] space-y-2 overflow-y-auto">{historial.length?historial.map(h=><div key={h.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800"><strong>{h.accion}</strong><p className="text-xs text-slate-500">{fmt(h.fecha_hora)}</p><p className="mt-1 text-xs text-slate-500">{typeof h.detalle==="object"?JSON.stringify(h.detalle):String(h.detalle||"")}</p></div>):<p className="text-sm text-slate-500">No hay registros de auditoría para esta cuenta.</p>}</div>
+      <div className="max-h-[60vh] space-y-2 overflow-y-auto">{historial.length?historial.map(h=><div key={h.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800"><strong>{etiquetaAccion(h.accion)}</strong><p className="text-xs text-slate-500">{fmt(h.fecha_hora)}</p>{textoDetalle(h.detalle)&&<p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{textoDetalle(h.detalle)}</p>}</div>):<p className="text-sm text-slate-500">No hay registros de auditoría para esta cuenta.</p>}</div>
     </Dialogo>
   </div>
 }
