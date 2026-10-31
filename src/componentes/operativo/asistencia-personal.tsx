@@ -472,7 +472,6 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
           </div>
         </div>
       </div>,document.body)}
-      <p className="flex items-start gap-2 text-xs leading-5 text-slate-500 dark:text-slate-400"><Clock3 className="mt-0.5 h-4 w-4 shrink-0"/>El selector de fecha permite consultar jornadas anteriores. Las marcas guardadas se mantienen separadas de la grilla de vigilancia.</p>
     </section>
   )
 }
