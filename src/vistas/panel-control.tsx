@@ -228,7 +228,7 @@ export const VistaPanelControl: React.FC = () => {
                     <Boton variante="secundario" tamano="chico" onClick={() => setVistaObjetivo('detalle')} icono={<ArrowLeft className="w-4 h-4" />}>{idioma === 'en' ? 'Back to Site' : 'Volver al objetivo'}</Boton>
                     <Insignia variante="azul">Vigiladores del objetivo</Insignia>
                   </div>
-                  <GestionVigiladores idEmpresaSeleccionada={objetivo.id_empresa} idObjetivoSeleccionado={objetivo.id} modoConsulta />
+                  <GestionVigiladores idEmpresaSeleccionada={objetivo.id_empresa} idObjetivoSeleccionado={objetivo.id} ocultarAlta />
                 </div>
               )
               if (vistaObjetivo === 'encargados' || vistaObjetivo === 'supervisores') return (

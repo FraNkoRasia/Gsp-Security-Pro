@@ -35,7 +35,7 @@ const etiquetaEstadoCambio = (estado: string, administrador?: string | null) => 
   return estado
 }
 
-export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idObjetivoSeleccionado?: string; modoConsulta?: boolean }> = ({ idEmpresaSeleccionada, idObjetivoSeleccionado, modoConsulta = false }) => {
+export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idObjetivoSeleccionado?: string; modoConsulta?: boolean; ocultarAlta?: boolean }> = ({ idEmpresaSeleccionada, idObjetivoSeleccionado, modoConsulta = false, ocultarAlta = false }) => {
   const { vigiladores, asignaciones, objetivos, turnos, novedades, solicitudesCambio, avisos, solicitudesHorasExtra, crearVigilador, editarVigilador, cambiarEstadoVigilador } = useOperativo()
   const { usuario } = useAutenticacion()
 
@@ -383,7 +383,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
             Control de personal de guardia, asignaciones vigentes e historial de traslados operativos.
           </p>
         </div>
-        {!modoConsulta && <Boton
+        {!modoConsulta && !ocultarAlta && <Boton
           variante="primario"
           onClick={abrirAlta}
           icono={<UserPlus className="w-4 h-4" />}
