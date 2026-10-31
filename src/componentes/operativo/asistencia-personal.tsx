@@ -117,7 +117,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
       // La gestión conserva visibles los registros inactivos y categorías históricas; asistencia solo muestra categorías activas.
       setPersonal(((p.data || []) as Personal[]).filter(persona => modoGestion || (persona.activo && nombresCategoriasActivas.has(persona.categoria.trim().toLocaleLowerCase('es-AR')))))
       setAsistencias((a.data || []) as Asistencia[])
-      setCategorias(todasLasCategorias)
+      setCategorias(modoGestion ? todasLasCategorias : categoriasActivas)
       setCategoria(actual => categoriasActivas.some(x=>x.nombre===actual) ? actual : (categoriasActivas[0]?.nombre || ''))
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron cargar los registros.') }
     finally { setCargando(false) }
