@@ -194,7 +194,7 @@ export const VistaPanelControl: React.FC = () => {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => { if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
+                  onClick={() => { 
                     if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) { setPestanaPendiente(p.id); setModalSalidaGrilla(true) } else setPestanaActiva(p.id) }}
                   className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl font-bold text-[11px] sm:text-xs text-center transition-all cursor-pointer select-none min-w-0 ${
                     estaActiva
@@ -296,7 +296,8 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'grilla' && esVigilador && !objetivoVigiladorId && <div className="rounded-2xl border border-slate-800 bg-[#0C121E] p-6 text-center text-sm text-slate-400">No tenés un objetivo activo asignado actualmente.</div>}
             {pestanaRenderizada === 'miMes' && esVigilador && <MiMes />}
             {pestanaRenderizada === 'historialLaboral' && esVigilador && <HistorialLaboral />}
-            {(pestanaRenderizada === 'asistenciaPersonal' || pestanaRenderizada === 'personal') && (esVigilador || esEncargado) && <AsistenciaPersonal />}
+            {pestanaRenderizada === 'asistenciaPersonal' && (esVigilador || esEncargado) && <AsistenciaPersonal />}
+            {pestanaRenderizada === 'personal' && esEncargado && <AsistenciaPersonal modoGestion />}
           </div>
         </>
       )}
@@ -330,7 +331,7 @@ export const VistaPanelControl: React.FC = () => {
                 return (
                   <button key={p.id} type="button" onClick={() => {
                     window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
-                    if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
+                    
                     if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                       setPestanaPendiente(p.id)
                       setModalSalidaGrilla(true)
@@ -372,7 +373,7 @@ export const VistaPanelControl: React.FC = () => {
                       return (
                         <button key={p.id} type="button" onClick={() => {
                           window.dispatchEvent(new Event('gsp:mostrar-inicio-operativo'))
-                          if (p.id === 'personal') window.dispatchEvent(new Event('gsp:abrir-alta-personal'))
+                          
                           if (esAdmin && pestanaRenderizada === 'grillaObjetivo' && grillaConCambios && p.id !== pestanaRenderizada) {
                             setPestanaPendiente(p.id)
                             setModalSalidaGrilla(true)
