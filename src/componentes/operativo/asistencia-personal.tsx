@@ -53,7 +53,7 @@ const fechaLocal = () => {
 }
 const hora = (value: string|null) => value ? new Date(value).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—'
 
-export const AsistenciaPersonal: React.FC = () => {
+export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGestion = false }) => {
   const { usuario } = useAutenticacion()
   const { asignaciones, objetivos, vigiladores } = useOperativo()
   const esEncargado = usuario?.rol === 'encargado_empresa'
@@ -75,6 +75,9 @@ export const AsistenciaPersonal: React.FC = () => {
   const [categoriaAEliminar,setCategoriaAEliminar] = useState<Categoria|null>(null)
   const [confirmacionEliminarCategoria,setConfirmacionEliminarCategoria] = useState(false)
   const [modalAltaAbierto,setModalAltaAbierto] = useState(false)
+  const [personaEditando,setPersonaEditando] = useState<Personal|null>(null)
+  const [filtroEstadoPersonal,setFiltroEstadoPersonal] = useState<'activos'|'inactivos'>('activos')
+  const [confirmacionEstadoPersonal,setConfirmacionEstadoPersonal] = useState<Personal|null>(null)
   useEffect(() => {
     const abrirAltaPersonal = () => { setError(''); setModalAltaAbierto(true) }
     window.addEventListener('gsp:abrir-alta-personal', abrirAltaPersonal)
@@ -101,23 +104,24 @@ export const AsistenciaPersonal: React.FC = () => {
       if (!idObjetivo) { setObjetivoId(''); setPersonal([]); setAsistencias([]); setCargando(false); return }
       setObjetivoId(idObjetivo)
       const [p,a,c] = await Promise.all([
-        supabase.from('personal_empresa').select('id,nombre,apellido,categoria,estado_aprobacion,activo').eq('id_objetivo',idObjetivo).eq('activo',true).order('nombre'),
+        supabase.from('personal_empresa').select('id,nombre,apellido,categoria,estado_aprobacion,activo').eq('id_objetivo',idObjetivo).order('nombre'),
         supabase.from('asistencias_personal_empresa').select('id,id_personal,fecha,ingreso,egreso,jornada_cerrada,informe_enviado_en').eq('id_objetivo',idObjetivo).eq('fecha',fecha),
-        supabase.from('categorias_personal_empresa').select('id,nombre,activa').eq('id_objetivo',idObjetivo).eq('activa',true).order('nombre')
+        supabase.from('categorias_personal_empresa').select('id,nombre,activa').eq('id_objetivo',idObjetivo).order('nombre')
       ])
       if (p.error) throw p.error
       if (a.error) throw a.error
       if (c.error) throw c.error
-      const categoriasActivas = (c.data || []) as Categoria[]
+      const todasLasCategorias = (c.data || []) as Categoria[]
+      const categoriasActivas = todasLasCategorias.filter(cat => cat.activa)
       const nombresCategoriasActivas = new Set(categoriasActivas.map(cat => cat.nombre.trim().toLocaleLowerCase('es-AR')))
-      // Nunca mostrar personal con categorías fijas antiguas ni categorías de otro objetivo.
-      setPersonal(((p.data || []) as Personal[]).filter(persona => nombresCategoriasActivas.has(persona.categoria.trim().toLocaleLowerCase('es-AR'))))
+      // La gestión conserva visibles los registros inactivos y categorías históricas; asistencia solo muestra categorías activas.
+      setPersonal(((p.data || []) as Personal[]).filter(persona => modoGestion || (persona.activo && nombresCategoriasActivas.has(persona.categoria.trim().toLocaleLowerCase('es-AR')))))
       setAsistencias((a.data || []) as Asistencia[])
-      setCategorias(categoriasActivas)
-      setCategoria(actual => c.data?.some(x=>x.nombre===actual) ? actual : (c.data?.[0]?.nombre || ''))
+      setCategorias(todasLasCategorias)
+      setCategoria(actual => categoriasActivas.some(x=>x.nombre===actual) ? actual : (categoriasActivas[0]?.nombre || ''))
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron cargar los registros.') }
     finally { setCargando(false) }
-  },[usuario,objetivoId,objetivoVigilador,esEncargado,fecha])
+  },[usuario,objetivoId,objetivoVigilador,esEncargado,fecha,modoGestion])
 
   // Cargar al entrar y cuando el usuario cambia explícitamente la fecha o cambia la cuenta/objetivo; no depender de la identidad del callback, que puede recrearse en cada render del contexto.
   useEffect(() => { void cargar() },[usuario?.id, objetivoVigilador, esEncargado, fecha])
@@ -155,14 +159,38 @@ export const AsistenciaPersonal: React.FC = () => {
     const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
     if (!idEmpresa) { setError('No se pudo identificar la empresa de este objetivo.'); return }
     setGuardando(true); setError(''); setMensaje('')
-    const {error:err} = await supabase.from('personal_empresa').insert({
-      id_empresa:idEmpresa,id_objetivo:objetivoId,nombre:nombre.trim(),apellido:apellido.trim(),
-      categoria,estado_aprobacion:esEncargado?'aprobado':'pendiente',creado_por:usuario.id,revisado_por:esEncargado?usuario.id:null,revisado_en:esEncargado?new Date().toISOString():null
-    })
+    const resultado = personaEditando
+      ? await supabase.from('personal_empresa').update({nombre:nombre.trim(),apellido:apellido.trim(),categoria}).eq('id',personaEditando.id).eq('id_objetivo',objetivoId)
+      : await supabase.from('personal_empresa').insert({
+          id_empresa:idEmpresa,id_objetivo:objetivoId,nombre:nombre.trim(),apellido:apellido.trim(),
+          categoria,estado_aprobacion:esEncargado?'aprobado':'pendiente',creado_por:usuario.id,revisado_por:esEncargado?usuario.id:null,revisado_en:esEncargado?new Date().toISOString():null
+        })
     setGuardando(false)
-    if (err) { setError(err.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para registrar personal en este objetivo.' : err.message); return }
-    setNombre(''); setApellido(''); setNuevaCategoria(''); setModalAltaAbierto(false)
-    setMensaje(esEncargado?'Personal dado de alta correctamente.':'Alta propuesta; queda pendiente de aprobación del encargado. El registro se conserva para la jornada.')
+    if (resultado.error) { setError(resultado.error.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para modificar personal de este objetivo.' : resultado.error.message); return }
+    setNombre(''); setApellido(''); setNuevaCategoria(''); setPersonaEditando(null); setModalAltaAbierto(false)
+    setMensaje(personaEditando?'Datos del personal actualizados correctamente.':esEncargado?'Personal dado de alta correctamente.':'Alta propuesta; queda pendiente de aprobación del encargado. El registro se conserva para la jornada.')
+    await cargar()
+  }
+
+  const abrirAltaPersonal = () => {
+    setPersonaEditando(null); setNombre(''); setApellido(''); setCategoria(categorias.find(c=>c.activa)?.nombre || '')
+    setNuevaCategoria(''); setError(''); setModalAltaAbierto(true)
+  }
+
+  const abrirEdicionPersonal = (persona: Personal) => {
+    setPersonaEditando(persona); setNombre(persona.nombre); setApellido(persona.apellido); setCategoria(persona.categoria)
+    setNuevaCategoria(''); setError(''); setModalAltaAbierto(true)
+  }
+
+  const confirmarCambioEstadoPersonal = async () => {
+    if (!supabase || !usuario || !objetivoId || !confirmacionEstadoPersonal) return
+    const persona = confirmacionEstadoPersonal
+    setGuardando(true); setError(''); setMensaje('')
+    const {error:err} = await supabase.from('personal_empresa').update({activo:!persona.activo}).eq('id',persona.id).eq('id_objetivo',objetivoId)
+    setGuardando(false)
+    if (err) { setError(err.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para cambiar el estado de este personal.' : err.message); return }
+    setConfirmacionEstadoPersonal(null)
+    setMensaje(persona.activo?'Personal dado de baja. Se conservarán sus asistencias e historial.':'Personal reactivado correctamente.')
     await cargar()
   }
 
@@ -276,7 +304,7 @@ export const AsistenciaPersonal: React.FC = () => {
 
   const personalPorCategoria = useMemo(() => {
     const termino = busqueda.trim().toLocaleLowerCase('es-AR')
-    const filtrado = [...personal].filter(p => (categoriaFiltro === 'Todas' || p.categoria === categoriaFiltro) && (!termino || `${p.apellido} ${p.nombre}`.toLocaleLowerCase('es-AR').includes(termino) || `${p.nombre} ${p.apellido}`.toLocaleLowerCase('es-AR').includes(termino)))
+    const filtrado = [...personal].filter(p => (!modoGestion || (filtroEstadoPersonal === 'activos') === p.activo) && (categoriaFiltro === 'Todas' || p.categoria === categoriaFiltro) && (!termino || `${p.apellido} ${p.nombre}`.toLocaleLowerCase('es-AR').includes(termino) || `${p.nombre} ${p.apellido}`.toLocaleLowerCase('es-AR').includes(termino)))
     const prioridadCategoria = (nombre: string) => {
       const normalizado = nombre.trim().toLocaleLowerCase('es-AR')
       if (normalizado === 'operarios fijos') return 0
@@ -293,7 +321,7 @@ export const AsistenciaPersonal: React.FC = () => {
         a.nombre.localeCompare(b.nombre, 'es', {sensitivity:'base'})
       )
     }))
-  }, [personal, busqueda, categoriaFiltro])
+  }, [personal, busqueda, categoriaFiltro, modoGestion, filtroEstadoPersonal])
   const asistenciaDe = (id:string) => asistencias.find(a=>a.id_personal===id)
   const hoyLocal = fechaLocal()
   const fechaFutura = fecha > hoyLocal
@@ -303,18 +331,26 @@ export const AsistenciaPersonal: React.FC = () => {
   return (
     <section className="space-y-5 animate-fadeIn">
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="min-w-0 text-lg font-black text-slate-900 dark:text-white sm:text-2xl">Asistencia del personal</h2>
-          <label className="flex shrink-0 items-center rounded-xl border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200">
-            <span className="sr-only">Fecha de asistencia</span><input aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="w-[145px] min-w-0 bg-transparent outline-none"/>
-          </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div><h2 className="min-w-0 text-lg font-black text-slate-900 dark:text-white sm:text-2xl">{modoGestion?'Personal del objetivo':'Asistencia del personal'}</h2>
+          {modoGestion && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Administrá las altas, los datos y el estado del personal de tu objetivo.</p>}</div>
+          {modoGestion
+            ? <button type="button" onClick={abrirAltaPersonal} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><UserRoundPlus className="h-4 w-4"/>Agregar personal</button>
+            : <label className="flex shrink-0 items-center rounded-xl border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200"><span className="sr-only">Fecha de asistencia</span><input aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="w-[145px] min-w-0 bg-transparent outline-none"/></label>}
         </div>
         <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
         
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
           {['Todas',...categorias.map(cat=>cat.nombre)].map(nombreCategoria=><button key={nombreCategoria} type="button" onClick={()=>setCategoriaFiltro(nombreCategoria)} aria-pressed={categoriaFiltro===nombreCategoria} className={`shrink-0 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition ${categoriaFiltro===nombreCategoria?'border-emerald-400 bg-emerald-500/10 text-emerald-500':'border-slate-300 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300'}`}>{nombreCategoria}</button>)}
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='aprobado').length} aprobados</span><span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='pendiente').length} pendientes</span><button type="button" onClick={()=>void cargar()} className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 dark:border-slate-700" aria-label="Actualizar"><RefreshCw className="mr-1 inline h-3.5 w-3.5"/>Actualizar</button></div>
+        {modoGestion && <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 p-2 dark:border-slate-800">
+          <button type="button" onClick={()=>setFiltroEstadoPersonal('activos')} aria-pressed={filtroEstadoPersonal==='activos'} className={`rounded-lg px-3 py-3 text-sm font-bold transition ${filtroEstadoPersonal==='activos'?'bg-emerald-600 text-white':'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>Activos ({personal.filter(p=>p.activo).length})</button>
+          <button type="button" onClick={()=>setFiltroEstadoPersonal('inactivos')} aria-pressed={filtroEstadoPersonal==='inactivos'} className={`rounded-lg px-3 py-3 text-sm font-bold transition ${filtroEstadoPersonal==='inactivos'?'bg-slate-700 text-white':'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>Inactivos ({personal.filter(p=>!p.activo).length})</button>
+        </div>}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          {modoGestion ? <><span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{personal.filter(p=>p.activo).length} activos</span><span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1">{personal.filter(p=>!p.activo).length} inactivos</span></> : <><span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='aprobado').length} aprobados</span><span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1">{personal.filter(p=>p.estado_aprobacion==='pendiente').length} pendientes</span></>}
+          <button type="button" onClick={()=>void cargar()} className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 dark:border-slate-700" aria-label="Actualizar"><RefreshCw className="mr-1 inline h-3.5 w-3.5"/>Actualizar</button>
+        </div>
       </div>
 
       {fechaFutura && <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">No se pueden registrar ingresos ni egresos para un día posterior a hoy.</div>}
@@ -331,16 +367,23 @@ export const AsistenciaPersonal: React.FC = () => {
         <form onSubmit={registrarPersona} className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md shrink-0 space-y-4 overflow-y-auto overscroll-contain rounded-2xl border border-emerald-500/25 bg-white p-5 shadow-2xl dark:bg-[#0C121E] sm:p-6">
           <div className="flex items-start gap-3">
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-700 dark:text-emerald-300"><UserRoundPlus className="h-5 w-5"/></div>
-            <div className="min-w-0 flex-1"><h3 id="alta-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">{esEncargado?'Dar de alta personal':'Proponer alta de personal'}</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{esEncargado?'Registrá el personal y elegí una categoría propia de este objetivo.':'El encargado debe haber creado la categoría para este objetivo. El alta quedará pendiente de aprobación.'}</p></div>
+            <div className="min-w-0 flex-1"><h3 id="alta-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">{personaEditando?'Editar personal':esEncargado?'Dar de alta personal':'Proponer alta de personal'}</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{esEncargado?'Registrá el personal y elegí una categoría propia de este objetivo.':'El encargado debe haber creado la categoría para este objetivo. El alta quedará pendiente de aprobación.'}</p></div>
             <button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar"><X className="h-5 w-5"/></button>
           </div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre<input required value={nombre} onChange={e=>setNombre(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Apellido<input value={apellido} onChange={e=>setApellido(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
-          <div className="space-y-2"><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Categoría<select required value={categoria} onChange={e=>setCategoria(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">Seleccionar categoría</option>{categorias.map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}</select></label>{esEncargado && <div className="flex gap-2"><input value={nuevaCategoria} onChange={e=>setNuevaCategoria(e.target.value)} placeholder="Crear categoría para este objetivo" maxLength={80} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"/><button type="button" disabled={!nuevaCategoria.trim()||guardandoCategoria} onClick={()=>void crearCategoria()} className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:text-emerald-300"><Plus className="h-4 w-4"/>Crear</button></div>}{esEncargado && categorias.length>0 && <div className="flex items-end gap-2 pt-1"><label className="block min-w-0 flex-1 text-xs font-semibold text-slate-600 dark:text-slate-400">Categoría a eliminar<select value={categoriaAEliminar?.id || ''} onChange={e=>{const seleccionada=categorias.find(cat=>cat.id===e.target.value);setCategoriaAEliminar(seleccionada||null)}} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">Seleccionar categoría…</option>{categorias.map(cat=><option key={cat.id} value={cat.id}>{cat.nombre}</option>)}</select></label><button type="button" disabled={!categoriaAEliminar||guardandoCategoria} onClick={()=>{if(categoriaAEliminar){setConfirmacionEliminarCategoria(true)}}} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-500/20 disabled:opacity-50 dark:text-red-300"><Trash2 className="h-3.5 w-3.5"/>Eliminar</button></div>}{categorias.length===0 && <p className="text-xs text-amber-700 dark:text-amber-300">{esEncargado?'Creá una categoría para poder dar de alta personal.':'Todavía no hay categorías creadas para este objetivo. Pedile al encargado que cree una.'}</p>}</div>
-          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button><button disabled={guardando||cargando||!categoria||categorias.length===0} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"><Plus className="h-4 w-4"/>{guardando?(esEncargado?'Guardando…':'Enviando…'):(esEncargado?'Dar de alta':'Proponer alta')}</button></div>
+          <div className="space-y-2"><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Categoría<select required value={categoria} onChange={e=>setCategoria(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">Seleccionar categoría</option>{categorias.filter(c=>c.activa || (personaEditando?.categoria===c.nombre)).map(c=><option key={c.id} value={c.nombre}>{c.nombre}{!c.activa?' (categoría inactiva)':''}</option>)}</select></label>{esEncargado && <div className="flex gap-2"><input value={nuevaCategoria} onChange={e=>setNuevaCategoria(e.target.value)} placeholder="Crear categoría para este objetivo" maxLength={80} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"/><button type="button" disabled={!nuevaCategoria.trim()||guardandoCategoria} onClick={()=>void crearCategoria()} className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 disabled:opacity-50 dark:text-emerald-300"><Plus className="h-4 w-4"/>Crear</button></div>}{esEncargado && categorias.length>0 && <div className="flex items-end gap-2 pt-1"><label className="block min-w-0 flex-1 text-xs font-semibold text-slate-600 dark:text-slate-400">Categoría a eliminar<select value={categoriaAEliminar?.id || ''} onChange={e=>{const seleccionada=categorias.find(cat=>cat.id===e.target.value);setCategoriaAEliminar(seleccionada||null)}} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">Seleccionar categoría…</option>{categorias.map(cat=><option key={cat.id} value={cat.id}>{cat.nombre}</option>)}</select></label><button type="button" disabled={!categoriaAEliminar||guardandoCategoria} onClick={()=>{if(categoriaAEliminar){setConfirmacionEliminarCategoria(true)}}} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-500/20 disabled:opacity-50 dark:text-red-300"><Trash2 className="h-3.5 w-3.5"/>Eliminar</button></div>}{categorias.length===0 && <p className="text-xs text-amber-700 dark:text-amber-300">{esEncargado?'Creá una categoría para poder dar de alta personal.':'Todavía no hay categorías creadas para este objetivo. Pedile al encargado que cree una.'}</p>}</div>
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end"><button type="button" onClick={()=>setModalAltaAbierto(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button><button disabled={guardando||cargando||!categoria||categorias.length===0} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"><Plus className="h-4 w-4"/>{guardando?'Guardando…':personaEditando?'Guardar cambios':esEncargado?'Dar de alta':'Proponer alta'}</button></div>
         </form>
       </div>, document.body)}
 
+      {confirmacionEstadoPersonal && createPortal(<div className="fixed inset-0 z-[11000] flex h-[100dvh] w-full items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="estado-personal-titulo">
+        <div className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-300 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-[#0C121E]">
+          <div><h3 id="estado-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">{confirmacionEstadoPersonal.activo?'Dar de baja personal':'Reactivar personal'}</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{confirmacionEstadoPersonal.apellido}, {confirmacionEstadoPersonal.nombre}</p></div>
+          <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">{confirmacionEstadoPersonal.activo?'El registro dejará de aparecer en la lista activa. Las asistencias y el historial se conservarán.':'El registro volverá a estar disponible en la lista activa.'}</p>
+          <div className="flex justify-end gap-2"><button type="button" disabled={guardando} onClick={()=>setConfirmacionEstadoPersonal(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="button" disabled={guardando} onClick={()=>void confirmarCambioEstadoPersonal()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{guardando?'Procesando…':confirmacionEstadoPersonal.activo?'Confirmar baja':'Confirmar reactivación'}</button></div>
+        </div>
+      </div>,document.body)}
       {confirmacionEliminarCategoria && categoriaAEliminar && createPortal(<div className="fixed inset-0 z-[11000] flex h-[100dvh] w-full items-center justify-center overflow-y-auto overscroll-contain bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="eliminar-categoria-titulo">
         <div className="my-auto w-full max-w-sm space-y-4 rounded-2xl border border-red-500/25 bg-white p-5 shadow-2xl dark:bg-[#0C121E] sm:p-6">
           <div className="flex items-start gap-3">
@@ -365,29 +408,21 @@ export const AsistenciaPersonal: React.FC = () => {
             return `flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors ${color==='emerald' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300'} ${marcada ? 'ring-1 ring-current/20' : ''} disabled:cursor-not-allowed disabled:opacity-40`
           }
           return <article key={p.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-[#0C121E]">
-            <div className="flex items-center gap-3">
+            {modoGestion ? <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0"><h4 className="truncate text-sm font-bold text-slate-900 dark:text-white">{p.apellido}{p.nombre ? `, ${p.nombre}` : ''}</h4><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span>{p.categoria}</span><span className={`rounded-full px-2 py-0.5 font-semibold ${p.activo?'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':'bg-slate-500/10 text-slate-600 dark:text-slate-300'}`}>{p.activo?'Activo':'Inactivo'}</span></div></div>
+              <div className="flex shrink-0 gap-2"><button type="button" disabled={guardando} onClick={()=>abrirEdicionPersonal(p)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil className="h-3.5 w-3.5"/>Editar</button><button type="button" disabled={guardando} onClick={()=>setConfirmacionEstadoPersonal(p)} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold ${p.activo?'border-red-500/30 bg-red-500/5 text-red-700 hover:bg-red-500/10 dark:text-red-300':'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300'}`}>{p.activo?'Dar de baja':'Reactivar'}</button></div>
+            </div> : <><div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <h4 className="truncate text-sm font-bold text-slate-900 dark:text-white">{p.apellido}{p.nombre ? `, ${p.nombre}` : ''}</h4>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span>{p.categoria}</span>
-                  {p.estado_aprobacion!=='aprobado' && <span className={`font-semibold ${rechazado?'text-red-600 dark:text-red-300':'text-amber-600 dark:text-amber-300'}`}>{rechazado?'Rechazado':'Pendiente de aprobación'}</span>}
-                </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400"><span>{p.categoria}</span>{p.estado_aprobacion!=='aprobado' && <span className={`font-semibold ${rechazado?'text-red-600 dark:text-red-300':'text-amber-600 dark:text-amber-300'}`}>{rechazado?'Rechazado':'Pendiente de aprobación'}</span>}</div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <div className="flex w-[48px] flex-col items-center gap-1">
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span>
-                  <button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/></button>
-                  <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span>
-                </div>
-                <div className="flex w-[48px] flex-col items-center gap-1">
-                  <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">Egreso</span>
-                  <button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'egreso'})} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button>
-                  <span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span>
-                </div>
-                <button type="button" aria-label='Editar ingreso y egreso' title={esEncargado?'Editar ingreso y egreso':'Editar ingreso'} disabled={guardando||rechazado||!puedeEditarHorario} onClick={()=>abrirEdicionHorario(p)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-400/40 bg-slate-500/10 text-slate-600 transition-colors hover:bg-slate-500/20 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"><Pencil className="h-4 w-4"/></button>
+                <div className="flex w-[48px] flex-col items-center gap-1"><span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span><button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/><span className="sr-only">Marcar ingreso</span></button><span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span></div>
+                <div className="flex w-[48px] flex-col items-center gap-1"><span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">Egreso</span><button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'egreso'})} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button><span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span></div>
+                <button type="button" aria-label="Editar ingreso y egreso" title={esEncargado?'Editar ingreso y egreso':'Editar ingreso'} disabled={guardando||rechazado||!puedeEditarHorario} onClick={()=>abrirEdicionHorario(p)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-400/40 bg-slate-500/10 text-slate-600 transition-colors hover:bg-slate-500/20 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"><Pencil className="h-4 w-4"/></button>
               </div>
             </div>
-            {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-2 flex gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}
+            {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-2 flex gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}</>}
           </article>
         })}</div></section>)}</div>}
       </div>
