@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Pencil } from 'lucide-react'
+import { Check, Clock3, Search, RefreshCw, UserRoundPlus, X } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -137,19 +137,19 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
         })
     setGuardando(false)
     if (resultado.error) { setError(resultado.error.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para modificar personal de este objetivo.' : resultado.error.message); return }
-    setNombre(''); setApellido(''); setNuevaCategoria(''); setPersonaEditando(null); setModalAltaAbierto(false)
+    setNombre(''); setApellido(''); setPersonaEditando(null); setModalAltaAbierto(false)
     setMensaje(personaEditando?'Datos del personal actualizados correctamente.':esEncargado?'Personal dado de alta correctamente.':'Alta propuesta; queda pendiente de aprobación del encargado. El registro se conserva para la jornada.')
     await cargar()
   }
 
   const abrirAltaPersonal = () => {
     setPersonaEditando(null); setNombre(''); setApellido(''); setCategoria(categorias.find(c=>c.activa)?.id || '')
-    setNuevaCategoria(''); setError(''); setModalAltaAbierto(true)
+    setError(''); setModalAltaAbierto(true)
   }
 
   const abrirEdicionPersonal = (persona: Personal) => {
     setPersonaEditando(persona); setNombre(persona.nombre); setApellido(persona.apellido); setCategoria(persona.categoria_id || '')
-    setNuevaCategoria(''); setError(''); setModalAltaAbierto(true)
+    setError(''); setModalAltaAbierto(true)
   }
 
   const confirmarCambioEstadoPersonal = async () => {
@@ -351,20 +351,6 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
           <div><h3 id="estado-personal-titulo" className="text-lg font-black text-slate-900 dark:text-white">{confirmacionEstadoPersonal.activo?'Dar de baja personal':'Reactivar personal'}</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{confirmacionEstadoPersonal.apellido}, {confirmacionEstadoPersonal.nombre}</p></div>
           <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">{confirmacionEstadoPersonal.activo?'El registro dejará de aparecer en la lista activa. Las asistencias y el historial se conservarán.':'El registro volverá a estar disponible en la lista activa.'}</p>
           <div className="flex justify-end gap-2"><button type="button" disabled={guardando} onClick={()=>setConfirmacionEstadoPersonal(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="button" disabled={guardando} onClick={()=>void confirmarCambioEstadoPersonal()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{guardando?'Procesando…':confirmacionEstadoPersonal.activo?'Confirmar baja':'Confirmar reactivación'}</button></div>
-        </div>
-      </div>,document.body)}
-      {categoriaAEditar && createPortal(<div className="fixed inset-0 z-[11000] flex h-[100dvh] w-full items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="editar-categoria-titulo">
-        <form onSubmit={e=>{e.preventDefault();void guardarEdicionCategoria()}} className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-300 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-[#0C121E]">
-          <div><h3 id="editar-categoria-titulo" className="text-lg font-black text-slate-900 dark:text-white">Editar categoría</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">El personal vinculado y sus registros conservarán la relación.</p></div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre<input autoFocus required maxLength={80} value={nombreCategoriaEditada} onChange={e=>setNombreCategoriaEditada(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white"/></label>
-          <div className="flex justify-end gap-2"><button type="button" disabled={guardandoCategoria} onClick={()=>setCategoriaAEditar(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="submit" disabled={guardandoCategoria||!nombreCategoriaEditada.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{guardandoCategoria?'Guardando…':'Guardar cambios'}</button></div>
-        </form>
-      </div>,document.body)}
-      {categoriaAEliminar && createPortal(<div className="fixed inset-0 z-[11000] flex h-[100dvh] w-full items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="desactivar-categoria-titulo">
-        <div className="w-full max-w-sm space-y-4 rounded-2xl border border-amber-500/25 bg-white p-5 shadow-2xl dark:bg-[#0C121E]">
-          <div><h3 id="desactivar-categoria-titulo" className="text-lg font-black text-slate-900 dark:text-white">Desactivar categoría</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">¿Querés desactivar “{categoriaAEliminar.nombre}”?</p></div>
-          <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm leading-5 text-amber-800 dark:text-amber-300">{personal.filter(p=>p.categoria_id===categoriaAEliminar.id && p.activo).length} persona(s) activa(s) están vinculadas. Seguirán apareciendo en Personal y en los registros de asistencia, pero esta categoría no estará disponible para nuevas altas. No se borra ningún dato.</p>
-          <div className="flex justify-end gap-2"><button type="button" disabled={guardandoCategoria} onClick={()=>setCategoriaAEliminar(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="button" disabled={guardandoCategoria} onClick={()=>void cambiarEstadoCategoria(categoriaAEliminar)} className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{guardandoCategoria?'Procesando…':'Confirmar baja'}</button></div>
         </div>
       </div>,document.body)}
       <div className="space-y-3">
