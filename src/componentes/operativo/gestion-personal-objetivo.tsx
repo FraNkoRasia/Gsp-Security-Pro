@@ -97,7 +97,7 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
     if(detalle===null||detalle===undefined||detalle==="") return ""
     let valor=detalle
     if(typeof valor==="string"){
-      try{valor=JSON.parse(valor)}catch{return valor}
+      try{valor=JSON.parse(valor)}catch{return detalle}
     }
     if(typeof valor==="object"){
       const objeto=valor as Record<string,unknown>
