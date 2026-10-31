@@ -11,6 +11,7 @@ import {
   Clock,
   History,
   ClipboardCheck,
+  Tags,
   ArrowLeft,
   Shield,
   Menu,
@@ -33,6 +34,7 @@ import { MiTurno } from '@/componentes/operativo/mi-turno'
 import { MiMes } from '@/componentes/operativo/mi-mes'
 import { HistorialLaboral } from '@/componentes/operativo/historial-laboral'
 import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
+import { GestionCategoriasPersonal } from '@/componentes/operativo/gestion-categorias-personal'
 import { GestionHorasExtra } from '@/componentes/operativo/gestion-horas-extra'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
@@ -89,7 +91,8 @@ export const VistaPanelControl: React.FC = () => {
     : esEncargado
     ? [
         { id: 'asistenciaPersonal', label: 'Asistencia', icono: <ClipboardCheck className="w-4 h-4" /> },
-        { id: 'personal', label: 'Personal', icono: <UserRoundPlus className="w-4 h-4" /> }
+        { id: 'personal', label: 'Personal', icono: <UserRoundPlus className="w-4 h-4" /> },
+        { id: 'categorias', label: 'Categorías', icono: <Tags className="w-4 h-4" /> }
       ]
     : esAdmin
     ? [
@@ -298,6 +301,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'historialLaboral' && esVigilador && <HistorialLaboral />}
             {pestanaRenderizada === 'asistenciaPersonal' && (esVigilador || esEncargado) && <AsistenciaPersonal />}
             {pestanaRenderizada === 'personal' && esEncargado && <AsistenciaPersonal modoGestion />}
+            {pestanaRenderizada === 'categorias' && esEncargado && <GestionCategoriasPersonal />}
           </div>
         </>
       )}
@@ -324,7 +328,7 @@ export const VistaPanelControl: React.FC = () => {
                 : esAdmin
                 ? pestanas.filter((p) => ['objetivos', 'vigiladores', 'novedades'].includes(p.id))
                 : esEncargado
-                ? pestanas.filter((p) => ['asistenciaPersonal', 'personal'].includes(p.id))
+                ? pestanas.filter((p) => ['asistenciaPersonal', 'personal', 'categorias'].includes(p.id))
                 : pestanas.slice(0, 1)
               ).map((p) => {
                 const activa = pestanaRenderizada === p.id
@@ -347,7 +351,7 @@ export const VistaPanelControl: React.FC = () => {
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal', 'personal']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal', 'personal', 'categorias']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
@@ -367,7 +371,7 @@ export const VistaPanelControl: React.FC = () => {
                       ? ['miTurno', 'grilla', 'miMes'].includes(p.id)
                       : esAdmin
                       ? ['objetivos', 'vigiladores', 'novedades'].includes(p.id)
-                      : ['asistenciaPersonal', 'personal'].includes(p.id)
+                      : ['asistenciaPersonal', 'personal', 'categorias'].includes(p.id)
                     )).map((p) => {
                       const activa = pestanaRenderizada === p.id
                       return (
