@@ -70,12 +70,6 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
   const [apellido,setApellido] = useState('')
   const [categoria,setCategoria] = useState('')
   const [categorias,setCategorias] = useState<Categoria[]>([])
-  const [nuevaCategoria,setNuevaCategoria] = useState('')
-  const [guardandoCategoria,setGuardandoCategoria] = useState(false)
-  const [categoriaAEditar,setCategoriaAEditar] = useState<Categoria|null>(null)
-  const [nombreCategoriaEditada,setNombreCategoriaEditada] = useState('')
-  const [categoriaAEliminar,setCategoriaAEliminar] = useState<Categoria|null>(null)
-  const [filtroEstadoCategoria,setFiltroEstadoCategoria] = useState<'activas'|'inactivas'>('activas')
   const [modalAltaAbierto,setModalAltaAbierto] = useState(false)
   const [personaEditando,setPersonaEditando] = useState<Personal|null>(null)
   const [filtroEstadoPersonal,setFiltroEstadoPersonal] = useState<'activos'|'inactivos'>('activos')
@@ -126,48 +120,6 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
 
   // Cargar al entrar y cuando el usuario cambia explícitamente la fecha o cambia la cuenta/objetivo; no depender de la identidad del callback, que puede recrearse en cada render del contexto.
   useEffect(() => { void cargar() },[usuario?.id, objetivoVigilador, esEncargado, fecha])
-
-  const crearCategoria = async () => {
-    const nombreLimpio = nuevaCategoria.trim()
-    if (!supabase || !usuario || !objetivoId || !esEncargado || !nombreLimpio) return
-    setGuardandoCategoria(true); setError('')
-    const objetivo = objetivos.find(o => o.id === objetivoId)
-    const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
-    if (!idEmpresa) { setError('No se pudo identificar la empresa de este objetivo.'); setGuardandoCategoria(false); return }
-    const {data,error:err} = await supabase.from('categorias_personal_empresa').insert({id_empresa:idEmpresa,id_objetivo:objetivoId,nombre:nombreLimpio,creado_por:usuario.id}).select('id,nombre,activa').single()
-    setGuardandoCategoria(false)
-    if (err) { setError(err.code==='23505' ? 'Ya existe una categoría con ese nombre en este objetivo.' : err.message); return }
-    setCategorias(prev=>[...prev,data as Categoria].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'})))
-    setCategoria(data.id); setNuevaCategoria('')
-  }
-
-  const guardarEdicionCategoria = async () => {
-    const nombreLimpio = nombreCategoriaEditada.trim()
-    if (!supabase || !usuario || !objetivoId || !esEncargado || !categoriaAEditar || !nombreLimpio) return
-    const duplicada = categorias.some(c => c.id !== categoriaAEditar.id && c.nombre.trim().toLocaleLowerCase('es-AR') === nombreLimpio.toLocaleLowerCase('es-AR'))
-    if (duplicada) { setError('Ya existe una categoría con ese nombre en este objetivo.'); return }
-    setGuardandoCategoria(true); setError(''); setMensaje('')
-    const {error:err} = await supabase.from('categorias_personal_empresa').update({nombre:nombreLimpio}).eq('id',categoriaAEditar.id).eq('id_objetivo',objetivoId)
-    setGuardandoCategoria(false)
-    if (err) { setError(err.code==='23505' ? 'Ya existe una categoría con ese nombre en este objetivo.' : err.message); return }
-    setCategoriaAEditar(null); setNombreCategoriaEditada('')
-    setMensaje('Nombre de categoría actualizado. El personal vinculado conserva su relación e historial.')
-    await cargar()
-  }
-
-  const cambiarEstadoCategoria = async (cat: Categoria) => {
-    if (!supabase || !usuario || !objetivoId || !esEncargado) return
-    const nuevaActiva = !cat.activa
-    const cantidadActiva = personal.filter(p => p.categoria_id === cat.id && p.activo).length
-    setGuardandoCategoria(true); setError(''); setMensaje('')
-    const {error:err} = await supabase.from('categorias_personal_empresa').update({activa:nuevaActiva}).eq('id',cat.id).eq('id_objetivo',objetivoId)
-    setGuardandoCategoria(false)
-    if (err) { setError(err.message); return }
-    setCategorias(prev=>prev.map(c=>c.id===cat.id?{...c,activa:nuevaActiva}:c))
-    setCategoriaAEliminar(null)
-    if (nuevaActiva) setMensaje(`Categoría “${cat.nombre}” reactivada y disponible para nuevas altas.`)
-    else setMensaje(`Categoría “${cat.nombre}” desactivada. ${cantidadActiva} persona(s) activa(s) siguen vinculadas y visibles; no se modificó su historial.`)
-  }
 
   const registrarPersona = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -357,12 +309,6 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
             : <label className="flex shrink-0 items-center rounded-xl border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200"><span className="sr-only">Fecha de asistencia</span><input aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="w-[145px] min-w-0 bg-transparent outline-none"/></label>}
         </div>
         <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
-        {modoGestion && <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
-          <div><h3 className="text-sm font-black text-slate-900 dark:text-white">Categorías del objetivo</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Podés cambiar el nombre, desactivar o reactivar categorías. No se eliminan definitivamente.</p></div>
-          <div className="flex gap-2"><input value={nuevaCategoria} onChange={e=>setNuevaCategoria(e.target.value)} placeholder="Nombre de la nueva categoría" maxLength={80} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"/><button type="button" disabled={!nuevaCategoria.trim()||guardandoCategoria} onClick={()=>void crearCategoria()} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"><Plus className="h-4 w-4"/>Agregar</button></div>
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 p-1.5 dark:border-slate-800"><button type="button" onClick={()=>setFiltroEstadoCategoria('activas')} aria-pressed={filtroEstadoCategoria==='activas'} className={`rounded-lg px-3 py-2 text-xs font-bold ${filtroEstadoCategoria==='activas'?'bg-emerald-600 text-white':'text-slate-600 dark:text-slate-300'}`}>Activas ({categorias.filter(c=>c.activa).length})</button><button type="button" onClick={()=>setFiltroEstadoCategoria('inactivas')} aria-pressed={filtroEstadoCategoria==='inactivas'} className={`rounded-lg px-3 py-2 text-xs font-bold ${filtroEstadoCategoria==='inactivas'?'bg-slate-700 text-white':'text-slate-600 dark:text-slate-300'}`}>Inactivas ({categorias.filter(c=>!c.activa).length})</button></div>
-          <div className="space-y-2">{categorias.filter(c=>filtroEstadoCategoria==='activas'?c.activa:!c.activa).length===0 ? <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500 dark:border-slate-700">No hay categorías {filtroEstadoCategoria}.</p> : categorias.filter(c=>filtroEstadoCategoria==='activas'?c.activa:!c.activa).map(cat=><div key={cat.id} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-800"><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{cat.nombre}</p><p className="text-[11px] text-slate-500 dark:text-slate-400">{cat.activa?'Disponible para nuevas altas':'No disponible para nuevas altas'}</p></div><button type="button" onClick={()=>{setCategoriaAEditar(cat);setNombreCategoriaEditada(cat.nombre);setError('')}} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" aria-label={`Editar ${cat.nombre}`}><Pencil className="h-4 w-4"/></button><button type="button" disabled={guardandoCategoria} onClick={()=>cat.activa?setCategoriaAEliminar(cat):void cambiarEstadoCategoria(cat)} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${cat.activa?'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300':'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`} aria-label={cat.activa?`Desactivar ${cat.nombre}`:`Reactivar ${cat.nombre}`}>{cat.activa?<X className="h-4 w-4"/>:<Check className="h-4 w-4"/>}</button></div>)}</div>
-        </section>}
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
           {['Todas',...categorias.map(cat=>cat.nombre)].map(nombreCategoria=><button key={nombreCategoria} type="button" onClick={()=>setCategoriaFiltro(nombreCategoria)} aria-pressed={categoriaFiltro===nombreCategoria} className={`shrink-0 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition ${categoriaFiltro===nombreCategoria?'border-emerald-400 bg-emerald-500/10 text-emerald-500':'border-slate-300 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:text-slate-300'}`}>{nombreCategoria}{categorias.find(cat=>cat.nombre===nombreCategoria && !cat.activa) ? ' (inactiva)' : ''}</button>)}
         </div>
