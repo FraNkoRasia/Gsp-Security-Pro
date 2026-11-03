@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, BookOpen, Search } from 'lucide-react'
+import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, Search } from 'lucide-react'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { supabase } from '@/servicios/supabase'
