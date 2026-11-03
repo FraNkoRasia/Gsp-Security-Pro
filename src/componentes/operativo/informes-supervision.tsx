@@ -136,7 +136,7 @@ export const InformesSupervision: React.FC = () => {
   }, [usuario?.id, usuario?.id_empresa, cargar])
 
   const abrirNuevo = () => {
-    setObjetivoId(objetivosVisibles[0]?.id || '')
+    setObjetivoId(objetivosVisibles.find(o => o.activo)?.id || '')
     setVigiladorId('')
     setTipo('observacion')
     setGravedad('media')
@@ -179,7 +179,7 @@ export const InformesSupervision: React.FC = () => {
   const crearInforme = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!supabase || !usuario || !esSupervisor) return
-    if (!objetivosVisibles.some(o => o.id === objetivoId)) { setError('Seleccioná uno de tus objetivos asignados.'); return }
+    if (!objetivosVisibles.some(o => o.id === objetivoId && o.activo)) { setError('Seleccioná uno de tus objetivos asignados.'); return }
     const vigilador = vigiladoresObjetivo.find(v => v.id === vigiladorId)
     if (!vigilador) { setError('Seleccioná un vigilador actualmente asignado a ese objetivo.'); return }
     if (descripcion.trim().length < 10) { setError('La descripción debe tener al menos 10 caracteres para que el informe sea claro.'); return }
@@ -237,6 +237,17 @@ export const InformesSupervision: React.FC = () => {
       .eq('id', informe.id)
     if (errorEstado) setError(errorEstado.message)
     else {
+      const comentario = (comentarios[informe.id] || '').trim()
+      if (comentario) {
+        const { error: errorComentario } = await supabase.from('informes_supervision_actuaciones').insert({
+          id_informe: informe.id,
+          id_autor: usuario?.id,
+          autor_nombre: (usuario?.nombre + ' ' + usuario?.apellido).trim(),
+          tipo: 'seguimiento',
+          comentario
+        })
+        if (errorComentario) setError('El estado se actualizó, pero no se pudo guardar el comentario: ' + errorComentario.message)
+      }
       setMensaje('Estado actualizado y registrado en el historial.')
       setComentarios(actual => ({ ...actual, [informe.id]: '' }))
       await cargar()
