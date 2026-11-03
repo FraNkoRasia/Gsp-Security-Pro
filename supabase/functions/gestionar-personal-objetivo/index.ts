@@ -39,23 +39,27 @@ Deno.serve(async (req) => {
     const nombreRol = rol === "supervisor" ? "supervisor" : "encargado"
 
     if (accion === "listar") {
-      // Estas tres consultas son independientes: ejecutarlas en paralelo evita
-      // sumar sus latencias en cada apertura de Supervisores/Encargados.
       const [perfilesResult, objetivosResult, credResult] = await Promise.all([
-        db.from("perfiles")
-          .select("id,id_empresa,nombre,apellido,email,telefono,rol,activo,debe_cambiar_contrasena,creado_en")
-          .eq("id_empresa", idEmpresa).eq("rol", rol).order("apellido"),
+        db.from("perfiles").select("id,id_empresa,nombre,apellido,email,telefono,rol,activo,debe_cambiar_contrasena,creado_en").eq("id_empresa", idEmpresa).eq("rol", rol).order("apellido"),
         db.from("objetivos").select("id,nombre,id_supervisor,id_encargado_empresa").eq("id_empresa", idEmpresa),
         db.from("credenciales_personal_objetivo").select("id_usuario,dni").eq("id_empresa", idEmpresa),
       ])
       const error = perfilesResult.error || objetivosResult.error || credResult.error
       if (error) return json({ error: error.message }, 400)
-      const perfiles = perfilesResult.data
-      const objetivos = objetivosResult.data
-      const cred = credResult.data
-      const byId = new Map((objetivos || []).map(o => [rol === "supervisor" ? o.id_supervisor : o.id_encargado_empresa, { id: o.id, nombre: o.nombre }]))
-      const dniById = new Map((cred || []).map(c => [c.id_usuario, c.dni]))
-      return json({ personal: (perfiles || []).map(p => ({ ...p, dni: dniById.get(p.id) || "", objetivo: byId.get(p.id) || null })) })
+      const objetivos = objetivosResult.data || []
+      const dniById = new Map((credResult.data || []).map(c => [c.id_usuario, c.dni]))
+      const objetivosByPersona = new Map<string, { id: string; nombre: string }[]>()
+      for (const objetivo of objetivos) {
+        const personaId = rol === "supervisor" ? objetivo.id_supervisor : objetivo.id_encargado_empresa
+        if (!personaId) continue
+        const asignados = objetivosByPersona.get(personaId) || []
+        asignados.push({ id: objetivo.id, nombre: objetivo.nombre })
+        objetivosByPersona.set(personaId, asignados)
+      }
+      return json({ personal: (perfilesResult.data || []).map(p => {
+        const asignados = objetivosByPersona.get(p.id) || []
+        return { ...p, dni: dniById.get(p.id) || "", objetivos: asignados, objetivo: asignados[0] || null }
+      }) })
     }
 
     const id = String(b.id || "")
@@ -65,34 +69,32 @@ Deno.serve(async (req) => {
       const email = String(b.email || "").trim().toLowerCase()
       const telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
-      const idObjetivo = String(b.id_objetivo || "")
-      if (!nombre || !apellido || !email || !idObjetivo || dni.length < 8)
-        return json({ error: "Completá nombre, apellido, correo, DNI y objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
-      const password = dni
-      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
-      if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
-      if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== "") return json({ error: "Ese objetivo ya tiene una persona asignada en este rol. Elegí otro objetivo o editá la asignación existente." }, 409)
-      const { data: dniExistente } = await db.from("credenciales_personal_objetivo")
-        .select("id_usuario").eq("id_empresa", idEmpresa).eq("dni", dni).maybeSingle()
+      const idsObjetivos = rol === "supervisor"
+        ? [...new Set((Array.isArray(b.id_objetivos) ? b.id_objetivos : [b.id_objetivo]).map((v: unknown) => String(v || "")).filter(Boolean))]
+        : [String(b.id_objetivo || "")].filter(Boolean)
+      if (!nombre || !apellido || !email || !idsObjetivos.length || dni.length < 8)
+        return json({ error: "Completá nombre, apellido, correo, DNI y al menos un objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
+      const { data: objetivosSeleccionados } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id_empresa", idEmpresa).in("id", idsObjetivos)
+      if (!objetivosSeleccionados || objetivosSeleccionados.length !== idsObjetivos.length)
+        return json({ error: "Uno o más objetivos no pertenecen a esta empresa." }, 400)
+      if (objetivosSeleccionados.some(o => o[campoObjetivo]))
+        return json({ error: "Uno o más objetivos ya tienen una persona asignada en este rol. Elegí otros objetivos." }, 409)
+      const { data: dniExistente } = await db.from("credenciales_personal_objetivo").select("id_usuario").eq("id_empresa", idEmpresa).eq("dni", dni).maybeSingle()
       if (dniExistente) return json({ error: "Ya existe este DNI registrado en la empresa. Verificá el DNI ingresado o buscá la cuenta existente." }, 409)
-      const { data: created, error: createErr } = await db.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre, apellido } })
+      const { data: created, error: createErr } = await db.auth.admin.createUser({ email, password: dni, email_confirm: true, user_metadata: { nombre, apellido } })
       if (createErr || !created.user) return json({ error: createErr?.message || "No se pudo crear la cuenta." }, 400)
       const uid = created.user.id
-      const { error: profileErr } = await db.from("perfiles").update({
-        id_empresa: idEmpresa, nombre, apellido, email, telefono, rol, activo: true, debe_cambiar_contrasena: true,
-      }).eq("id", uid)
+      const { error: profileErr } = await db.from("perfiles").update({ id_empresa: idEmpresa, nombre, apellido, email, telefono, rol, activo: true, debe_cambiar_contrasena: true }).eq("id", uid)
       if (profileErr) { await db.auth.admin.deleteUser(uid); return json({ error: profileErr.message }, 400) }
       const { error: credErr } = await db.from("credenciales_personal_objetivo").insert({ id_usuario: uid, id_empresa: idEmpresa, dni })
-      if (credErr) {
-        await db.auth.admin.deleteUser(uid)
-        if (credErr.code === "23505" || credErr.message.includes("credenciales_personal_objetivo_dni_empresa_unique")) {
-          return json({ error: "Ya existe este DNI registrado en la empresa." }, 409)
-        }
-        return json({ error: credErr.message }, 400)
+      if (credErr) { await db.auth.admin.deleteUser(uid); return json({ error: credErr.code === "23505" ? "Ya existe este DNI registrado en la empresa." : credErr.message }, credErr.code === "23505" ? 409 : 400) }
+      for (const idObjetivo of idsObjetivos) {
+        const { data: ocupado } = await db.from("objetivos").select("id").eq("id", idObjetivo).eq("id_empresa", idEmpresa).not(campoObjetivo, "is", null).maybeSingle()
+        if (ocupado) { await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, uid); await db.auth.admin.deleteUser(uid); return json({ error: "Un objetivo acaba de ser asignado a otra persona. Actualizá la lista e intentá nuevamente." }, 409) }
+        const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: uid }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
+        if (assignErr) { await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, uid); await db.auth.admin.deleteUser(uid); return json({ error: assignErr.message }, 400) }
       }
-      const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: uid }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
-      if (assignErr) { await db.auth.admin.deleteUser(uid); return json({ error: assignErr.message }, 400) }
-      await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "CREAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: uid, detalle: { texto: "Creó cuenta con DNI como contraseña inicial y objetivo exclusivo" }, fecha_hora: new Date().toISOString() })
+      await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "CREAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: uid, detalle: { texto: rol === "supervisor" ? "Creó cuenta y asignó objetivos" : "Creó cuenta con objetivo exclusivo" }, fecha_hora: new Date().toISOString() })
       return json({ ok: true, id: uid, debe_cambiar_contrasena: true })
     }
 
@@ -123,14 +125,17 @@ Deno.serve(async (req) => {
       const nombre = String(b.nombre || "").trim(), apellido = String(b.apellido || "").trim()
       const email = String(b.email || "").trim().toLowerCase(), telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
-      const idObjetivo = String(b.id_objetivo || "")
-      if (!nombre || !apellido || !email || dni.length < 8 || !idObjetivo) return json({ error: "Nombre, apellido, correo, DNI y objetivo son obligatorios." }, 400)
-      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
-      if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
-      if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== id) return json({ error: "Ese objetivo ya tiene una persona asignada en este rol." }, 409)
+      const idsObjetivos = rol === "supervisor"
+        ? [...new Set((Array.isArray(b.id_objetivos) ? b.id_objetivos : [b.id_objetivo]).map((v: unknown) => String(v || "")).filter(Boolean))]
+        : [String(b.id_objetivo || "")].filter(Boolean)
+      if (!nombre || !apellido || !email || dni.length < 8 || !idsObjetivos.length)
+        return json({ error: "Nombre, apellido, correo, DNI y al menos un objetivo son obligatorios." }, 400)
+      const { data: objetivosSeleccionados } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id_empresa", idEmpresa).in("id", idsObjetivos)
+      if (!objetivosSeleccionados || objetivosSeleccionados.length !== idsObjetivos.length) return json({ error: "Uno o más objetivos no pertenecen a esta empresa." }, 400)
+      if (objetivosSeleccionados.some(o => o[campoObjetivo] && o[campoObjetivo] !== id))
+        return json({ error: "Uno o más objetivos ya están asignados a otra persona en este rol." }, 409)
       const { data: credActual } = await db.from("credenciales_personal_objetivo").select("dni").eq("id_usuario", id).eq("id_empresa", idEmpresa).single()
-      const dniAnterior = normDni(credActual?.dni)
-      const cambiaDni = dni !== dniAnterior
+      const cambiaDni = dni !== normDni(credActual?.dni)
       const authChanges: { email: string; email_confirm: boolean; password?: string } = { email, email_confirm: true }
       if (cambiaDni) authChanges.password = dni
       const { error: authUpdate } = await db.auth.admin.updateUserById(id, authChanges)
@@ -140,16 +145,16 @@ Deno.serve(async (req) => {
       const { error: profileUpdate } = await db.from("perfiles").update(profileChanges).eq("id", id)
       if (profileUpdate) return json({ error: profileUpdate.message }, 400)
       const { error: credUpdate } = await db.from("credenciales_personal_objetivo").upsert({ id_usuario: id, id_empresa: idEmpresa, dni, actualizado_en: new Date().toISOString() }, { onConflict: "id_usuario" })
-      if (credUpdate) {
-        if (credUpdate.code === "23505" || credUpdate.message.includes("credenciales_personal_objetivo_dni_empresa_unique")) {
-          return json({ error: "Ya existe este DNI registrado en la empresa." }, 409)
-        }
-        return json({ error: credUpdate.message }, 400)
-      }
+      if (credUpdate) return json({ error: credUpdate.code === "23505" ? "Ya existe este DNI registrado en la empresa." : credUpdate.message }, credUpdate.code === "23505" ? 409 : 400)
       const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
       if (unassignErr) return json({ error: unassignErr.message }, 400)
-      const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: id }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
-      if (assignErr) return json({ error: assignErr.message }, 400)
+      for (const idObjetivo of idsObjetivos) {
+        const { data: ocupado } = await db.from("objetivos").select("id").eq("id", idObjetivo).eq("id_empresa", idEmpresa).not(campoObjetivo, "is", null).maybeSingle()
+        if (ocupado) return json({ error: "Un objetivo acaba de ser asignado a otra persona. Actualizá la lista e intentá nuevamente." }, 409)
+        const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: id }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
+        if (assignErr) return json({ error: assignErr.message }, 400)
+      }
+      await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "EDITAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: id, detalle: { texto: rol === "supervisor" ? "Actualizó datos y objetivos asignados" : "Actualizó datos y objetivo asignado" }, fecha_hora: new Date().toISOString() })
       return json({ ok: true })
     }
 
