@@ -78,6 +78,7 @@ on public.informes_supervision for insert to authenticated
 with check (
   creado_por = (select auth.uid())
   and id_supervisor = (select auth.uid())
+  and estado = 'registrado'
   and exists (
     select 1 from public.perfiles p
     join public.objetivos o on o.id = informes_supervision.id_objetivo
@@ -135,6 +136,64 @@ with check (
       )
   )
 );
+
+create or replace function private.preparar_informe_supervision()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_empresa uuid;
+  v_supervisor text;
+  v_vigilante text;
+begin
+  select p.id_empresa, p.nombre || ' ' || p.apellido
+    into v_empresa, v_supervisor
+  from public.perfiles p
+  where p.id = (select auth.uid()) and p.activo = true and p.rol = 'supervisor';
+
+  if v_empresa is null then
+    raise exception 'Solo un supervisor activo puede registrar informes.';
+  end if;
+
+  if not exists (
+    select 1 from public.objetivos o
+    where o.id = new.id_objetivo and o.id_empresa = v_empresa
+      and o.id_supervisor = (select auth.uid()) and o.activo = true
+  ) then
+    raise exception 'El objetivo no está asignado a tu cuenta o no se encuentra operativo.';
+  end if;
+
+  select v.nombre || ' ' || v.apellido into v_vigilante
+  from public.vigiladores v
+  join public.asignaciones a on a.id_vigilador = v.id
+  where v.id = new.id_vigilador and v.id_empresa = v_empresa and v.activo = true
+    and a.id_objetivo = new.id_objetivo and a.id_empresa = v_empresa
+    and a.activa = true and a.fecha_inicio <= current_date
+    and (a.fecha_fin is null or a.fecha_fin >= current_date)
+  order by a.fecha_inicio desc
+  limit 1;
+
+  if v_vigilante is null then
+    raise exception 'El vigilador no tiene una asignación activa en ese objetivo.';
+  end if;
+
+  new.id_empresa := v_empresa;
+  new.id_supervisor := (select auth.uid());
+  new.supervisor_nombre := btrim(v_supervisor);
+  new.nombre_vigilante := btrim(v_vigilante);
+  new.creado_por := (select auth.uid());
+  new.creado_en := now();
+  new.estado := 'registrado';
+  return new;
+end;
+$;
+
+drop trigger if exists trg_preparar_informe_supervision on public.informes_supervision;
+create trigger trg_preparar_informe_supervision
+before insert on public.informes_supervision
+for each row execute function private.preparar_informe_supervision();
 
 create or replace function private.registrar_actuacion_informe_supervision()
 returns trigger
