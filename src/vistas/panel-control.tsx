@@ -307,7 +307,6 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'inicioSupervisor' && usuario.rol === 'supervisor' && <InicioSupervisor />}
             {pestanaRenderizada === 'personalSupervisor' && usuario.rol === 'supervisor' && <PersonalSupervisor />}
             {pestanaRenderizada === 'grillaSupervisor' && usuario.rol === 'supervisor' && <GrillaSupervisor />}
-            {pestanaRenderizada === 'asistenciaSupervisor' && usuario.rol === 'supervisor' && <AsistenciaSupervisor />}
             {pestanaRenderizada === 'supervisiones' && usuario.rol === 'supervisor' && <SupervisionesSupervisor />}
             {pestanaRenderizada === 'novedadesSupervisor' && usuario.rol === 'supervisor' && <NovedadesSupervisor />}
             {pestanaRenderizada === 'informesSupervision' && (esAdmin || esEncargado || usuario.rol === 'supervisor') && <InformesSupervision />}
