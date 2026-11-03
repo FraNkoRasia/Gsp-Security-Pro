@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw } from 'lucide-react'
+import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, BookOpen, Search } from 'lucide-react'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { supabase } from '@/servicios/supabase'
@@ -267,6 +267,40 @@ export const AsistenciaSupervisor: React.FC = () => {
   return <section className="space-y-4 animate-fadeIn">
     {objetivosSupervisor.length > 1 && <div className="flex justify-end"><div className="w-full sm:max-w-xs"><SelectorObjetivo objetivos={objetivosSupervisor} valor={objetivoId} alCambiar={setObjetivoId} /></div></div>}
     {objetivoActual && <AsistenciaPersonal key={objetivoId} objetivoInicial={objetivoId} soloLectura />}
+  </section>
+}
+
+
+export const NovedadesSupervisor: React.FC = () => {
+  const { usuario } = useAutenticacion()
+  const { objetivos, novedades } = useOperativo()
+  const objetivosSupervisor = useMemo(
+    () => objetivos.filter(o => o.id_supervisor === usuario?.id && o.activo),
+    [objetivos, usuario?.id]
+  )
+  const idsObjetivos = useMemo(() => new Set(objetivosSupervisor.map(o => o.id)), [objetivosSupervisor])
+  const [objetivoId, setObjetivoId] = useState('todos')
+  const [busqueda, setBusqueda] = useState('')
+  const novedadesVisibles = useMemo(() => novedades.filter(n => {
+    const coincideObjetivo = !idsObjetivos.size ? false : (objetivoId === 'todos' ? idsObjetivos.has(n.id_objetivo) : n.id_objetivo === objetivoId && idsObjetivos.has(n.id_objetivo))
+    const texto = [n.nombre_vigilante, n.informe_novedades, n.fecha, n.hora].join(' ').toLocaleLowerCase('es-AR')
+    return coincideObjetivo && texto.includes(busqueda.toLocaleLowerCase('es-AR').trim())
+  }), [novedades, idsObjetivos, objetivoId, busqueda])
+
+  if (!objetivosSupervisor.length) return <SinObjetivos />
+
+  return <section className="space-y-4 animate-fadeIn">
+    <div><h2 className="text-xl font-black text-slate-900 dark:text-white">Novedades e incumplimientos</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta del Libro de Novedades de tus objetivos asignados.</p></div>
+    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)]">
+      <label className="relative block"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar por vigilador o contenido..." className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white" /></label>
+      {objetivosSupervisor.length > 1 && <label className="flex h-11 items-center rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200"><span className="sr-only">Filtrar por objetivo</span><select value={objetivoId} onChange={e => setObjetivoId(e.target.value)} className="w-full bg-transparent outline-none"><option value="todos">Todos mis objetivos</option>{objetivosSupervisor.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}</select></label>}
+    </div>
+    <div className="space-y-3">
+      {novedadesVisibles.length ? novedadesVisibles.map(n => <article key={n.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{n.nombre_vigilante || 'Vigilador'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{objetivosSupervisor.find(o => o.id === n.id_objetivo)?.nombre || 'Objetivo'}</p></div><span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{n.fecha.split('-').reverse().join('/')} · {n.hora.slice(0,5)}</span></div>
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">{n.informe_novedades}</p>
+      </article>) : <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No hay novedades disponibles para los filtros seleccionados.</div>}
+    </div>
   </section>
 }
 
