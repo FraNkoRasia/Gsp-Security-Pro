@@ -214,15 +214,20 @@ Deno.serve(async (req) => {
         asignacionesAplicadas.push({ id: objetivo.id, anterior: ocupante })
       }
       const seleccionados = new Set(idsObjetivos)
+      const desasignacionesAplicadas: string[] = []
       for (const actual of actuales || []) {
         if (seleccionados.has(actual.id)) continue
         const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id", actual.id).eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
         if (unassignErr) {
+          for (const idObjetivo of desasignacionesAplicadas) {
+            await db.from("objetivos").update({ [campoObjetivo]: id }).eq("id", idObjetivo).is(campoObjetivo, null)
+          }
           for (const aplicado of asignacionesAplicadas.reverse()) {
             await db.from("objetivos").update({ [campoObjetivo]: aplicado.anterior }).eq("id", aplicado.id).eq(campoObjetivo, id)
           }
           return json({ error: unassignErr.message }, 400)
         }
+        desasignacionesAplicadas.push(actual.id)
       }
       await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "ASIGNAR_OBJETIVO_PERSONAL", entidad: nombreRol, entidad_id: id, detalle: { texto: "Actualizó los objetivos asignados: " + idsObjetivos.length }, fecha_hora: new Date().toISOString() })
       return json({ ok: true })
