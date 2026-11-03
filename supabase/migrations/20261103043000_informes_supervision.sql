@@ -42,11 +42,13 @@ create index if not exists idx_informes_supervision_actuaciones_informe
 alter table public.informes_supervision enable row level security;
 alter table public.informes_supervision_actuaciones enable row level security;
 
+revoke all on public.informes_supervision from anon;
+revoke all on public.informes_supervision_actuaciones from anon;
+revoke update, delete on public.informes_supervision from authenticated;
+revoke update, delete on public.informes_supervision_actuaciones from authenticated;
 grant select, insert on public.informes_supervision to authenticated;
 grant update (estado) on public.informes_supervision to authenticated;
 grant select, insert on public.informes_supervision_actuaciones to authenticated;
-revoke update, delete on public.informes_supervision from authenticated;
-revoke update, delete on public.informes_supervision_actuaciones from authenticated;
 
 drop policy if exists "informes supervision lectura autorizada" on public.informes_supervision;
 create policy "informes supervision lectura autorizada"
