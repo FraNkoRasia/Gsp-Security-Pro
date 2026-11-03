@@ -53,14 +53,15 @@ const fechaLocal = () => {
 }
 const hora = (value: string|null) => value ? new Date(value).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—'
 
-export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGestion = false }) => {
+export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean; objetivoInicial?: string; soloLectura?: boolean }> = ({ modoGestion = false, objetivoInicial = '', soloLectura = false }) => {
   const { usuario } = useAutenticacion()
   const { asignaciones, objetivos, vigiladores } = useOperativo()
   const esEncargado = usuario?.rol === 'encargado_empresa'
+  const esSupervisor = usuario?.rol === 'supervisor'
   const vigiladorActual = vigiladores.find(v => v.id_usuario === usuario?.id)
   const asignacion = asignaciones.find(a => a.id_vigilador === vigiladorActual?.id && a.activa)
   const objetivoVigilador = asignacion?.id_objetivo
-  const [objetivoId,setObjetivoId] = useState<string>('')
+  const [objetivoId,setObjetivoId] = useState<string>(objetivoInicial)
   const [personal,setPersonal] = useState<Personal[]>([])
   const [asistencias,setAsistencias] = useState<Asistencia[]>([])
   const [fecha,setFecha] = useState(fechaLocal())
@@ -90,7 +91,12 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
     if (!supabase || !usuario) { setError('No hay conexión con la base de datos.'); setCargando(false); return }
     setCargando(true); setError('')
     try {
-      let idObjetivo = objetivoId || objetivoVigilador || ''
+      let idObjetivo = objetivoId || objetivoInicial || objetivoVigilador || ''
+      if (esSupervisor) {
+        const { data: objetivoAsignado, error: errorObjetivo } = await supabase.from('objetivos').select('id').eq('id', idObjetivo).eq('id_supervisor', usuario.id).eq('activo', true).maybeSingle()
+        if (errorObjetivo) throw errorObjetivo
+        if (!objetivoAsignado) throw new Error('El objetivo seleccionado no está asignado a tu cuenta.')
+      }
       if (esEncargado && !idObjetivo) {
         const {data,error:err} = await supabase.from('objetivos').select('id').eq('id_encargado_empresa',usuario.id).eq('activo',true).limit(2)
         if (err) throw err
@@ -118,7 +124,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
       setCategoria(actual => categoriasActivas.some(x=>x.id===actual) ? actual : (categoriasActivas[0]?.id || ''))
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudieron cargar los registros.') }
     finally { setCargando(false) }
-  },[usuario,objetivoId,objetivoVigilador,esEncargado,fecha,modoGestion])
+  },[usuario,objetivoId,objetivoInicial,objetivoVigilador,esEncargado,esSupervisor,fecha,modoGestion])
 
   // Cargar al entrar y cuando el usuario cambia explícitamente la fecha o cambia la cuenta/objetivo; no depender de la identidad del callback, que puede recrearse en cada render del contexto.
   useEffect(() => { void cargar() },[usuario?.id, objetivoVigilador, esEncargado, fecha])
@@ -126,7 +132,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
   const registrarPersona = async (e: React.FormEvent) => {
     e.preventDefault()
     const categoriaSeleccionada = categorias.find(c => c.id === categoria)
-    if (!supabase || !usuario || !objetivoId || !nombre.trim() || !categoriaSeleccionada || (!categoriaSeleccionada.activa && personaEditando?.categoria_id !== categoriaSeleccionada.id)) return
+    if (!supabase || !usuario || soloLectura || !objetivoId || !nombre.trim() || !categoriaSeleccionada || (!categoriaSeleccionada.activa && personaEditando?.categoria_id !== categoriaSeleccionada.id)) return
     const objetivo = objetivos.find(o => o.id === objetivoId)
     const idEmpresa = objetivo?.id_empresa || usuario.id_empresa
     if (!idEmpresa) { setError('No se pudo identificar la empresa de este objetivo.'); return }
@@ -155,7 +161,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
   }
 
   const confirmarCambioEstadoPersonal = async () => {
-    if (!supabase || !usuario || !objetivoId || !confirmacionEstadoPersonal) return
+    if (!supabase || !usuario || soloLectura || !objetivoId || !confirmacionEstadoPersonal) return
     const persona = confirmacionEstadoPersonal
     setGuardando(true); setError(''); setMensaje('')
     if (!persona.activo) {
@@ -172,7 +178,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
     await cargar()
   }
 
-  const puedeEditarHorario = esEncargado ? fecha <= fechaLocal() : fecha === fechaLocal()
+  const puedeEditarHorario = !soloLectura && (esEncargado ? fecha <= fechaLocal() : fecha === fechaLocal())
   const abrirEdicionHorario = (persona: Personal) => {
     if (!puedeEditarHorario) return
     const original = asistencias.find(a=>a.id_personal===persona.id) || null
@@ -182,7 +188,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
   }
 
   const guardarEdicionHorario = async () => {
-    if (!supabase || !usuario || !objetivoId || !edicionHorario || !puedeEditarHorario) return
+    if (!supabase || !usuario || soloLectura || !objetivoId || !edicionHorario || !puedeEditarHorario) return
     const {persona,ingreso,egreso,original} = edicionHorario
     if (!ingreso) { setError('Ingresá la hora de ingreso.'); return }
     if (egreso && egreso < ingreso) { setError('La hora de egreso no puede ser anterior al ingreso.'); return }
@@ -221,7 +227,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
   }
 
   const guardarMarca = async (persona: Personal, tipo: 'ingreso'|'egreso') => {
-    if (!supabase || !usuario || !objetivoId) return
+    if (!supabase || !usuario || soloLectura || !objetivoId) return
     const existente = asistencias.find(a=>a.id_personal===persona.id)
     setGuardando(true); setError(''); setMensaje('')
     const marca = new Date().toISOString()
@@ -304,14 +310,14 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
   const hoyLocal = fechaLocal()
   const fechaFutura = fecha > hoyLocal
   const fechaPasada = fecha < hoyLocal
-  const puedeMarcarFecha = !fechaFutura && (esEncargado || !fechaPasada)
+  const puedeMarcarFecha = !soloLectura && !fechaFutura && (esEncargado || !fechaPasada)
 
   return (
     <section className="space-y-5 animate-fadeIn">
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="min-w-0 text-lg font-black text-slate-900 dark:text-white sm:text-2xl">{modoGestion?'Personal del objetivo':'Asistencia del personal'}</h2>
-          {modoGestion && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Administrá las altas, los datos y el estado del personal de tu objetivo.</p>}</div>
+          {modoGestion && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Administrá las altas, los datos y el estado del personal de tu objetivo.</p>}{soloLectura && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta de registros de asistencia. No podés modificar marcas ni horarios.</p>}</div>
           {modoGestion
             ? <button type="button" onClick={abrirAltaPersonal} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><UserRoundPlus className="h-4 w-4"/>Agregar personal</button>
             : <label className="flex h-11 w-full shrink-0 items-center rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200 sm:w-auto"><span className="sr-only">Fecha de asistencia</span><input aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="h-full w-full min-w-0 flex-1 bg-transparent leading-none outline-none sm:w-[145px] sm:flex-none [&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:mr-0 [&::-webkit-calendar-picker-indicator]:shrink-0"/></label>}
@@ -381,10 +387,10 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400"><span>{p.categoria}</span>{p.estado_aprobacion!=='aprobado' && <span className={`font-semibold ${rechazado?'text-red-600 dark:text-red-300':'text-amber-600 dark:text-amber-300'}`}>{rechazado?'Rechazado':'Pendiente de aprobación'}</span>}</div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <div className="flex w-[48px] flex-col items-center gap-1"><span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span><button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/><span className="sr-only">Marcar ingreso</span></button><span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span></div>
+                {soloLectura ? <div className="grid grid-cols-2 gap-3 text-center"><div><span className="block text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span><span className="text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span></div><div><span className="block text-[10px] font-semibold text-amber-700 dark:text-amber-300">Egreso</span><span className="text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span></div></div> : <><div className="flex w-[48px] flex-col items-center gap-1"><span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ingreso</span><button type="button" aria-label={a?.ingreso ? `Ingreso registrado a las ${hora(a.ingreso)}` : `Marcar ingreso de ${p.nombre} ${p.apellido}`} title={a?.ingreso ? `Ingreso: ${hora(a.ingreso)}` : 'Marcar ingreso'} disabled={guardando||rechazado||!!a?.ingreso||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'ingreso'})} className={marcaClase('ingreso')}><Check className={`h-5 w-5 ${a?.ingreso?'opacity-100':'opacity-0'}`}/><span className="sr-only">Marcar ingreso</span></button><span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.ingreso||null)}</span></div>
                 <div className="flex w-[48px] flex-col items-center gap-1"><span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">Egreso</span><button type="button" aria-label={a?.egreso ? `Egreso registrado a las ${hora(a.egreso)}` : `Marcar egreso de ${p.nombre} ${p.apellido}`} title={a?.egreso ? `Egreso: ${hora(a.egreso)}` : 'Marcar egreso'} disabled={guardando||rechazado||!a?.ingreso||!!a?.egreso||!!a?.jornada_cerrada||!puedeMarcarFecha} onClick={()=>setConfirmacionMarca({persona:p,tipo:'egreso'})} className={marcaClase('egreso')}><Check className={`h-5 w-5 ${a?.egreso?'opacity-100':'opacity-0'}`}/></button><span className="text-[10px] font-semibold tabular-nums text-slate-600 dark:text-slate-300">{hora(a?.egreso||null)}</span></div>
                 <button type="button" aria-label="Editar ingreso y egreso" title={esEncargado?'Editar ingreso y egreso':'Editar ingreso'} disabled={guardando||rechazado||!puedeEditarHorario} onClick={()=>abrirEdicionHorario(p)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-400/40 bg-slate-500/10 text-slate-600 transition-colors hover:bg-slate-500/20 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"><Pencil className="h-4 w-4"/></button>
-              </div>
+              </div></>}
             </div>
             {esEncargado && p.estado_aprobacion==='pendiente' && <div className="mt-2 flex gap-2 border-t border-slate-200 pt-2 dark:border-slate-800"><button type="button" disabled={guardando} onClick={()=>void revisar(p,true)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"><Check className="h-4 w-4"/> Aprobar</button><button type="button" disabled={guardando} onClick={()=>void revisar(p,false)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 disabled:opacity-50"><X className="h-4 w-4"/> Rechazar</button></div>}</>}
           </article>
