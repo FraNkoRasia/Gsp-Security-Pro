@@ -107,14 +107,27 @@ export const GestionCategoriasPersonal: React.FC = () => {
     if (!supabase || !objetivoId) return
     const activa = !categoria.activa
     setGuardando(true); setError(''); setMensaje('')
+    if (!activa) {
+      // Validar contra la base de datos para no depender de una lista potencialmente desactualizada.
+      const { count, error: errorPersonal } = await supabase.from('personal_empresa')
+        .select('id', { count: 'exact', head: true }).eq('id_objetivo', objetivoId)
+        .eq('categoria_id', categoria.id).eq('activo', true)
+      if (errorPersonal) { setGuardando(false); setError('No se pudo verificar el personal asignado. Intentá nuevamente.'); return }
+      if ((count || 0) > 0) {
+        setGuardando(false)
+        setCategoriaADesactivar(null)
+        setError(`No se puede dar de baja “${categoria.nombre}” porque tiene ${count} persona(s) activa(s). Primero dales de baja o reasignalas a otra categoría activa.`)
+        return
+      }
+    }
     const { error: err } = await supabase.from('categorias_personal_empresa')
-      .update({ activa }).eq('id', categoria.id).eq('id_objetivo', objetivoId)
+      .update({ activa }).eq('id', categoria.id).eq('id_objetivo', objetivoId).eq('activa', categoria.activa)
     setGuardando(false)
     if (err) { setError(err.message); return }
     setCategoriaADesactivar(null)
     setMensaje(activa
       ? `Categoría “${categoria.nombre}” reactivada y disponible para nuevas altas.`
-      : `Categoría “${categoria.nombre}” desactivada. El personal vinculado sigue visible y conserva su historial.`)
+      : `Categoría “${categoria.nombre}” desactivada. Se conservaron los vínculos y el historial del personal inactivo.`)
     await cargar()
   }
 
@@ -182,8 +195,8 @@ export const GestionCategoriasPersonal: React.FC = () => {
       {categoriaADesactivar && createPortal(<div className="fixed inset-0 z-[11000] flex h-[100dvh] w-full items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="desactivar-categoria-titulo">
         <div className="w-full max-w-sm space-y-4 rounded-2xl border border-amber-500/25 bg-white p-5 shadow-2xl dark:bg-[#0C121E]">
           <div><h3 id="desactivar-categoria-titulo" className="text-lg font-black text-slate-900 dark:text-white">Desactivar categoría</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">¿Querés desactivar “{categoriaADesactivar.nombre}”?</p></div>
-          <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm leading-5 text-amber-800 dark:text-amber-300">{cantidadPersonalActivo(categoriaADesactivar.id)} persona(s) activa(s) están vinculadas. Seguirán apareciendo en Personal y en los registros de asistencia, pero esta categoría no estará disponible para nuevas altas. No se borra ningún dato.</p>
-          <div className="flex justify-end gap-2"><button type="button" disabled={guardando} onClick={()=>setCategoriaADesactivar(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="button" disabled={guardando} onClick={()=>void cambiarEstado(categoriaADesactivar)} className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{guardando?'Procesando…':'Confirmar baja'}</button></div>
+          <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm leading-5 text-amber-800 dark:text-amber-300">{cantidadPersonalActivo(categoriaADesactivar.id) > 0 ? `Hay ${cantidadPersonalActivo(categoriaADesactivar.id)} persona(s) activa(s) vinculada(s). Primero debés dar de baja a ese personal o reasignarlo a otra categoría activa. No se puede desactivar la categoría mientras tenga personal activo.` : 'No hay personal activo vinculado. La categoría se desactivará y dejará de estar disponible para nuevas altas. Los vínculos e historiales del personal inactivo se conservarán.'}</p>
+          <div className="flex justify-end gap-2"><button type="button" disabled={guardando} onClick={()=>setCategoriaADesactivar(null)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Cancelar</button><button type="button" disabled={guardando || cantidadPersonalActivo(categoriaADesactivar.id) > 0} onClick={()=>void cambiarEstado(categoriaADesactivar)} className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{guardando?'Procesando…':'Confirmar baja'}</button></div>
         </div>
       </div>,document.body)}
     </section>
