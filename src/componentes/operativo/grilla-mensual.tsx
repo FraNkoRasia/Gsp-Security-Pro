@@ -471,7 +471,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#082f63;background:#fff}
 .muestra.nocturno{background:linear-gradient(145deg,#6b5be9,#4335bd);color:#fff}
 .muestra.feriado{background:linear-gradient(145deg,#ff5576,#e92c53);color:#fff}
 .muestra.franco{background:linear-gradient(145deg,#55a977,#318354);color:#fff}
-.horas-globales{min-width:48mm;display:flex;align-items:center;justify-content:center;gap:2mm;padding:2mm 3mm;border:.3mm solid #c3e1fa;border-radius:2mm;background:linear-gradient(145deg,#dff1ff,#c5e4fc);color:#082f63;font-size:12px;font-weight:900;text-align:center;white-space:nowrap;box-shadow:inset 0 .3mm .5mm #fff}\n.icono-horas-globales{display:inline-block;flex:none;font-size:21px;line-height:1}
+.horas-globales{min-width:48mm;display:flex;align-items:center;justify-content:center;gap:2mm;padding:2mm 3mm;border:.3mm solid #c3e1fa;border-radius:2mm;background:linear-gradient(145deg,#dff1ff,#c5e4fc);color:#082f63;font-size:12px;font-weight:900;text-align:center;white-space:nowrap;box-shadow:inset 0 .3mm .5mm #fff}\n.icono-horas-globales{display:inline-block;flex:none;font-size:28px;line-height:1}
 .quincena{min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden;border:.35mm solid #83b9e8;border-radius:2.3mm;background:#fff;box-shadow:0 .5mm 1.2mm rgba(15,65,110,.1)}
 .encabezado-quincena{height:8mm;flex:none;display:flex;justify-content:space-between;align-items:center;padding:1mm 3mm;background:linear-gradient(100deg,#0b3564,#164b7e 58%,#0d3767)}
 h2{margin:0;color:#fff;font-size:13px;font-weight:900;text-shadow:0 .3mm .5mm rgba(0,0,0,.18)}
