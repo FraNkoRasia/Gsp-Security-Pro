@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
       const email = String(b.email || "").trim().toLowerCase(), telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
       const idsObjetivos = rol === "supervisor"
-        ? Array.from(new Set((Array.isArray(b.ids_objetivos) ? b.ids_objetivos : []).map((v: unknown) => String(v)).filter(Boolean)))
+        ? Array.from(new Set((Array.isArray(b.ids_objetivos) ? b.ids_objetivos : [b.id_objetivo]).map((v: unknown) => String(v)).filter(Boolean)))
         : [String(b.id_objetivo || "")].filter(Boolean)
       if (!nombre || !apellido || !email || dni.length < 8 || idsObjetivos.length === 0)
         return json({ error: "Nombre, apellido, correo, DNI y al menos un objetivo son obligatorios." }, 400)
