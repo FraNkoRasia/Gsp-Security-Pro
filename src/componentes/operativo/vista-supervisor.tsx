@@ -6,7 +6,6 @@ import { supabase } from '@/servicios/supabase'
 import { GestionVigiladores } from '@/componentes/operativo/gestion-vigiladores'
 import { GrillaMensual } from '@/componentes/operativo/grilla-mensual'
 import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
-import { InformesSupervision } from '@/componentes/operativo/informes-supervision'
 
 type InformeResumen = {
   id: string
