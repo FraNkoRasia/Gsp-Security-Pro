@@ -71,7 +71,7 @@ const claseGravedad = (gravedad: GravedadInforme) => ({
   critica: 'text-red-600 dark:text-red-300'
 }[gravedad])
 
-export const InformesSupervision: React.FC = () => {
+export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ tipoInicial }) => {
   const { usuario } = useAutenticacion()
   const { objetivos, vigiladores } = useOperativo()
   const esSupervisor = usuario?.rol === 'supervisor'
@@ -138,7 +138,7 @@ export const InformesSupervision: React.FC = () => {
   const abrirNuevo = () => {
     setObjetivoId(objetivosVisibles.find(o => o.activo)?.id || '')
     setVigiladorId('')
-    setTipo('observacion')
+    setTipo(tipoInicial || 'observacion')
     setGravedad('media')
     setDescripcion('')
     setAccionTomada('')
@@ -260,7 +260,7 @@ export const InformesSupervision: React.FC = () => {
     const coincideEstado = filtroEstado === 'todos' || informe.estado === filtroEstado
     const texto = [informe.nombre_vigilante, informe.supervisor_nombre, informe.descripcion, informe.accion_tomada || '', informe.observaciones || ''].join(' ').toLocaleLowerCase('es-AR')
     return coincideObjetivo && coincideEstado && texto.includes(busqueda.toLocaleLowerCase('es-AR').trim())
-  }), [informes, filtroObjetivo, filtroEstado, busqueda])
+  }).filter(informe => !tipoInicial || informe.tipo === tipoInicial), [informes, filtroObjetivo, filtroEstado, busqueda, tipoInicial])
 
   const objetivoNombre = (id: string) => objetivos.find(o => o.id === id)?.nombre || 'Objetivo'
   const actuacionesDe = (id: string) => actuaciones.filter(a => a.id_informe === id)
@@ -274,13 +274,13 @@ export const InformesSupervision: React.FC = () => {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-300"><ClipboardList className="h-5 w-5" /></div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">Informes de Supervisión</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">{tipoInicial === 'supervision' ? 'Supervisiones' : 'Informes de Supervisión'}</h2>
           </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Registro formal de incumplimientos, observaciones, incidentes y controles operativos.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tipoInicial === 'supervision' ? 'Registro de controles operativos realizados en tus objetivos.' : 'Registro formal de incumplimientos, observaciones, incidentes y controles operativos.'}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">{totalPendientes} pendientes</span>
-          {esSupervisor && <button type="button" onClick={abrirNuevo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Plus className="h-4 w-4" />Nuevo informe</button>}
+          {esSupervisor && <button type="button" onClick={abrirNuevo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Plus className="h-4 w-4" />{tipoInicial === 'supervision' ? 'Registrar supervisión' : 'Nuevo informe'}</button>}
         </div>
       </header>
 
@@ -355,7 +355,7 @@ export const InformesSupervision: React.FC = () => {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Objetivo<select required value={objetivoId} onChange={e => setObjetivoId(e.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">Seleccionar objetivo</option>{objetivosVisibles.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}</select></label>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Vigilador<select required value={vigiladorId} onChange={e => setVigiladorId(e.target.value)} disabled={!vigiladoresObjetivo.length} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="">{vigiladoresObjetivo.length ? 'Seleccionar vigilador' : 'Sin vigiladores asignados'}</option>{vigiladoresObjetivo.map(v => <option key={v.id} value={v.id}>{v.apellido}, {v.nombre}{v.legajo ? ' · Leg. ' + v.legajo : ''}</option>)}</select></label>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Tipo de informe<select value={tipo} onChange={e => setTipo(e.target.value as TipoInforme)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">{tipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></label>
+            {!tipoInicial && <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Tipo de informe<select value={tipo} onChange={e => setTipo(e.target.value as TipoInforme)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">{tipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></label>}
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Gravedad<select value={gravedad} onChange={e => setGravedad(e.target.value as GravedadInforme)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">{gravedades.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}</select></label>
           </div>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Descripción del hecho<textarea required minLength={10} rows={4} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Describí objetivamente qué ocurrió, cuándo y en qué circunstancias." className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label>
