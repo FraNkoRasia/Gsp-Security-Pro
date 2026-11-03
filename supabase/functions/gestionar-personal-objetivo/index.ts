@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       const telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
       const idsObjetivos = rol === "supervisor"
-        ? Array.from(new Set((Array.isArray(b.ids_objetivos) ? b.ids_objetivos : []).map((v: unknown) => String(v)).filter(Boolean)))
+        ? Array.from(new Set((Array.isArray(b.ids_objetivos) ? b.ids_objetivos : [b.id_objetivo]).map((v: unknown) => String(v)).filter(Boolean)))
         : [String(b.id_objetivo || "")].filter(Boolean)
       if (!nombre || !apellido || !email || idsObjetivos.length === 0 || dni.length < 8)
         return json({ error: "Completá nombre, apellido, correo, DNI y al menos un objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
