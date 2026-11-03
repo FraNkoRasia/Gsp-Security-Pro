@@ -5,7 +5,6 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 import { supabase } from '@/servicios/supabase'
 import { GestionVigiladores } from '@/componentes/operativo/gestion-vigiladores'
 import { GrillaMensual } from '@/componentes/operativo/grilla-mensual'
-import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 
 type InformeResumen = {
   id: string
@@ -259,16 +258,6 @@ export const GrillaSupervisor: React.FC = () => {
     {objetivoActual && <GrillaMensual key={objetivoId} objetivoInicial={objetivoId} soloLectura />}
   </section>
 }
-
-export const AsistenciaSupervisor: React.FC = () => {
-  const { objetivosSupervisor, objetivoActual, objetivoId, setObjetivoId } = useObjetivosSupervisor()
-  if (!objetivosSupervisor.length) return <SinObjetivos />
-  return <section className="space-y-4 animate-fadeIn">
-    {objetivosSupervisor.length > 1 && <div className="flex justify-end"><div className="w-full sm:max-w-xs"><SelectorObjetivo objetivos={objetivosSupervisor} valor={objetivoId} alCambiar={setObjetivoId} /></div></div>}
-    {objetivoActual && <AsistenciaPersonal key={objetivoId} objetivoInicial={objetivoId} soloLectura />}
-  </section>
-}
-
 
 export const NovedadesSupervisor: React.FC = () => {
   const { usuario } = useAutenticacion()
