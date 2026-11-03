@@ -536,7 +536,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
             Grilla Mensual Operativa
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {usuario?.rol === 'vigilador' ? 'Consultá los turnos del mes completo.' : usuario?.rol === 'administrador' || usuario?.rol === 'supervisor' ? 'Visualizá y administrá los turnos del mes completo.' : 'Visualizá los turnos del mes completo.'}
+            {usuario?.rol === 'vigilador' ? 'Consultá los turnos del mes completo.' : usuario?.rol === 'administrador' ? 'Visualizá y administrá los turnos del mes completo.' : usuario?.rol === 'supervisor' ? 'Consultá los turnos del mes completo.' : 'Visualizá los turnos del mes completo.'}
           </p>
         </div>
 
