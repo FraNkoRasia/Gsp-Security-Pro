@@ -73,7 +73,7 @@ const claseGravedad = (gravedad: GravedadInforme) => ({
 
 export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ tipoInicial }) => {
   const { usuario } = useAutenticacion()
-  const { objetivos, vigiladores } = useOperativo()
+  const { objetivos } = useOperativo()
   const esSupervisor = usuario?.rol === 'supervisor'
   const esAdmin = usuario?.rol === 'administrador'
   const esEncargado = usuario?.rol === 'encargado_empresa'
@@ -163,18 +163,18 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       const ids = Array.from(new Set((asignaciones || []).map(x => x.id_vigilador)))
       if (!ids.length) { setVigiladoresObjetivo([]); setVigiladorId(''); return }
       const { data, error: errorVigiladores } = await supabase.from('vigiladores')
-        .select('id,id_usuario,nombre,apellido,legajo,activo')
+        .select('id,nombre,apellido,legajo,activo')
         .in('id', ids)
         .eq('activo', true)
         .order('apellido')
       if (errorVigiladores) { setError(errorVigiladores.message); setVigiladoresObjetivo([]); return }
-      const lista = (data || []).filter(v => !v.id_usuario || vigiladores.some(p => p.id === v.id_usuario && p.activo))
+      const lista = (data || [])
         .map(v => ({ id: v.id, nombre: v.nombre, apellido: v.apellido, legajo: v.legajo || null })) as VigiladorObjetivo[]
       setVigiladoresObjetivo(lista)
       setVigiladorId(actual => lista.some(v => v.id === actual) ? actual : lista[0]?.id || '')
     }
     void cargarVigiladores()
-  }, [objetivoId, usuario?.id, usuario?.id_empresa, esSupervisor, vigiladores])
+  }, [objetivoId, usuario?.id, usuario?.id_empresa, esSupervisor])
 
   const crearInforme = async (e: React.FormEvent) => {
     e.preventDefault()
