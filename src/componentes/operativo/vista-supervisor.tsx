@@ -75,6 +75,7 @@ export const InicioSupervisor: React.FC = () => {
     [objetivos, usuario?.id]
   )
   const idsObjetivos = useMemo(() => new Set(objetivosSupervisor.map(o => o.id)), [objetivosSupervisor])
+  const claveObjetivos = objetivosSupervisor.map(o => o.id).sort().join('|')
   const [informes, setInformes] = useState<InformeResumen[]>([])
   const [cargandoInformes, setCargandoInformes] = useState(false)
   const [errorInformes, setErrorInformes] = useState('')
@@ -100,7 +101,7 @@ export const InicioSupervisor: React.FC = () => {
     }
     void cargar()
     return () => { vigente = false }
-  }, [usuario?.id, objetivosSupervisor.length])
+  }, [usuario?.id, claveObjetivos])
 
   const ahora = Date.now()
   const hoy = fechaArgentina(new Date())
