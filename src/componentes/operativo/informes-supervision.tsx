@@ -77,7 +77,7 @@ export const InformesSupervision: React.FC = () => {
   const esSupervisor = usuario?.rol === 'supervisor'
   const esAdmin = usuario?.rol === 'administrador'
   const esEncargado = usuario?.rol === 'encargado_empresa'
-  const objetivosVisibles = useMemo(() => objetivos.filter(o => o.activo && (
+  const objetivosVisibles = useMemo(() => objetivos.filter(o => (
     esSupervisor ? o.id_supervisor === usuario?.id :
     esEncargado ? o.id_encargado_empresa === usuario?.id :
     esAdmin ? o.id_empresa === usuario?.id_empresa : false
@@ -232,11 +232,9 @@ export const InformesSupervision: React.FC = () => {
     const nuevoEstado = estadosPendientes[informe.id] || informe.estado
     if (nuevoEstado === informe.estado) return
     setGuardando(true); setError('')
-    const { error: errorEstado } = await supabase.rpc('actualizar_estado_informe_supervision', {
-      p_id_informe: informe.id,
-      p_estado: nuevoEstado,
-      p_comentario: (comentarios[informe.id] || '').trim() || null
-    })
+    const { error: errorEstado } = await supabase.from('informes_supervision')
+      .update({ estado: nuevoEstado })
+      .eq('id', informe.id)
     if (errorEstado) setError(errorEstado.message)
     else {
       setMensaje('Estado actualizado y registrado en el historial.')
@@ -277,7 +275,7 @@ export const InformesSupervision: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,220px)_minmax(0,220px)]">
         <label className="relative block"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar vigilador o contenido..." className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white" /></label>
-        <select value={filtroObjetivo} onChange={e => setFiltroObjetivo(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"><option value="todos">Todos los objetivos</option>{objetivosVisibles.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}</select>
+        <select value={filtroObjetivo} onChange={e => setFiltroObjetivo(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"><option value="todos">Todos los objetivos</option>{objetivosVisibles.filter(o => o.activo).map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}</select>
         <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"><option value="todos">Todos los estados</option>{estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}</select>
       </div>
 
