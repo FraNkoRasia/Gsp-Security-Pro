@@ -144,7 +144,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_empresa uuid;
   v_supervisor text;
@@ -190,7 +190,7 @@ begin
   new.estado := 'registrado';
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists trg_preparar_informe_supervision on public.informes_supervision;
 create trigger trg_preparar_informe_supervision
