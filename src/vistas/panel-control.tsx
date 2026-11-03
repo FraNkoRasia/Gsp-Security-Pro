@@ -11,6 +11,7 @@ import {
   Clock,
   History,
   ClipboardCheck,
+  FileText,
   Tags,
   ArrowLeft,
   Shield,
@@ -46,7 +47,7 @@ export const VistaPanelControl: React.FC = () => {
   const { usuario, cerrarSesion } = useAutenticacion()
   const { idioma } = useTraduccion()
 
-  const [pestanaActiva, setPestanaActiva] = useState<string>('inicioSupervisor')
+  const [pestanaActiva, setPestanaActiva] = useState<string>('objetivos')
   const [objetivoGrillaId, setObjetivoGrillaId] = useState<string | null>(null)
   const [vistaObjetivo, setVistaObjetivo] = useState<'detalle' | 'vigiladores' | 'encargados' | 'supervisores' | 'grilla'>('detalle')
   const [volverDetallePendiente, setVolverDetallePendiente] = useState(false)
