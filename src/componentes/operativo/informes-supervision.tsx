@@ -264,7 +264,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
 
   const objetivoNombre = (id: string) => objetivos.find(o => o.id === id)?.nombre || 'Objetivo'
   const actuacionesDe = (id: string) => actuaciones.filter(a => a.id_informe === id)
-  const totalPendientes = informes.filter(i => i.estado === 'registrado' || i.estado === 'pendiente_revision').length
+  const totalPendientes = informes.filter(i => (!tipoInicial || i.tipo === tipoInicial) && (i.estado === 'registrado' || i.estado === 'pendiente_revision')).length
 
   if (!usuario || (!esSupervisor && !esAdmin && !esEncargado)) return null
 
