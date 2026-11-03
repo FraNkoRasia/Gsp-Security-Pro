@@ -16,9 +16,9 @@ type Props = { rol:RolPersonal; idEmpresaSeleccionada?:string; idObjetivoSelecci
 
 export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSeleccionada, idObjetivoSeleccionado, modoConsulta=false }) => {
   const { usuario } = useAutenticacion()
-  const { empresas, objetivos } = useOperativo()
+  const { empresas, objetivos, supervisores, encargados } = useOperativo()
   const [personal,setPersonal] = useState<Persona[]>([])
-  const [cargando,setCargando] = useState(true)
+  const [cargando,setCargando] = useState(!modoConsulta)
   const [error,setError] = useState("")
   const [busqueda,setBusqueda] = useState("")
   const [filtro,setFiltro] = useState<"activos"|"inactivos">("activos")
@@ -40,6 +40,22 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
   const idEmpresa = idEmpresaSeleccionada || usuario?.id_empresa || empresas[0]?.id || ""
   const objetivosEmpresa = useMemo(()=>objetivos.filter(o=>o.id_empresa===idEmpresa&&o.activo),[objetivos,idEmpresa])
   const titulo = rol === "supervisor" ? "Supervisores" : "Encargados"
+  // En la vista de consulta del objetivo, los perfiles ya están cargados en el contexto
+  // operativo. Se muestran inmediatamente y se completa el DNI en segundo plano.
+  const personalContexto = useMemo(() => {
+    const fuente = rol === "supervisor" ? supervisores : encargados
+    return fuente
+      .filter(persona => !idEmpresaSeleccionada || persona.id_empresa === idEmpresaSeleccionada)
+      .map(persona => {
+        const objetivo = objetivos.find(item => (rol === "supervisor" ? item.id_supervisor : item.id_encargado_empresa) === persona.id)
+        return {
+          id: persona.id, nombre: persona.nombre, apellido: persona.apellido, email: persona.email,
+          telefono: persona.telefono || null, id_empresa: persona.id_empresa || "", rol, activo: persona.activo,
+          debe_cambiar_contrasena: persona.debe_cambiar_contrasena, creado_en: persona.creado_en, dni: "",
+          objetivo: objetivo ? { id: objetivo.id, nombre: objetivo.nombre } : null,
+        } as Persona
+      })
+  }, [rol, supervisores, encargados, objetivos, idEmpresaSeleccionada])
 
   const ejecutar = useCallback(async (accion:string, extra:Record<string,unknown>={}) => {
     if(!supabase) throw new Error("Supabase no está configurado.")
@@ -60,11 +76,16 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
   },[rol,idEmpresa])
 
   const cargar = useCallback(async()=>{
-    setCargando(true); setError("")
+    if (!modoConsulta) setCargando(true); setError("")
     try { const data=await ejecutar("listar"); setPersonal((data.personal||[]) as Persona[]) }
     catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el personal.")}
-    finally{setCargando(false)}
-  },[ejecutar])
+    finally{if (!modoConsulta) setCargando(false)}
+  },[ejecutar, modoConsulta])
+  useEffect(() => {
+    if (!modoConsulta) return
+    setPersonal(personalContexto)
+    setCargando(false)
+  }, [modoConsulta, personalContexto])
   useEffect(()=>{void cargar()},[cargar])
 
   const abrirCrear=()=>{setEditando(null);setNombre("");setApellido("");setEmail("");setTelefono("");setDni("");setObjetivoId(idObjetivoSeleccionado||"");setError("");setDialogo(true)}
@@ -123,7 +144,7 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
     <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre, DNI, teléfono o correo..." className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white"/>
     {error&&<p className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-500">{error}</p>}
     {cargando?<p className="p-8 text-center text-sm text-slate-500">Cargando {titulo.toLowerCase()}…</p>:visibles.length===0?<p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">No hay {titulo.toLowerCase()} para mostrar.</p>:<div className="grid gap-4 lg:grid-cols-2">{visibles.map(p=><article key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-lg font-bold text-slate-900 dark:text-white">{p.nombre} {p.apellido}</h3><p className="break-all text-sm text-slate-500">{p.email}</p><p className="mt-1 text-sm text-slate-500">DNI: {p.dni||"No registrado"}</p><p className="mt-1 text-sm text-slate-500">Objetivo: {p.objetivo?.nombre||"Sin objetivo"}</p></div><Insignia variante={p.activo?"verde":"gris"}>{p.activo?"Activo":"Inactivo"}</Insignia></div>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-lg font-bold text-slate-900 dark:text-white">{p.nombre} {p.apellido}</h3><p className="break-all text-sm text-slate-500">{p.email}</p>{(!modoConsulta || p.dni) && <p className="mt-1 text-sm text-slate-500">DNI: {p.dni||"No registrado"}</p>}<p className="mt-1 text-sm text-slate-500">Objetivo: {p.objetivo?.nombre||"Sin objetivo"}</p></div><Insignia variante={p.activo?"verde":"gris"}>{p.activo?"Activo":"Inactivo"}</Insignia></div>
       {p.debe_cambiar_contrasena&&<p className="mt-3 rounded-lg bg-amber-500/10 p-2 text-xs font-semibold text-amber-600">Debe cambiar la contraseña al ingresar.</p>}
       <div className="mt-4 flex flex-wrap gap-2"><Boton variante="secundario" tamano="chico" onClick={()=>setDetalle(p)}>Ficha técnica</Boton><Boton variante="secundario" tamano="chico" onClick={()=>void verHistorial(p)}>Historial</Boton><><Boton variante="secundario" tamano="chico" onClick={()=>abrirEditar(p)}>Editar / Asignar objetivo</Boton><Boton variante="secundario" tamano="chico" onClick={()=>void restablecer(p)}>Restablecer contraseña</Boton><Boton variante="secundario" tamano="chico" onClick={()=>void cambiarEstado(p)}>{p.activo?"Dar de baja":"Reactivar"}</Boton></></div>
     </article>)}</div>}

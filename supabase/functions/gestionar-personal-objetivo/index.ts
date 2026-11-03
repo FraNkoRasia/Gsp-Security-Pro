@@ -39,12 +39,20 @@ Deno.serve(async (req) => {
     const nombreRol = rol === "supervisor" ? "supervisor" : "encargado"
 
     if (accion === "listar") {
-      const { data: perfiles, error } = await db.from("perfiles")
-        .select("id,id_empresa,nombre,apellido,email,telefono,rol,activo,debe_cambiar_contrasena,creado_en")
-        .eq("id_empresa", idEmpresa).eq("rol", rol).order("apellido")
+      // Estas tres consultas son independientes: ejecutarlas en paralelo evita
+      // sumar sus latencias en cada apertura de Supervisores/Encargados.
+      const [perfilesResult, objetivosResult, credResult] = await Promise.all([
+        db.from("perfiles")
+          .select("id,id_empresa,nombre,apellido,email,telefono,rol,activo,debe_cambiar_contrasena,creado_en")
+          .eq("id_empresa", idEmpresa).eq("rol", rol).order("apellido"),
+        db.from("objetivos").select("id,nombre,id_supervisor,id_encargado_empresa").eq("id_empresa", idEmpresa),
+        db.from("credenciales_personal_objetivo").select("id_usuario,dni").eq("id_empresa", idEmpresa),
+      ])
+      const error = perfilesResult.error || objetivosResult.error || credResult.error
       if (error) return json({ error: error.message }, 400)
-      const { data: objetivos } = await db.from("objetivos").select("id,nombre,id_supervisor,id_encargado_empresa").eq("id_empresa", idEmpresa)
-      const { data: cred } = await db.from("credenciales_personal_objetivo").select("id_usuario,dni").eq("id_empresa", idEmpresa)
+      const perfiles = perfilesResult.data
+      const objetivos = objetivosResult.data
+      const cred = credResult.data
       const byId = new Map((objetivos || []).map(o => [rol === "supervisor" ? o.id_supervisor : o.id_encargado_empresa, { id: o.id, nombre: o.nombre }]))
       const dniById = new Map((cred || []).map(c => [c.id_usuario, c.dni]))
       return json({ personal: (perfiles || []).map(p => ({ ...p, dni: dniById.get(p.id) || "", objetivo: byId.get(p.id) || null })) })
