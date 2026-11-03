@@ -38,7 +38,7 @@ import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 import { GestionCategoriasPersonal } from '@/componentes/operativo/gestion-categorias-personal'
 import { GestionHorasExtra } from '@/componentes/operativo/gestion-horas-extra'
 import { InformesSupervision } from '@/componentes/operativo/informes-supervision'
-import { InicioSupervisor, PersonalSupervisor, GrillaSupervisor, AsistenciaSupervisor, SupervisionesSupervisor, NovedadesSupervisor } from '@/componentes/operativo/vista-supervisor'
+import { InicioSupervisor, PersonalSupervisor, GrillaSupervisor, SupervisionesSupervisor, NovedadesSupervisor } from '@/componentes/operativo/vista-supervisor'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -96,7 +96,6 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'inicioSupervisor', label: 'Inicio', icono: <Shield className="w-4 h-4" /> },
         { id: 'personalSupervisor', label: 'Personal', icono: <Users className="w-4 h-4" /> },
         { id: 'grillaSupervisor', label: 'Grilla', icono: <Calendar className="w-4 h-4" /> },
-        { id: 'asistenciaSupervisor', label: 'Asistencia', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'informesSupervision', label: 'Informes', icono: <FileText className="w-4 h-4" /> },
         { id: 'novedadesSupervisor', label: 'Novedades', icono: <BookOpen className="w-4 h-4" /> },
         { id: 'supervisiones', label: 'Supervisiones', icono: <Shield className="w-4 h-4" /> }
@@ -352,7 +351,7 @@ export const VistaPanelControl: React.FC = () => {
                 : esEncargado
                 ? pestanas.filter((p) => ['asistenciaPersonal', 'personal', 'categorias'].includes(p.id))
                 : usuario.rol === 'supervisor'
-                ? pestanas.filter((p) => ['inicioSupervisor', 'personalSupervisor', 'grillaSupervisor', 'asistenciaSupervisor'].includes(p.id))
+                ? pestanas.filter((p) => ['inicioSupervisor', 'personalSupervisor', 'grillaSupervisor'].includes(p.id))
                 : pestanas.slice(0, 1)
               ).map((p) => {
                 const activa = pestanaRenderizada === p.id
@@ -375,7 +374,7 @@ export const VistaPanelControl: React.FC = () => {
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : esEncargado ? ['asistenciaPersonal', 'personal', 'categorias'] : usuario.rol === 'supervisor' ? ['inicioSupervisor', 'personalSupervisor', 'grillaSupervisor', 'asistenciaSupervisor'] : []).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : esEncargado ? ['asistenciaPersonal', 'personal', 'categorias'] : usuario.rol === 'supervisor' ? ['inicioSupervisor', 'personalSupervisor', 'grillaSupervisor'] : []).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
@@ -398,7 +397,7 @@ export const VistaPanelControl: React.FC = () => {
                       : esEncargado
                       ? ['asistenciaPersonal', 'personal', 'categorias'].includes(p.id)
                       : usuario.rol === 'supervisor'
-                      ? ['inicioSupervisor', 'personalSupervisor', 'grillaSupervisor', 'asistenciaSupervisor'].includes(p.id)
+                      ? ['inicioSupervisor', 'personalSupervisor', 'grillaSupervisor'].includes(p.id)
                       : false
                     )).map((p) => {
                       const activa = pestanaRenderizada === p.id
