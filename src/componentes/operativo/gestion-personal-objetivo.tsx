@@ -48,12 +48,12 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
     return fuente
       .filter(persona => !idEmpresaSeleccionada || persona.id_empresa === idEmpresaSeleccionada)
       .map(persona => {
-        const objetivo = objetivos.find(item => (rol === "supervisor" ? item.id_supervisor : item.id_encargado_empresa) === persona.id)
+        const objetivosPersona = objetivos.filter(item => (rol === "supervisor" ? item.id_supervisor : item.id_encargado_empresa) === persona.id)
         return {
           id: persona.id, nombre: persona.nombre, apellido: persona.apellido, email: persona.email,
           telefono: persona.telefono || null, id_empresa: persona.id_empresa || "", rol, activo: persona.activo,
           debe_cambiar_contrasena: persona.debe_cambiar_contrasena, creado_en: persona.creado_en, dni: "",
-          objetivo: objetivo ? { id: objetivo.id, nombre: objetivo.nombre } : null, objetivos: objetivo ? [{ id: objetivo.id, nombre: objetivo.nombre }] : [],
+          objetivo: objetivosPersona[0] ? { id: objetivosPersona[0].id, nombre: objetivosPersona[0].nombre } : null, objetivos: objetivosPersona.map(o => ({ id: o.id, nombre: o.nombre })),
         } as Persona
       })
   }, [rol, supervisores, encargados, objetivos, idEmpresaSeleccionada])
@@ -139,8 +139,8 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
       {!modoConsulta&&<Boton variante="primario" onClick={abrirCrear}>+ Nuevo {rol==="supervisor"?"Supervisor":"Encargado"}</Boton>}
     </div>
     <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 p-2 dark:border-slate-800">
-      <button type="button" onClick={()=>setFiltro("activos")} className={`rounded-lg p-3 text-sm font-bold ${filtro==="activos"?"bg-emerald-600 text-white":"text-slate-500"}`}>Activos ({personal.filter(p=>p.activo&&(!idObjetivoSeleccionado||p.objetivo?.id===idObjetivoSeleccionado)).length})</button>
-      <button type="button" onClick={()=>setFiltro("inactivos")} className={`rounded-lg p-3 text-sm font-bold ${filtro==="inactivos"?"bg-slate-600 text-white":"text-slate-500"}`}>Inactivos ({personal.filter(p=>!p.activo&&(!idObjetivoSeleccionado||p.objetivo?.id===idObjetivoSeleccionado)).length})</button>
+      <button type="button" onClick={()=>setFiltro("activos")} className={`rounded-lg p-3 text-sm font-bold ${filtro==="activos"?"bg-emerald-600 text-white":"text-slate-500"}`}>Activos ({personal.filter(p=>p.activo&&(!idObjetivoSeleccionado||(p.objetivos|| (p.objetivo?[p.objetivo]:[])).some(o=>o.id===idObjetivoSeleccionado))).length})</button>
+      <button type="button" onClick={()=>setFiltro("inactivos")} className={`rounded-lg p-3 text-sm font-bold ${filtro==="inactivos"?"bg-slate-600 text-white":"text-slate-500"}`}>Inactivos ({personal.filter(p=>!p.activo&&(!idObjetivoSeleccionado||(p.objetivos|| (p.objetivo?[p.objetivo]:[])).some(o=>o.id===idObjetivoSeleccionado))).length})</button>
     </div>
     <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre, DNI, teléfono o correo..." className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white"/>
     {error&&<p className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-500">{error}</p>}
@@ -165,7 +165,7 @@ export const GestionPersonalObjetivo: React.FC<Props> = ({ rol, idEmpresaSelecci
       {confirmacion&&<div className="space-y-4"><div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">{confirmacion.accion==="restablecer"?"La contraseña volverá a ser el DNI y la persona deberá cambiarla obligatoriamente al ingresar.":confirmacion.accion==="baja"?"La persona perderá el acceso a su cuenta. Podrás reactivarla más adelante.":"La cuenta volverá a estar activa y podrá acceder al sistema."}</div><div className="flex justify-end gap-2"><Boton type="button" variante="secundario" disabled={procesandoConfirmacion} onClick={()=>setConfirmacion(null)}>Cancelar</Boton><Boton type="button" variante="primario" disabled={procesandoConfirmacion} onClick={()=>void confirmarAccion()}>{procesandoConfirmacion?"Procesando…":confirmacion.accion==="restablecer"?"Restablecer contraseña":confirmacion.accion==="baja"?"Dar de baja":"Reactivar cuenta"}</Boton></div></div>}
     </Dialogo>
     <Dialogo abierto={!!detalle} alCerrar={()=>setDetalle(null)} titulo="Ficha técnica" subtitulo={titulo.slice(0,-1)}>
-      {detalle&&<div className="space-y-2 text-sm"><p><strong>Nombre:</strong> {detalle.nombre} {detalle.apellido}</p><p><strong>DNI:</strong> {detalle.dni||"No registrado"}</p><p><strong>Correo:</strong> {detalle.email}</p><p><strong>Teléfono:</strong> {detalle.telefono||"No registrado"}</p><p><strong>Empresa:</strong> {empresas.find(e=>e.id===detalle.id_empresa)?.nombre||"Empresa"}</p><p><strong>Objetivo:</strong> {detalle.objetivo?.nombre||"Sin objetivo"}</p><p><strong>Alta:</strong> {fmt(detalle.creado_en)}</p><p><strong>Estado:</strong> {detalle.activo?"Activo":"Inactivo"}</p><p><strong>Contraseña:</strong> {detalle.debe_cambiar_contrasena?"Cambio obligatorio pendiente":"Contraseña personal establecida"}</p></div>}
+      {detalle&&<div className="space-y-2 text-sm"><p><strong>Nombre:</strong> {detalle.nombre} {detalle.apellido}</p><p><strong>DNI:</strong> {detalle.dni||"No registrado"}</p><p><strong>Correo:</strong> {detalle.email}</p><p><strong>Teléfono:</strong> {detalle.telefono||"No registrado"}</p><p><strong>Empresa:</strong> {empresas.find(e=>e.id===detalle.id_empresa)?.nombre||"Empresa"}</p><p><strong>Objetivos:</strong> {detalle.objetivos?.length?detalle.objetivos.map(o=>o.nombre).join(", "):detalle.objetivo?.nombre||"Sin objetivo"}</p><p><strong>Alta:</strong> {fmt(detalle.creado_en)}</p><p><strong>Estado:</strong> {detalle.activo?"Activo":"Inactivo"}</p><p><strong>Contraseña:</strong> {detalle.debe_cambiar_contrasena?"Cambio obligatorio pendiente":"Contraseña personal establecida"}</p></div>}
     </Dialogo>
     <Dialogo abierto={!!historialPersona} alCerrar={()=>setHistorialPersona(null)} titulo="Historial de actividad" subtitulo={historialPersona?historialPersona.nombre+" "+historialPersona.apellido:""}>
       <div className="max-h-[60vh] space-y-2 overflow-y-auto">{historial.length?historial.map(h=><div key={h.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800"><strong>{etiquetaAccion(h.accion)}</strong><p className="text-xs text-slate-500">{fmt(h.fecha_hora)}</p>{textoDetalle(h.detalle)&&<p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{textoDetalle(h.detalle)}</p>}</div>):<p className="text-sm text-slate-500">No hay registros de auditoría para esta cuenta.</p>}</div>
