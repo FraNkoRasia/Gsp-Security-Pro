@@ -53,9 +53,19 @@ Deno.serve(async (req) => {
       const perfiles = perfilesResult.data
       const objetivos = objetivosResult.data
       const cred = credResult.data
-      const byId = new Map((objetivos || []).map(o => [rol === "supervisor" ? o.id_supervisor : o.id_encargado_empresa, { id: o.id, nombre: o.nombre }]))
+      const byId = new Map<string, { id: string; nombre: string }[]>()
+      for (const objetivo of objetivos || []) {
+        const idPersonal = rol === "supervisor" ? objetivo.id_supervisor : objetivo.id_encargado_empresa
+        if (!idPersonal) continue
+        const lista = byId.get(idPersonal) || []
+        lista.push({ id: objetivo.id, nombre: objetivo.nombre })
+        byId.set(idPersonal, lista)
+      }
       const dniById = new Map((cred || []).map(c => [c.id_usuario, c.dni]))
-      return json({ personal: (perfiles || []).map(p => ({ ...p, dni: dniById.get(p.id) || "", objetivo: byId.get(p.id) || null })) })
+      return json({ personal: (perfiles || []).map(p => {
+        const asignados = byId.get(p.id) || []
+        return { ...p, dni: dniById.get(p.id) || "", objetivos: asignados, objetivo: asignados[0] || null }
+      }) })
     }
 
     const id = String(b.id || "")
@@ -65,13 +75,20 @@ Deno.serve(async (req) => {
       const email = String(b.email || "").trim().toLowerCase()
       const telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
-      const idObjetivo = String(b.id_objetivo || "")
-      if (!nombre || !apellido || !email || !idObjetivo || dni.length < 8)
-        return json({ error: "Completá nombre, apellido, correo, DNI y objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
+      const idsObjetivos = rol === "supervisor"
+        ? Array.from(new Set((Array.isArray(b.ids_objetivos) ? b.ids_objetivos : []).map((v: unknown) => String(v)).filter(Boolean)))
+        : [String(b.id_objetivo || "")].filter(Boolean)
+      if (!nombre || !apellido || !email || idsObjetivos.length === 0 || dni.length < 8)
+        return json({ error: "Completá nombre, apellido, correo, DNI y al menos un objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
       const password = dni
-      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
-      if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
-      if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== "") return json({ error: "Ese objetivo ya tiene una persona asignada en este rol. Elegí otro objetivo o editá la asignación existente." }, 409)
+      const { data: objetivosSeleccionados, error: objetivosError } = await db.from("objetivos")
+        .select("id,id_empresa,id_supervisor,id_encargado_empresa")
+        .eq("id_empresa", idEmpresa).in("id", idsObjetivos)
+      if (objetivosError) return json({ error: objetivosError.message }, 400)
+      if (!objetivosSeleccionados || objetivosSeleccionados.length !== idsObjetivos.length)
+        return json({ error: "Uno o más objetivos seleccionados no pertenecen a esta empresa." }, 400)
+      const ocupado = objetivosSeleccionados.find(o => o[campoObjetivo] && o[campoObjetivo] !== "")
+      if (ocupado) return json({ error: "El objetivo seleccionado ya tiene una persona asignada en este rol. Elegí otro objetivo." }, 409)
       const { data: dniExistente } = await db.from("credenciales_personal_objetivo")
         .select("id_usuario").eq("id_empresa", idEmpresa).eq("dni", dni).maybeSingle()
       if (dniExistente) return json({ error: "Ya existe este DNI registrado en la empresa. Verificá el DNI ingresado o buscá la cuenta existente." }, 409)
@@ -90,9 +107,9 @@ Deno.serve(async (req) => {
         }
         return json({ error: credErr.message }, 400)
       }
-      const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: uid }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
-      if (assignErr) { await db.auth.admin.deleteUser(uid); return json({ error: assignErr.message }, 400) }
-      await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "CREAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: uid, detalle: { texto: "Creó cuenta con DNI como contraseña inicial y objetivo exclusivo" }, fecha_hora: new Date().toISOString() })
+      const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: uid }).eq("id_empresa", idEmpresa).in("id", idsObjetivos)
+      if (assignErr) { await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).in("id", idsObjetivos).eq(campoObjetivo, uid); await db.auth.admin.deleteUser(uid); return json({ error: assignErr.message }, 400) }
+      await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "CREAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: uid, detalle: { texto: rol === "supervisor" ? "Creó cuenta y asignó uno o más objetivos" : "Creó cuenta con DNI como contraseña inicial y objetivo exclusivo" }, fecha_hora: new Date().toISOString() })
       return json({ ok: true, id: uid, debe_cambiar_contrasena: true })
     }
 
@@ -123,11 +140,19 @@ Deno.serve(async (req) => {
       const nombre = String(b.nombre || "").trim(), apellido = String(b.apellido || "").trim()
       const email = String(b.email || "").trim().toLowerCase(), telefono = String(b.telefono || "").trim() || null
       const dni = normDni(b.dni)
-      const idObjetivo = String(b.id_objetivo || "")
-      if (!nombre || !apellido || !email || dni.length < 8 || !idObjetivo) return json({ error: "Nombre, apellido, correo, DNI y objetivo son obligatorios." }, 400)
-      const { data: objetivo } = await db.from("objetivos").select("id,id_empresa,id_supervisor,id_encargado_empresa").eq("id", idObjetivo).eq("id_empresa", idEmpresa).single()
-      if (!objetivo) return json({ error: "El objetivo seleccionado no pertenece a esta empresa." }, 400)
-      if (objetivo[campoObjetivo] && objetivo[campoObjetivo] !== id) return json({ error: "Ese objetivo ya tiene una persona asignada en este rol." }, 409)
+      const idsObjetivos = rol === "supervisor"
+        ? Array.from(new Set((Array.isArray(b.ids_objetivos) ? b.ids_objetivos : []).map((v: unknown) => String(v)).filter(Boolean)))
+        : [String(b.id_objetivo || "")].filter(Boolean)
+      if (!nombre || !apellido || !email || dni.length < 8 || idsObjetivos.length === 0)
+        return json({ error: "Nombre, apellido, correo, DNI y al menos un objetivo son obligatorios." }, 400)
+      const { data: objetivosSeleccionados, error: objetivosError } = await db.from("objetivos")
+        .select("id,id_empresa,id_supervisor,id_encargado_empresa")
+        .eq("id_empresa", idEmpresa).in("id", idsObjetivos)
+      if (objetivosError) return json({ error: objetivosError.message }, 400)
+      if (!objetivosSeleccionados || objetivosSeleccionados.length !== idsObjetivos.length)
+        return json({ error: "Uno o más objetivos seleccionados no pertenecen a esta empresa." }, 400)
+      const ocupado = objetivosSeleccionados.find(o => o[campoObjetivo] && o[campoObjetivo] !== id)
+      if (ocupado) return json({ error: "Uno de los objetivos seleccionados ya tiene otra persona asignada en este rol." }, 409)
       const { data: credActual } = await db.from("credenciales_personal_objetivo").select("dni").eq("id_usuario", id).eq("id_empresa", idEmpresa).single()
       const dniAnterior = normDni(credActual?.dni)
       const cambiaDni = dni !== dniAnterior
@@ -148,8 +173,9 @@ Deno.serve(async (req) => {
       }
       const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
       if (unassignErr) return json({ error: unassignErr.message }, 400)
-      const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: id }).eq("id", idObjetivo).eq("id_empresa", idEmpresa)
+      const { error: assignErr } = await db.from("objetivos").update({ [campoObjetivo]: id }).eq("id_empresa", idEmpresa).in("id", idsObjetivos)
       if (assignErr) return json({ error: assignErr.message }, 400)
+      await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "ASIGNAR_OBJETIVO_PERSONAL", entidad: nombreRol, entidad_id: id, detalle: { texto: "Actualizó los objetivos asignados: " + idsObjetivos.length }, fecha_hora: new Date().toISOString() })
       return json({ ok: true })
     }
 
