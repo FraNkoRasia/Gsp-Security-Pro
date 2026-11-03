@@ -38,7 +38,7 @@ import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 import { GestionCategoriasPersonal } from '@/componentes/operativo/gestion-categorias-personal'
 import { GestionHorasExtra } from '@/componentes/operativo/gestion-horas-extra'
 import { InformesSupervision } from '@/componentes/operativo/informes-supervision'
-import { InicioSupervisor, PersonalSupervisor, GrillaSupervisor, AsistenciaSupervisor, SupervisionesSupervisor } from '@/componentes/operativo/vista-supervisor'
+import { InicioSupervisor, PersonalSupervisor, GrillaSupervisor, AsistenciaSupervisor, SupervisionesSupervisor, NovedadesSupervisor } from '@/componentes/operativo/vista-supervisor'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -98,6 +98,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'grillaSupervisor', label: 'Grilla', icono: <Calendar className="w-4 h-4" /> },
         { id: 'asistenciaSupervisor', label: 'Asistencia', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'informesSupervision', label: 'Informes', icono: <FileText className="w-4 h-4" /> },
+        { id: 'novedadesSupervisor', label: 'Novedades', icono: <BookOpen className="w-4 h-4" /> },
         { id: 'supervisiones', label: 'Supervisiones', icono: <Shield className="w-4 h-4" /> }
       ]
     : esEncargado
@@ -309,6 +310,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'grillaSupervisor' && usuario.rol === 'supervisor' && <GrillaSupervisor />}
             {pestanaRenderizada === 'asistenciaSupervisor' && usuario.rol === 'supervisor' && <AsistenciaSupervisor />}
             {pestanaRenderizada === 'supervisiones' && usuario.rol === 'supervisor' && <SupervisionesSupervisor />}
+            {pestanaRenderizada === 'novedadesSupervisor' && usuario.rol === 'supervisor' && <NovedadesSupervisor />}
             {pestanaRenderizada === 'informesSupervision' && (esAdmin || esEncargado || usuario.rol === 'supervisor') && <InformesSupervision />}
             {pestanaRenderizada === 'novedades' && (esAdmin || esVigilador) && <LibroNovedades />}
             {pestanaRenderizada === 'cambios' && (esAdmin || esVigilador) && <CambiosTurnos />}
