@@ -113,16 +113,20 @@ Deno.serve(async (req) => {
         }
         return json({ error: credErr.message }, 400)
       }
+      const asignacionesAplicadas: { id: string; anterior: string | null }[] = []
       for (const objetivo of objetivosSeleccionados) {
-        const ocupante = objetivo[campoObjetivo]
+        const ocupante = objetivo[campoObjetivo] || null
         let query = db.from("objetivos").update({ [campoObjetivo]: uid }).eq("id", objetivo.id).eq("id_empresa", idEmpresa)
         query = ocupante ? query.eq(campoObjetivo, ocupante) : query.is(campoObjetivo, null)
         const { data: asignado, error: assignErr } = await query.select("id").maybeSingle()
         if (assignErr || !asignado) {
-          await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).in("id", idsObjetivos).eq(campoObjetivo, uid)
+          for (const aplicado of asignacionesAplicadas.reverse()) {
+            await db.from("objetivos").update({ [campoObjetivo]: aplicado.anterior }).eq("id", aplicado.id).eq(campoObjetivo, uid)
+          }
           await db.auth.admin.deleteUser(uid)
           return json({ error: assignErr?.message || "El objetivo fue asignado a otra persona mientras se guardaba. Actualizá la lista e intentá nuevamente." }, 409)
         }
+        asignacionesAplicadas.push({ id: objetivo.id, anterior: ocupante })
       }
       await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "CREAR_PERSONAL_OBJETIVO", entidad: nombreRol, entidad_id: uid, detalle: { texto: rol === "supervisor" ? "Creó cuenta y asignó uno o más objetivos" : "Creó cuenta con DNI como contraseña inicial y objetivo exclusivo" }, fecha_hora: new Date().toISOString() })
       return json({ ok: true, id: uid, debe_cambiar_contrasena: true })
@@ -192,22 +196,46 @@ Deno.serve(async (req) => {
         }
         return json({ error: credUpdate.message }, 400)
       }
+      const { data: actuales, error: actualesError } = await db.from("objetivos").select("id").eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
+      if (actualesError) return json({ error: actualesError.message }, 400)
+      const asignacionesAplicadas: { id: string; anterior: string | null }[] = []
       for (const objetivo of objetivosSeleccionados) {
         if (objetivo[campoObjetivo] === id) continue
-        const ocupante = objetivo[campoObjetivo]
+        const ocupante = objetivo[campoObjetivo] || null
         let query = db.from("objetivos").update({ [campoObjetivo]: id }).eq("id", objetivo.id).eq("id_empresa", idEmpresa)
         query = ocupante ? query.eq(campoObjetivo, ocupante) : query.is(campoObjetivo, null)
         const { data: asignado, error: assignErr } = await query.select("id").maybeSingle()
-        if (assignErr || !asignado) return json({ error: assignErr?.message || "Uno de los objetivos fue asignado a otra persona. Actualizá la lista e intentá nuevamente." }, 409)
+        if (assignErr || !asignado) {
+          for (const aplicado of asignacionesAplicadas.reverse()) {
+            await db.from("objetivos").update({ [campoObjetivo]: aplicado.anterior }).eq("id", aplicado.id).eq(campoObjetivo, id)
+          }
+          return json({ error: assignErr?.message || "Uno de los objetivos fue asignado a otra persona. Actualizá la lista e intentá nuevamente." }, 409)
+        }
+        asignacionesAplicadas.push({ id: objetivo.id, anterior: ocupante })
       }
-      const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id_empresa", idEmpresa).eq(campoObjetivo, id).not("id", "in", "("+idsObjetivos.join(",")+")")
-      if (unassignErr) return json({ error: unassignErr.message }, 400)
+      const seleccionados = new Set(idsObjetivos)
+      for (const actual of actuales || []) {
+        if (seleccionados.has(actual.id)) continue
+        const { error: unassignErr } = await db.from("objetivos").update({ [campoObjetivo]: null }).eq("id", actual.id).eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
+        if (unassignErr) {
+          for (const aplicado of asignacionesAplicadas.reverse()) {
+            await db.from("objetivos").update({ [campoObjetivo]: aplicado.anterior }).eq("id", aplicado.id).eq(campoObjetivo, id)
+          }
+          return json({ error: unassignErr.message }, 400)
+        }
+      }
       await db.from("auditoria").insert({ id_empresa: idEmpresa, id_usuario: caller.id, accion: "ASIGNAR_OBJETIVO_PERSONAL", entidad: nombreRol, entidad_id: id, detalle: { texto: "Actualizó los objetivos asignados: " + idsObjetivos.length }, fecha_hora: new Date().toISOString() })
       return json({ ok: true })
     }
 
     if (accion === "dar_baja" || accion === "reactivar") {
       const activo = accion === "reactivar"
+      if (activo) {
+        const { count, error: asignacionError } = await db.from("objetivos").select("id", { count: "exact", head: true })
+          .eq("id_empresa", idEmpresa).eq(campoObjetivo, id).eq("activo", true)
+        if (asignacionError) return json({ error: asignacionError.message }, 400)
+        if (!count) return json({ error: "No se puede reactivar la cuenta porque no tiene ningún objetivo activo asignado. Editá la cuenta y asignale al menos un objetivo disponible antes de reactivarla." }, 409)
+      }
       const { error } = await db.from("perfiles").update({ activo }).eq("id", id)
       if (error) return json({ error: error.message }, 400)
       // Se conserva la relación con los objetivos al dar de baja para que el perfil
