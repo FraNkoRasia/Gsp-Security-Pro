@@ -103,16 +103,28 @@ html.light .grilla-mensual table tfoot td {
   border-color: #cbd5e1 !important;
 }
 
-/* Flecha y margen uniforme para todos los select nativos de la aplicación.
-   Evita que el indicador quede pegado al borde en cualquier rol o pantalla. */
-select:not([multiple]) {
+/* Indicador uniforme para los desplegables y campos de fecha de toda la app.
+   La posición se calcula desde el borde derecho de cada control, sin depender
+   del padding o del ancho declarado por cada pantalla/rol. */
+select:not([multiple]),
+input[type="date"] {
   -webkit-appearance: none;
   appearance: none;
-  padding-right: 2.75rem !important;
+  padding-right: 3.25rem !important;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 1.25rem center;
-  background-size: 1.125rem 1.125rem;
+  background-position: right 1.25rem center !important;
+  background-size: 1.125rem 1.125rem !important;
+}
+
+/* Oculta el indicador propio del navegador en fechas para evitar una segunda
+   flecha desplazada; el selector de fecha sigue abriéndose al tocar el campo. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  cursor: pointer;
 }
 
 /* Scrollbar estilizada */
