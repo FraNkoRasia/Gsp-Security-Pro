@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, Search } from 'lucide-react'
+import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, Search, ClipboardCheck, Plus } from 'lucide-react'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { supabase } from '@/servicios/supabase'
@@ -304,4 +304,121 @@ export const NovedadesSupervisor: React.FC = () => {
   </section>
 }
 
-export const SupervisionesSupervisor: React.FC = () => <InformesSupervision tipoInicial="supervision" />
+type SupervisionOperativa = {
+  id: string
+  id_objetivo: string
+  fecha_supervision: string
+  resultado: 'conforme' | 'con_observaciones'
+  observaciones: string
+}
+
+export const SupervisionesSupervisor: React.FC = () => {
+  const { usuario, objetivosSupervisor, objetivoActual, objetivoId, setObjetivoId } = useObjetivosSupervisor()
+  const [resultado, setResultado] = useState<'conforme' | 'con_observaciones'>('conforme')
+  const [observaciones, setObservaciones] = useState('')
+  const [registros, setRegistros] = useState<SupervisionOperativa[]>([])
+  const [cargando, setCargando] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  const [mensaje, setMensaje] = useState('')
+  const claveObjetivos = objetivosSupervisor.map(o => o.id).sort().join('|')
+
+  useEffect(() => {
+    let vigente = true
+    const cargar = async () => {
+      if (!supabase || !usuario || !objetivosSupervisor.length) {
+        setRegistros([])
+        return
+      }
+      setCargando(true)
+      setError('')
+      const { data, error: errorCarga } = await supabase
+        .from('supervisiones_operativas')
+        .select('id,id_objetivo,fecha_supervision,resultado,observaciones')
+        .eq('id_supervisor', usuario.id)
+        .in('id_objetivo', objetivosSupervisor.map(o => o.id))
+        .order('fecha_supervision', { ascending: false })
+        .limit(100)
+      if (!vigente) return
+      if (errorCarga) setError('No se pudo cargar el historial de supervisiones.')
+      else setRegistros((data || []) as SupervisionOperativa[])
+      setCargando(false)
+    }
+    void cargar()
+    return () => { vigente = false }
+  }, [usuario?.id, claveObjetivos])
+
+  const registrar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!supabase || !usuario || !objetivoActual || !observaciones.trim()) return
+    setGuardando(true)
+    setError('')
+    setMensaje('')
+    const { error: errorGuardar } = await supabase.from('supervisiones_operativas').insert({
+      id_empresa: objetivoActual.id_empresa,
+      id_objetivo: objetivoActual.id,
+      id_supervisor: usuario.id,
+      resultado,
+      observaciones: observaciones.trim()
+    })
+    if (errorGuardar) {
+      setError(errorGuardar.message.includes('row-level security')
+        ? 'No tenés autorización para registrar una supervisión en este objetivo.'
+        : 'No se pudo guardar la supervisión. Revisá los datos e intentá nuevamente.')
+      setGuardando(false)
+      return
+    }
+    setObservaciones('')
+    setResultado('conforme')
+    setMensaje('La supervisión quedó registrada correctamente.')
+    const { data } = await supabase.from('supervisiones_operativas')
+      .select('id,id_objetivo,fecha_supervision,resultado,observaciones')
+      .eq('id_supervisor', usuario.id)
+      .in('id_objetivo', objetivosSupervisor.map(o => o.id))
+      .order('fecha_supervision', { ascending: false })
+      .limit(100)
+    setRegistros((data || []) as SupervisionOperativa[])
+    setGuardando(false)
+  }
+
+  if (!objetivosSupervisor.length) return <SinObjetivos />
+
+  return <section className="space-y-5 animate-fadeIn">
+    <header className="flex items-start gap-3">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-300"><ClipboardCheck className="h-5 w-5" /></div>
+      <div className="min-w-0"><h2 className="text-xl font-black text-slate-900 dark:text-white">Supervisiones</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Registrá los controles realizados y consultá su historial en tus objetivos asignados.</p></div>
+    </header>
+
+    <form onSubmit={registrar} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#0C121E] sm:p-5">
+      <div className="flex items-center gap-2"><Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" /><h3 className="text-sm font-bold text-slate-900 dark:text-white">Registrar control</h3></div>
+      <label className="block space-y-1.5"><span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Objetivo supervisado</span>
+        <select value={objetivoId} onChange={e => setObjetivoId(e.target.value)} required className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+          {objetivosSupervisor.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+        </select>
+      </label>
+      <fieldset className="space-y-2"><legend className="text-xs font-semibold text-slate-600 dark:text-slate-300">Resultado del control</legend>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setResultado('conforme')} aria-pressed={resultado === 'conforme'} className={'rounded-xl border px-3 py-3 text-sm font-semibold transition ' + (resultado === 'conforme' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300')}>Conforme</button>
+          <button type="button" onClick={() => setResultado('con_observaciones')} aria-pressed={resultado === 'con_observaciones'} className={'rounded-xl border px-3 py-3 text-sm font-semibold transition ' + (resultado === 'con_observaciones' ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300')}>Con observaciones</button>
+        </div>
+      </fieldset>
+      <label className="block space-y-1.5"><span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Detalle del control y observaciones</span>
+        <textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} required minLength={3} rows={4} placeholder="Describí el estado del servicio, los controles realizados y cualquier observación..." className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+      </label>
+      {error && <p role="alert" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-300">{error}</p>}
+      {mensaje && <p role="status" className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">{mensaje}</p>}
+      <button type="submit" disabled={guardando || !observaciones.trim() || !objetivoActual} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">{guardando ? 'Guardando...' : 'Guardar supervisión'}</button>
+    </form>
+
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3"><h3 className="text-base font-bold text-slate-900 dark:text-white">Historial de supervisiones</h3><span className="text-xs text-slate-500 dark:text-slate-400">{registros.length} registros</span></div>
+      {cargando ? <p className="py-6 text-center text-sm text-slate-500">Cargando historial...</p> : registros.length ? registros.map(r => {
+        const objetivo = objetivosSupervisor.find(o => o.id === r.id_objetivo)
+        return <article key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{objetivo?.nombre || 'Objetivo asignado'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{new Date(r.fecha_supervision).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</p></div><span className={'rounded-full px-2.5 py-1 text-[10px] font-bold ' + (r.resultado === 'conforme' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300')}>{r.resultado === 'conforme' ? 'Conforme' : 'Con observaciones'}</span></div>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">{r.observaciones}</p>
+        </article>
+      }) : <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Todavía no hay supervisiones registradas.</div>}
+    </div>
+  </section>
+}
