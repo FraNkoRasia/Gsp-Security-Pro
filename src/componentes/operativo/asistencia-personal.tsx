@@ -109,8 +109,10 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
       if (c.error) throw c.error
       const todasLasCategorias = (c.data || []) as Categoria[]
       const categoriasActivas = todasLasCategorias.filter(cat => cat.activa)
-      // El personal activo sigue visible aunque su categoría esté inactiva o sea un registro histórico sin vínculo.
-      setPersonal(((p.data || []) as Personal[]).filter(persona => modoGestion || persona.activo))
+      const idsCategoriasActivas = new Set(categoriasActivas.map(cat => cat.id))
+      // En asistencia solo se muestran personas activas vinculadas a una categoría activa.
+      // En gestión se conserva la lista completa para poder reasignar o revisar registros históricos.
+      setPersonal(((p.data || []) as Personal[]).filter(persona => modoGestion || (persona.activo && !!persona.categoria_id && idsCategoriasActivas.has(persona.categoria_id))))
       setAsistencias((a.data || []) as Asistencia[])
       setCategorias(todasLasCategorias)
       setCategoria(actual => categoriasActivas.some(x=>x.id===actual) ? actual : (categoriasActivas[0]?.id || ''))
@@ -156,6 +158,12 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean }> = ({ modoGe
     if (!supabase || !usuario || !objetivoId || !confirmacionEstadoPersonal) return
     const persona = confirmacionEstadoPersonal
     setGuardando(true); setError(''); setMensaje('')
+    if (!persona.activo) {
+      if (!persona.categoria_id) { setGuardando(false); setError('No se puede reactivar este personal porque no tiene una categoría vinculada. Asignale una categoría activa antes de reactivarlo.'); return }
+      const {data: categoriaVinculada,error: errorCategoria} = await supabase.from('categorias_personal_empresa').select('id,activa').eq('id',persona.categoria_id).eq('id_objetivo',objetivoId).maybeSingle()
+      if (errorCategoria) { setGuardando(false); setError('No se pudo verificar la categoría del personal. Intentá nuevamente.'); return }
+      if (!categoriaVinculada?.activa) { setGuardando(false); setError('No se puede reactivar este personal porque su categoría está inactiva. Reactivá la categoría o asignale una categoría activa antes de continuar.'); return }
+    }
     const {error:err} = await supabase.from('personal_empresa').update({activo:!persona.activo}).eq('id',persona.id).eq('id_objetivo',objetivoId)
     setGuardando(false)
     if (err) { setError(err.message.includes('row-level security') ? 'Tu cuenta no tiene permiso para cambiar el estado de este personal.' : err.message); return }
