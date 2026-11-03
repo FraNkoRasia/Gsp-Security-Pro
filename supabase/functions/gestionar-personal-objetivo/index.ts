@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
         return json({ error: "Completá nombre, apellido, correo, DNI y al menos un objetivo. El DNI debe tener al menos 8 dígitos." }, 400)
       const password = dni
       const { data: objetivosSeleccionados, error: objetivosError } = await db.from("objetivos")
-        .select("id,id_empresa,id_supervisor,id_encargado_empresa")
-        .eq("id_empresa", idEmpresa).in("id", idsObjetivos)
+        .select("id,id_empresa,id_supervisor,id_encargado_empresa,activo")
+        .eq("id_empresa", idEmpresa).eq("activo", true).in("id", idsObjetivos)
       if (objetivosError) return json({ error: objetivosError.message }, 400)
       if (!objetivosSeleccionados || objetivosSeleccionados.length !== idsObjetivos.length)
         return json({ error: "Uno o más objetivos seleccionados no pertenecen a esta empresa." }, 400)
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         }
         return json({ error: credUpdate.message }, 400)
       }
-      const { data: actuales, error: actualesError } = await db.from("objetivos").select("id").eq("id_empresa", idEmpresa).eq(campoObjetivo, id)
+      const { data: actuales, error: actualesError } = await db.from("objetivos").select("id").eq("id_empresa", idEmpresa).eq(campoObjetivo, id).eq("activo", true)
       if (actualesError) return json({ error: actualesError.message }, 400)
       const asignacionesAplicadas: { id: string; anterior: string | null }[] = []
       for (const objetivo of objetivosSeleccionados) {
