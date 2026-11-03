@@ -14,9 +14,7 @@ create table if not exists public.informes_supervision (
   observaciones text,
   estado text not null default 'registrado' check (estado in ('registrado','pendiente_revision','en_seguimiento','resuelto')),
   creado_por uuid not null references public.perfiles(id) on delete restrict,
-  creado_en timestamptz not null default now(),
-  constraint informes_supervision_objetivo_empresa_fk
-    foreign key (id_objetivo,id_empresa) references public.objetivos(id,id_empresa) deferrable initially immediate
+  creado_en timestamptz not null default now()
 );
 
 create index if not exists idx_informes_supervision_empresa_fecha
@@ -131,9 +129,9 @@ with check (
     join public.objetivos o on o.id = i.id_objetivo and o.id_empresa = i.id_empresa
     where p.id = (select auth.uid()) and p.activo = true
       and (
-        (p.rol = 'administrador' and p.id_empresa = i.id_empresa)
-        or (p.rol = 'super_administrador')
-        or (p.rol = 'supervisor' and p.id_empresa = i.id_empresa and o.id_supervisor = p.id and i.id_supervisor = p.id)
+        (p.rol = 'administrador' and p.id_empresa = i.id_empresa and informes_supervision_actuaciones.tipo = 'seguimiento')
+        or (p.rol = 'super_administrador' and informes_supervision_actuaciones.tipo = 'seguimiento')
+        or (p.rol = 'supervisor' and p.id_empresa = i.id_empresa and o.id_supervisor = p.id and i.id_supervisor = p.id and informes_supervision_actuaciones.tipo = 'aclaracion')
       )
   )
 );
