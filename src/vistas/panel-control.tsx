@@ -36,6 +36,7 @@ import { HistorialLaboral } from '@/componentes/operativo/historial-laboral'
 import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 import { GestionCategoriasPersonal } from '@/componentes/operativo/gestion-categorias-personal'
 import { GestionHorasExtra } from '@/componentes/operativo/gestion-horas-extra'
+import { InformesSupervision } from '@/componentes/operativo/informes-supervision'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -88,11 +89,16 @@ export const VistaPanelControl: React.FC = () => {
       ]
     : esSuperAdmin
     ? []
+    : usuario.rol === 'supervisor'
+    ? [
+        { id: 'informesSupervision', label: 'Informes de Supervisión', icono: <ClipboardCheck className="w-4 h-4" /> }
+      ]
     : esEncargado
     ? [
         { id: 'asistenciaPersonal', label: 'Asistencia', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'personal', label: 'Personal', icono: <UserRoundPlus className="w-4 h-4" /> },
-        { id: 'categorias', label: 'Categorías', icono: <Tags className="w-4 h-4" /> }
+        { id: 'categorias', label: 'Categorías', icono: <Tags className="w-4 h-4" /> },
+        { id: 'informesSupervision', label: 'Informes', icono: <ClipboardCheck className="w-4 h-4" /> }
       ]
     : esAdmin
     ? [
@@ -100,6 +106,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'vigiladores', label: 'Vigiladores', icono: <Users className="w-4 h-4" /> },
         { id: 'encargados', label: 'Encargados', icono: <Users className="w-4 h-4" /> },
         { id: 'supervisores', label: 'Supervisores', icono: <Shield className="w-4 h-4" /> },
+        { id: 'informesSupervision', label: 'Informes de Supervisión', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'novedades', label: 'Libro de Novedades', contador: novedadesNoLeidas, icono: <BookOpen className="w-4 h-4" /> },
         { id: 'cambios', label: 'Cambios y Reemplazos', contador: solicitudesCambioNoLeidas, icono: <ArrowRightLeft className="w-4 h-4" /> },
         { id: 'avisos', label: 'Avisos', contador: avisosNoLeidos, icono: <Bell className="w-4 h-4" /> },
@@ -290,6 +297,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'vigiladores' && esAdmin && <GestionVigiladores />}
             {pestanaRenderizada === 'encargados' && esAdmin && <GestionPersonalObjetivo rol="encargado_empresa" />}
             {pestanaRenderizada === 'supervisores' && esAdmin && <GestionPersonalObjetivo rol="supervisor" />}
+            {pestanaRenderizada === 'informesSupervision' && (esAdmin || esEncargado || usuario.rol === 'supervisor') && <InformesSupervision />}
             {pestanaRenderizada === 'novedades' && (esAdmin || esVigilador) && <LibroNovedades />}
             {pestanaRenderizada === 'cambios' && (esAdmin || esVigilador) && <CambiosTurnos />}
             {pestanaRenderizada === 'avisos' && (esAdmin || esVigilador) && <AvisosComunicacion />}
@@ -351,7 +359,7 @@ export const VistaPanelControl: React.FC = () => {
                 )
               })}
               <button type="button" onClick={() => setMasAbierto((abierto) => !abierto)} aria-expanded={masAbierto} aria-label="Más opciones"
-                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : ['asistenciaPersonal', 'personal', 'categorias']).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                className={'flex min-w-0 flex-1 h-full flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-bold transition-colors ' + (masAbierto || !(esVigilador ? ['miTurno', 'grilla', 'miMes'] : esAdmin ? ['objetivos', 'vigiladores', 'novedades'] : esEncargado ? ['asistenciaPersonal', 'personal', 'categorias'] : usuario.rol === 'supervisor' ? ['informesSupervision'] : []).includes(pestanaRenderizada) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
                 {masAbierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 <span>Más</span>
               </button>
@@ -371,7 +379,11 @@ export const VistaPanelControl: React.FC = () => {
                       ? ['miTurno', 'grilla', 'miMes'].includes(p.id)
                       : esAdmin
                       ? ['objetivos', 'vigiladores', 'novedades'].includes(p.id)
-                      : ['asistenciaPersonal', 'personal', 'categorias'].includes(p.id)
+                      : esEncargado
+                      ? ['asistenciaPersonal', 'personal', 'categorias'].includes(p.id)
+                      : usuario.rol === 'supervisor'
+                      ? p.id === 'informesSupervision'
+                      : false
                     )).map((p) => {
                       const activa = pestanaRenderizada === p.id
                       return (
