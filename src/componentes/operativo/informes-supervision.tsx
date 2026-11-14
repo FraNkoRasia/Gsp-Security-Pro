@@ -301,7 +301,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-300"><ClipboardList className="h-5 w-5" /></div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">{tipoInicial === 'supervision' ? 'Supervisiones' : esEncargado ? 'Informes operativos' : 'Informes de Supervisión'}</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">Informes Operativos</h2>
           </div>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tipoInicial === 'supervision' ? 'Registro de controles operativos realizados en tus objetivos.' : esEncargado ? 'Novedades e incidentes de tus objetivos asignados.' : 'Registro formal de incumplimientos, observaciones, incidentes y controles operativos.'}</p>
         </div>
