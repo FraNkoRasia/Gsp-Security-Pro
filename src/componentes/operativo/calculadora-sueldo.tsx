@@ -47,7 +47,8 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
   const { inicio, fin } = obtenerIntervaloTurno(turno)
   let diurnos = 0
   let nocturnos = 0
-  let feriado = 0
+  let feriadoDiurno = 0
+  let feriadoNocturno = 0
 
   // Recorremos el turno por minutos y consultamos la fecha real de cada minuto.
   // Nunca usamos turno.es_feriado para extender el feriado a toda la jornada:
@@ -56,15 +57,17 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
     const fecha = new Date(cursor)
     const hora = fecha.getHours()
     const esNocturna = hora >= 21 || hora < 6
-    if (esNocturna) nocturnos++
-    else diurnos++
-
-    // Se computa cada minuto cuya fecha real esté marcada como feriado
-    // en el encabezado de la grilla, incluso si el turno comenzó el día anterior.
-    if (Object.prototype.hasOwnProperty.call(feriados, fechaClave(fecha))) feriado++
+    const esFeriado = Object.prototype.hasOwnProperty.call(feriados, fechaClave(fecha))
+    if (esNocturna) {
+      nocturnos++
+      if (esFeriado) feriadoNocturno++
+    } else {
+      diurnos++
+      if (esFeriado) feriadoDiurno++
+    }
   }
 
-  return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriado: feriado / 60 }
+  return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriadoDiurno: feriadoDiurno / 60, feriadoNocturno: feriadoNocturno / 60 }
 }
 
 export const CalculadoraSueldo: React.FC = () => {
@@ -140,15 +143,22 @@ export const CalculadoraSueldo: React.FC = () => {
     const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
     total.diurnas += parte.diurnos
     total.nocturnas += parte.nocturnos
-    total.feriado += parte.feriado
+    total.feriadoDiurno += parte.feriadoDiurno
+    total.feriadoNocturno += parte.feriadoNocturno
     total.extras += Number(turno.horas_extra || 0)
     return total
-  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
+  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
+
+  const horasFeriado = horas.feriadoDiurno + horas.feriadoNocturno
 
   const liquidacion = useMemo(() => {
     const valorHora = config.divisorHora > 0 ? config.basico / config.divisorHora : 0
-    const adicionalNocturno = horas.nocturnas * config.basico * (config.porcentajeNocturno / 100)
-    const adicionalFeriado = horas.feriado * valorHora * (config.recargoFeriado / 100)
+    // El plus nocturno se calcula sobre el valor de una hora, no sobre el sueldo básico completo.
+    // Las horas nocturnas feriadas también conservan su adicional nocturno.
+    const adicionalNocturno = horas.nocturnas * valorHora * (config.porcentajeNocturno / 100)
+    const adicionalFeriadoDiurno = horas.feriadoDiurno * valorHora * (config.recargoFeriado / 100)
+    const adicionalFeriadoNocturno = horas.feriadoNocturno * valorHora * (config.recargoFeriado / 100)
+    const adicionalFeriado = adicionalFeriadoDiurno + adicionalFeriadoNocturno
     const remunerativo = config.basico + config.presentismo + adicionalNocturno + adicionalFeriado
     const descuentoRem = remunerativo * config.descuentoRemunerativo / 100
     const descuentoViaticos = config.viaticos * config.descuentoViaticos / 100
@@ -156,7 +166,8 @@ export const CalculadoraSueldo: React.FC = () => {
     const netoRem = remunerativo - descuentoRem
     const netoViaticos = config.viaticos - descuentoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
-    return { valorHora, adicionalNocturno, adicionalFeriado, remunerativo, descuentoRem, descuentoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto: netoRem + netoViaticos + netoNoRem }
+    const valorHoraNocturna = valorHora * (1 + config.porcentajeNocturno / 100)
+    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, remunerativo, descuentoRem, descuentoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto: netoRem + netoViaticos + netoNoRem }
   }, [config, horas])
 
   const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
@@ -196,7 +207,7 @@ export const CalculadoraSueldo: React.FC = () => {
           { label: 'Jornadas', value: String(turnosMes.length), icon: <CalendarDays className="h-4 w-4" /> },
           { label: 'Horas diurnas', value: formatoHoras(horas.diurnas), icon: <Sun className="h-4 w-4 text-amber-500" /> },
           { label: 'Horas nocturnas', value: formatoHoras(horas.nocturnas), icon: <Moon className="h-4 w-4 text-blue-500" /> },
-          { label: 'Horas feriado', value: formatoHoras(horas.feriado), icon: <CalendarDays className="h-4 w-4 text-amber-600" /> },
+          { label: 'Horas feriado', value: formatoHoras(horasFeriado), icon: <CalendarDays className="h-4 w-4 text-amber-600" /> },
         ].map(item => <Tarjeta key={item.label}><TarjetaContenido className="p-3"><div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">{item.icon}{item.label}</div><p className="mt-2 text-lg font-black tabular-nums text-slate-900 dark:text-white">{item.value}</p></TarjetaContenido></Tarjeta>)}
       </div>
 
@@ -207,7 +218,10 @@ export const CalculadoraSueldo: React.FC = () => {
             ['Sueldo básico', config.basico],
             ['Presentismo', config.presentismo],
             [`Plus nocturno · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
-            [`Adicional feriados · ${horas.feriado.toFixed(2)} hs`, liquidacion.adicionalFeriado],
+            [`Valor hora diurna · ${formatoPesos(liquidacion.valorHora)}`, 0],
+            [`Valor hora nocturna · ${formatoPesos(liquidacion.valorHoraNocturna)}`, 0],
+            [`Feriado diurno · ${horas.feriadoDiurno.toFixed(2)} hs`, liquidacion.adicionalFeriadoDiurno],
+            [`Feriado nocturno · ${horas.feriadoNocturno.toFixed(2)} hs`, liquidacion.adicionalFeriadoNocturno],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
           ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm dark:border-slate-800"><span className="text-slate-600 dark:text-slate-300">{label}</span><strong className="tabular-nums text-slate-900 dark:text-white">{formatoPesos(Number(value))}</strong></div>)}
