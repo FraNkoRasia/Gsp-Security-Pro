@@ -375,7 +375,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     return 34
   }
 
-  const mostrarValidacionDiaria = usuario?.rol === 'administrador' && !soloLectura && !soloLecturaEfectiva
+  const mostrarValidacionDiaria = (usuario?.rol === 'administrador' || usuario?.rol === 'super_administrador') && !soloLectura && !soloLecturaEfectiva
 
   const obtenerEtiquetaTurno = (t?: Turno) => {
     if (!t) return <span className="text-slate-400 dark:text-slate-600">-</span>
