@@ -110,7 +110,8 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const hoy = new Date()
   const fechaHoyClave = fechaClave(hoy)
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-  const soloLecturaEfectiva = soloLectura || mesSeleccionado < mesActual
+  const esAdministrador = usuario?.rol === 'administrador' || usuario?.rol === 'super_administrador'
+  const soloLecturaEfectiva = soloLectura || (mesSeleccionado < mesActual && !esAdministrador)
   const [grillaCreada, setGrillaCreada] = useState(false)
   const [grillasVigiladoresCreadas, setGrillasVigiladoresCreadas] = useState<string[]>([])
   const [cargandoEstadoGrilla, setCargandoEstadoGrilla] = useState(true)
@@ -268,7 +269,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     const diaStr = dia < 10 ? `0${dia}` : `${dia}`
     const fecha = `${mesSeleccionado}-${diaStr}`
     if (soloLecturaEfectiva || cargandoEstadoGrilla) return
-    if (vigiladorTieneGrillaCreada(idVig) && fecha <= fechaHoyClave) { mostrarAvisoBloqueo(); return }
+    if (!esAdministrador && vigiladorTieneGrillaCreada(idVig) && fecha <= fechaHoyClave) { mostrarAvisoBloqueo(); return }
     const turnoActual = turnosVisibles.find(
       (t) => t.id_vigilador === idVig && t.id_objetivo === objetivoSeleccionado && t.fecha === fecha
     )
@@ -663,7 +664,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
                         </span>
                       </div>
                       <div className="font-extrabold text-sm">{dia}</div>
-                      {!(soloLecturaEfectiva || claveFecha < fechaHoyClave) ? (
+                      {!(soloLecturaEfectiva || (!esAdministrador && claveFecha < fechaHoyClave)) ? (
                         <button
                           type="button"
                           onClick={() => feriadosNacionales[claveFecha]
@@ -717,13 +718,13 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
                         (t) => t.id_vigilador === vig.id && t.id_objetivo === objetivoSeleccionado && t.fecha === fecha
                       )
                       const fechaCelda = fecha
-                      const celdaBloqueada = soloLecturaEfectiva || cargandoEstadoGrilla || (vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave)
+                      const celdaBloqueada = soloLecturaEfectiva || cargandoEstadoGrilla || (!esAdministrador && vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave)
                       const feriadoCelda = nombreFeriadoEnFecha(fechaCelda)
 
                       return (
                         <td
                           key={dia}
-                          onClick={() => { if (celdaBloqueada) { if (!soloLectura && vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave) mostrarAvisoBloqueo(); return } abrirEditarCelda(vig.id, `${vig.nombre} ${vig.apellido}`, dia) }}
+                          onClick={() => { if (celdaBloqueada) { if (!esAdministrador && !soloLectura && vigiladorTieneGrillaCreada(vig.id) && fechaCelda <= fechaHoyClave) mostrarAvisoBloqueo(); return } abrirEditarCelda(vig.id, `${vig.nombre} ${vig.apellido}`, dia) }}
                           className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 transition-colors select-none group ${fechaCelda === fechaHoyClave ? 'relative z-[1] animate-pulse bg-blue-50 dark:bg-blue-950/35' : feriadoCelda ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-white dark:bg-[#0C121E]'} ${celdaBloqueada ? '' : 'cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-800/80'}`}
                           title={feriadoCelda ? `${feriadoCelda} · ${fechaCelda}` : celdaBloqueada ? 'Día bloqueado para edición' : 'Clic para modificar turno'}
                         >
