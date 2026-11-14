@@ -11,6 +11,7 @@ import {
   Clock,
   History,
   ClipboardCheck,
+  Calculator,
   FileText,
   Tags,
   ArrowLeft,
@@ -33,6 +34,7 @@ import { CambiosTurnos } from '@/componentes/operativo/cambios-turnos'
 import { AvisosComunicacion } from '@/componentes/operativo/avisos-comunicacion'
 import { MiTurno } from '@/componentes/operativo/mi-turno'
 import { MiMes } from '@/componentes/operativo/mi-mes'
+import { CalculadoraSueldo } from '@/componentes/operativo/calculadora-sueldo'
 import { HistorialLaboral } from '@/componentes/operativo/historial-laboral'
 import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 import { GestionCategoriasPersonal } from '@/componentes/operativo/gestion-categorias-personal'
@@ -83,6 +85,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'miTurno', label: 'Mi Turno', icono: <Clock className="w-4 h-4" /> },
         { id: 'grilla', label: 'Grilla', icono: <Calendar className="w-4 h-4" /> },
         { id: 'miMes', label: 'Mi Mes', icono: <Calendar className="w-4 h-4" /> },
+        { id: 'calculadoraSueldo', label: 'Calculadora de sueldo', icono: <Calculator className="w-4 h-4" /> },
         { id: 'historialLaboral', label: 'Historial laboral', icono: <History className="w-4 h-4" /> },
         { id: 'asistenciaPersonal', label: 'Asistencia del personal', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'novedades', label: 'Libro de Novedades', contador: novedadesNoLeidas, icono: <BookOpen className="w-4 h-4" /> },
@@ -373,6 +376,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'grilla' && esVigilador && objetivoVigiladorId && <GrillaMensual objetivoInicial={objetivoVigiladorId} soloLectura />}
             {pestanaRenderizada === 'grilla' && esVigilador && !objetivoVigiladorId && <div className="rounded-2xl border border-slate-800 bg-[#0C121E] p-6 text-center text-sm text-slate-400">No tenés un objetivo activo asignado actualmente.</div>}
             {pestanaRenderizada === 'miMes' && esVigilador && <MiMes />}
+            {pestanaRenderizada === 'calculadoraSueldo' && esVigilador && <CalculadoraSueldo />}
             {pestanaRenderizada === 'historialLaboral' && esVigilador && <HistorialLaboral />}
             {pestanaRenderizada === 'asistenciaPersonal' && (esVigilador || esEncargado) && <AsistenciaPersonal />}
             {pestanaRenderizada === 'personal' && esEncargado && <AsistenciaPersonal modoGestion />}
