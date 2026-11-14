@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Pencil, CalendarDays } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
@@ -365,7 +365,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean; objetivoInici
                   })}</div>
                   <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800"><button type="button" onClick={() => { const hoy = fechaLocal(); setFecha(hoy); setMesCalendario(new Date(Number(hoy.slice(0,4)), Number(hoy.slice(5,7)) - 1, 1)); setCalendarioAbierto(false) }} className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-300">Hoy</button><button type="button" onClick={() => setCalendarioAbierto(false)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button></div>
                 </div>}
-              </div>
+              </div>}
         </div>
         <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
