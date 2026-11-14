@@ -5,9 +5,7 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
-import { cargarFeriadosArgentina } from '@/utilidades/feriados-argentina'
 import { cargarFeriadosManuales } from '@/utilidades/feriados-manuales'
-import { supabase } from '@/servicios/supabase'
 
 type ConfiguracionSalarial = {
   basico: number
