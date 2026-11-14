@@ -60,12 +60,9 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
     if (esNocturna) nocturnos++
     else diurnos++
 
-    // La grilla asigna el feriado al día del casillero/fecha de inicio
-    // del turno. Para un turno 19:00–07:00 solo se computa el tramo
-    // 19:00–24:00 de ese día; no se arrastran horas del día siguiente
-    // ni se suman las horas del turno anterior que termina en el feriado.
-    if (fechaClave(fecha) === turno.fecha &&
-        Object.prototype.hasOwnProperty.call(feriados, turno.fecha)) feriado++
+    // Se computa cada minuto cuya fecha real esté marcada como feriado
+    // en el encabezado de la grilla, incluso si el turno comenzó el día anterior.
+    if (Object.prototype.hasOwnProperty.call(feriados, fechaClave(fecha))) feriado++
   }
 
   return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriado: feriado / 60 }
