@@ -241,10 +241,10 @@ export const PersonalSupervisor: React.FC = () => {
   if (!objetivosSupervisor.length) return <SinObjetivos />
   return <section className="space-y-4 animate-fadeIn">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div><h2 className="text-xl font-black text-slate-900 dark:text-white">Plantel de Vigiladores</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta del personal de tus objetivos asignados.</p></div>
+      <div><h2 className="text-2xl font-black text-slate-900 dark:text-white">Plantel de Vigiladores</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta del personal de tus objetivos asignados.</p></div>
       {objetivosSupervisor.length > 1 && <div className="w-full sm:max-w-xs"><SelectorObjetivo objetivos={objetivosSupervisor} valor={objetivoId} alCambiar={setObjetivoId} /></div>}
     </div>
-    {objetivoActual && <GestionVigiladores key={objetivoId} idEmpresaSeleccionada={usuario.id_empresa || undefined} idObjetivoSeleccionado={objetivoId} modoConsulta />}
+    {objetivoActual && <GestionVigiladores key={objetivoId} idEmpresaSeleccionada={usuario.id_empresa || undefined} idObjetivoSeleccionado={objetivoId} modoConsulta ocultarTitulo />}
   </section>
 }
 
@@ -252,10 +252,10 @@ export const GrillaSupervisor: React.FC = () => {
   const { objetivosSupervisor, objetivoActual, objetivoId, setObjetivoId } = useObjetivosSupervisor()
   if (!objetivosSupervisor.length) return <SinObjetivos />
   return <section className="space-y-4 animate-fadeIn">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-black text-slate-900 dark:text-white">Grilla de Vigiladores</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta de turnos de los objetivos asignados.</p></div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-2xl font-black text-slate-900 dark:text-white">Grilla de Vigiladores</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta de turnos de los objetivos asignados.</p></div>
       {objetivosSupervisor.length > 1 && <div className="w-full sm:max-w-xs"><SelectorObjetivo objetivos={objetivosSupervisor} valor={objetivoId} alCambiar={setObjetivoId} /></div>}
     </div>
-    {objetivoActual && <GrillaMensual key={objetivoId} objetivoInicial={objetivoId} soloLectura />}
+    {objetivoActual && <GrillaMensual key={objetivoId} objetivoInicial={objetivoId} soloLectura ocultarTitulo />}
   </section>
 }
 
