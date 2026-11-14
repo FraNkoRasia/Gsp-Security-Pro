@@ -195,6 +195,15 @@ export const VistaPanelControl: React.FC = () => {
               ) : (() => {
                 const objetivo = objetivos.find((item) => item.id === objetivoSeleccionadoId)
                 if (!objetivo) return <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500">No se encontró el objetivo seleccionado.</div>
+                if (vistaObjetivo === 'grilla') return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Boton variante="secundario" tamano="chico" onClick={() => setVistaObjetivo('detalle')} icono={<ArrowLeft className="w-4 h-4" />}>Volver al objetivo</Boton>
+                      <Insignia variante="azul">Grilla de Vigiladores · {objetivo.nombre}</Insignia>
+                    </div>
+                    <GrillaMensual objetivoInicial={objetivoSeleccionadoId} onCambiosPendientesChange={setGrillaConCambios} />
+                  </div>
+                )
                 if (vistaObjetivo === 'vigiladores') return (
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -239,6 +248,7 @@ export const VistaPanelControl: React.FC = () => {
                         <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('vigiladores')} icono={<Users className="h-4 w-4" />}>Vigiladores</Boton>
                         <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('encargados')} icono={<Users className="h-4 w-4" />}>Encargados</Boton>
                         <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('supervisores')} icono={<Shield className="h-4 w-4" />}>Supervisores</Boton>
+                        <Boton variante="primario" className="w-full sm:flex-1" onClick={() => { setGrillaConCambios(false); setVistaObjetivo('grilla') }} icono={<Calendar className="h-4 w-4" />}>Grilla de Vigiladores</Boton>
                       </div>
                     </section>
                   </div>
