@@ -14,6 +14,7 @@ type Informe = {
   id_objetivo: string
   id_supervisor: string
   supervisor_nombre: string
+  rol_creador?: 'supervisor' | 'encargado_empresa' | string | null
   id_vigilador: string | null
   nombre_vigilante: string | null
   tipo: TipoInforme
@@ -92,6 +93,8 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
   const [busqueda, setBusqueda] = useState('')
   const [filtroObjetivo, setFiltroObjetivo] = useState('todos')
   const [filtroEstado, setFiltroEstado] = useState('todos')
+  // En Administración se separan los informes por el rol real de quien los registró.
+  const [filtroRolCreador, setFiltroRolCreador] = useState<'supervisores' | 'encargados' | 'todos'>('supervisores')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [objetivoId, setObjetivoId] = useState('')
   const [vigiladorId, setVigiladorId] = useState('')
@@ -259,13 +262,14 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
   const informesFiltrados = useMemo(() => informes.filter(informe => {
     const coincideObjetivo = filtroObjetivo === 'todos' || informe.id_objetivo === filtroObjetivo
     const coincideEstado = filtroEstado === 'todos' || informe.estado === filtroEstado
+    const coincideRolCreador = !esAdmin || filtroRolCreador === 'todos' || (filtroRolCreador === 'encargados' ? informe.rol_creador === 'encargado_empresa' : informe.rol_creador !== 'encargado_empresa')
     const texto = [informe.nombre_vigilante, informe.supervisor_nombre, informe.descripcion, informe.accion_tomada || '', informe.observaciones || ''].join(' ').toLocaleLowerCase('es-AR')
-    return coincideObjetivo && coincideEstado && texto.includes(busqueda.toLocaleLowerCase('es-AR').trim())
-  }).filter(informe => !tipoInicial || informe.tipo === tipoInicial), [informes, filtroObjetivo, filtroEstado, busqueda, tipoInicial])
+    return coincideObjetivo && coincideEstado && coincideRolCreador && texto.includes(busqueda.toLocaleLowerCase('es-AR').trim())
+  }).filter(informe => !tipoInicial || informe.tipo === tipoInicial), [informes, filtroObjetivo, filtroEstado, filtroRolCreador, busqueda, tipoInicial, esAdmin])
 
   const objetivoNombre = (id: string) => objetivos.find(o => o.id === id)?.nombre || 'Objetivo'
   const actuacionesDe = (id: string) => actuaciones.filter(a => a.id_informe === id)
-  const totalPendientes = informes.filter(i => (!tipoInicial || i.tipo === tipoInicial) && (i.estado === 'registrado' || i.estado === 'pendiente_revision')).length
+  const totalPendientes = informes.filter(i => (!tipoInicial || i.tipo === tipoInicial) && (!esAdmin || filtroRolCreador === 'todos' || (filtroRolCreador === 'encargados' ? i.rol_creador === 'encargado_empresa' : i.rol_creador !== 'encargado_empresa')) && (i.estado === 'registrado' || i.estado === 'pendiente_revision')).length
 
   if (!usuario || (!esSupervisor && !esAdmin && !esEncargado)) return null
 
@@ -285,10 +289,11 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,220px)_minmax(0,220px)]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,200px)_minmax(0,200px)_minmax(0,200px)]">
         <label className="relative block"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar vigilador o contenido..." className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white" /></label>
         <select value={filtroObjetivo} onChange={e => setFiltroObjetivo(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"><option value="todos">Todos los objetivos</option>{objetivosVisibles.filter(o => o.activo).map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}</select>
         <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"><option value="todos">Todos los estados</option>{estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}</select>
+        {esAdmin && <select aria-label="Filtrar informes por rol del autor" value={filtroRolCreador} onChange={e => setFiltroRolCreador(e.target.value as 'supervisores' | 'encargados' | 'todos')} className="h-11 w-full rounded-xl border border-blue-300 bg-white px-3 text-sm font-semibold text-slate-800 dark:border-blue-900 dark:bg-[#0C121E] dark:text-white"><option value="supervisores">Informes de supervisores</option><option value="encargados">Informes de encargados</option><option value="todos">Todos los informes</option></select>}
       </div>
 
       {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
@@ -320,7 +325,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
                 {informe.observaciones && <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60"><span className="font-bold text-slate-600 dark:text-slate-300">Observaciones</span><p className="mt-1 whitespace-pre-line text-slate-600 dark:text-slate-400">{informe.observaciones}</p></div>}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                <span>Supervisor: <strong className="font-semibold text-slate-700 dark:text-slate-300">{informe.supervisor_nombre}</strong></span>
+                <span>{informe.rol_creador === 'encargado_empresa' ? 'Encargado' : 'Supervisor'}: <strong className="font-semibold text-slate-700 dark:text-slate-300">{informe.supervisor_nombre}</strong></span>
                 <span>{acciones.length} {acciones.length === 1 ? 'actuación' : 'actuaciones'} en el historial</span>
               </div>
             </div>
