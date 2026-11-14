@@ -74,6 +74,7 @@ const claseGravedad = (gravedad: GravedadInforme) => ({
 
 export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ tipoInicial }) => {
   const { usuario } = useAutenticacion()
+  const usuarioId = usuario?.id
   const { objetivos } = useOperativo()
   const esSupervisor = usuario?.rol === 'supervisor'
   const esAdmin = usuario?.rol === 'administrador'
@@ -108,7 +109,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
   const [estadosPendientes, setEstadosPendientes] = useState<Record<string, EstadoInforme>>({})
 
   const cargar = useCallback(async () => {
-    if (!supabase || !usuario) { setError('No hay conexión con la base de datos.'); setCargando(false); return }
+    if (!supabase || !usuarioId) { setError('No hay conexión con la base de datos.'); setCargando(false); return }
     setCargando(true)
     setError('')
     const { data, error: errorInformes } = await supabase.from('informes_supervision').select('*').order('creado_en', { ascending: false })
@@ -127,16 +128,10 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       else setActuaciones((acciones || []) as Actuacion[])
     } else setActuaciones([])
     setCargando(false)
-  }, [usuario])
+  }, [usuarioId])
 
-  useEffect(() => { void cargar() }, [cargar])
-  useEffect(() => {
-    if (!supabase || !usuario?.id_empresa) return
-    const canal = supabase.channel('gsp-informes-supervision-' + usuario.id)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'informes_supervision', filter: 'id_empresa=eq.' + usuario.id_empresa }, () => { void cargar() })
-      .subscribe()
-    return () => { void supabase?.removeChannel(canal) }
-  }, [usuario?.id, usuario?.id_empresa, cargar])
+  // La consulta inicial se realiza una sola vez por sesión. Evitamos suscripciones
+  // realtime que provocaban recargas repetidas mientras se actualizaban los informes.
 
   const abrirNuevo = () => {
     setObjetivoId(objetivosVisibles.find(o => o.activo)?.id || '')
