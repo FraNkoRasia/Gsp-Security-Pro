@@ -199,6 +199,8 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const [feriadosManuales, setFeriadosManuales] = useState<string[]>([])
   const [feriadosNacionales, setFeriadosNacionales] = useState<Record<string, string>>({})
   const [feriadosNacionalesIgnorados, setFeriadosNacionalesIgnorados] = useState<string[]>([])
+  const [feriadosActivos, setFeriadosActivos] = useState<string[]>([])
+  const [feriadosSincronizadosCargados, setFeriadosSincronizadosCargados] = useState(false)
   const claveFeriadosIgnorados = `gsp-feriados-nacionales-ignorados:${claveFeriadosManuales}`
 
   useEffect(() => {
@@ -223,32 +225,80 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   }, [claveFeriadosManuales, claveFeriadosIgnorados, objetivoActual?.id_empresa, objetivoSeleccionado])
 
   const alternarFeriadoNacional = (fecha: string) => {
-    setFeriadosNacionalesIgnorados((actuales) => {
-      const nuevasFechas = actuales.includes(fecha)
-        ? actuales.filter((dia) => dia !== fecha)
-        : [...actuales, fecha]
-      try {
-        window.localStorage.setItem(claveFeriadosIgnorados, JSON.stringify(nuevasFechas))
-      } catch {
-        // La grilla sigue funcionando aunque no se pueda guardar la preferencia local.
-      }
+    const estabaActivo = feriadosActivos.includes(fecha)
+    setFeriadosNacionalesIgnorados(actuales => {
+      const nuevasFechas = estabaActivo
+        ? [...new Set([...actuales, fecha])]
+        : actuales.filter(dia => dia !== fecha)
+      try { window.localStorage.setItem(claveFeriadosIgnorados, JSON.stringify(nuevasFechas)) } catch { /* preferencia local opcional */ }
       return nuevasFechas
     })
+    alternarFeriadoActivo(fecha)
   }
 
   const alternarFeriadoManual = (fecha: string) => {
-    setFeriadosManuales((actuales) => {
-      const nuevasFechas = actuales.includes(fecha)
-        ? actuales.filter((dia) => dia !== fecha)
-        : [...actuales, fecha]
-      if (objetivoActual?.id_empresa && objetivoSeleccionado) {
-        guardarFeriadosManuales(objetivoActual.id_empresa, objetivoSeleccionado, nuevasFechas)
-      }
+    setFeriadosManuales(actuales => {
+      const nuevasFechas = actuales.includes(fecha) ? actuales.filter(dia => dia !== fecha) : [...actuales, fecha]
+      if (objetivoActual?.id_empresa && objetivoSeleccionado) guardarFeriadosManuales(objetivoActual.id_empresa, objetivoSeleccionado, nuevasFechas)
       return nuevasFechas
     })
+    alternarFeriadoActivo(fecha)
   }
 
-  const nombreFeriadoEnFecha = (fecha: string) => feriadosNacionalesIgnorados.includes(fecha) ? (feriadosManuales.includes(fecha) ? 'Feriado manual' : undefined) : feriadosNacionales[fecha] || (feriadosManuales.includes(fecha) ? 'Feriado manual' : undefined)
+  // La lista persistida en Supabase es la fuente única compartida entre
+  // administrador y vigilador. El almacenamiento local solo sirve como
+  // migración inicial para grillas que todavía no tenían fechas sincronizadas.
+  useEffect(() => {
+    let cancelado = false
+    setFeriadosSincronizadosCargados(false)
+    const cargar = async () => {
+      if (!objetivoSeleccionado || !objetivoActual?.id_empresa) return
+      const mesFecha = `${mesSeleccionado}-01`
+      const { data, error } = await (supabase as any)
+        .from('feriados_grilla_objetivo')
+        .select('fechas')
+        .eq('id_objetivo', objetivoSeleccionado)
+        .eq('mes', mesFecha)
+        .maybeSingle()
+      if (cancelado) return
+      if (!error && data && Array.isArray(data.fechas)) {
+        setFeriadosActivos(data.fechas.map((fecha: string) => String(fecha).slice(0, 10)))
+      } else {
+        const locales = [
+          ...Object.keys(feriadosNacionales).filter(fecha => !feriadosNacionalesIgnorados.includes(fecha)),
+          ...feriadosManuales,
+        ]
+        setFeriadosActivos(locales.filter(fecha => fecha.startsWith(mesSeleccionado)))
+      }
+      setFeriadosSincronizadosCargados(true)
+    }
+    void cargar()
+    return () => { cancelado = true }
+  }, [objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, feriadosNacionales, feriadosNacionalesIgnorados, feriadosManuales])
+
+  useEffect(() => {
+    if (!feriadosSincronizadosCargados || !objetivoSeleccionado || !objetivoActual?.id_empresa) return
+    if (usuario?.rol !== 'administrador' && usuario?.rol !== 'super_administrador') return
+    void (supabase as any).from('feriados_grilla_objetivo').upsert({
+      id_objetivo: objetivoSeleccionado,
+      id_empresa: objetivoActual.id_empresa,
+      mes: `${mesSeleccionado}-01`,
+      fechas: feriadosActivos,
+      actualizado_en: new Date().toISOString(),
+      actualizado_por: usuario?.id || null,
+    }, { onConflict: 'id_objetivo,mes' })
+  }, [feriadosSincronizadosCargados, feriadosActivos, objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, usuario?.id, usuario?.rol])
+
+  const alternarFeriadoActivo = (fecha: string) => {
+    setFeriadosActivos(actuales => actuales.includes(fecha)
+      ? actuales.filter(dia => dia !== fecha)
+      : [...actuales, fecha].sort())
+  }
+
+  const nombreFeriadoEnFecha = (fecha: string) => {
+    if (!feriadosActivos.includes(fecha)) return undefined
+    return feriadosNacionales[fecha] || (feriadosManuales.includes(fecha) ? 'Feriado manual' : 'Feriado configurado en grilla')
+  }
 
   // Modal para edición interactiva de celda
   const [modalEdicionAbierto, setModalEdicionAbierto] = useState(false)
