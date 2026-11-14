@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Pencil } from 'lucide-react'
+import { Check, Clock3, Search, Plus, RefreshCw, UserRoundPlus, X, Pencil, CalendarDays } from 'lucide-react'
 import { supabase } from '@/servicios/supabase'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -64,7 +64,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean; objetivoInici
   const [objetivoId,setObjetivoId] = useState<string>(objetivoInicial)
   const [personal,setPersonal] = useState<Personal[]>([])
   const [asistencias,setAsistencias] = useState<Asistencia[]>([])
-  const [fecha,setFecha] = useState(fechaLocal())
+  const [fecha,setFecha] = useState(fechaLocal())\n  const selectorFechaRef = useRef<HTMLInputElement>(null)
   const [busqueda,setBusqueda] = useState('')
   const [categoriaFiltro,setCategoriaFiltro] = useState('Todas')
   const [nombre,setNombre] = useState('')
@@ -320,7 +320,7 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean; objetivoInici
           {modoGestion && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Administrá las altas, los datos y el estado del personal de tu objetivo.</p>}{soloLectura && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta de registros de asistencia. No podés modificar marcas ni horarios.</p>}</div>
           {modoGestion
             ? <button type="button" onClick={abrirAltaPersonal} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><UserRoundPlus className="h-4 w-4"/>Agregar personal</button>
-            : <label className="flex h-11 w-full shrink-0 items-center rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200 sm:w-auto"><span className="sr-only">Fecha de asistencia</span><input aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="h-full w-full min-w-0 flex-1 bg-transparent leading-none outline-none sm:w-[145px] sm:flex-none [&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:mr-0 [&::-webkit-calendar-picker-indicator]:shrink-0"/></label>}
+            : <div className="flex h-11 w-full shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200 sm:w-auto"><label className="sr-only" htmlFor="fecha-asistencia-encargado">Fecha de asistencia</label><input ref={selectorFechaRef} id="fecha-asistencia-encargado" aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="h-full w-full min-w-0 flex-1 cursor-pointer bg-transparent leading-none outline-none sm:w-[145px] sm:flex-none [&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:mr-0 [&::-webkit-calendar-picker-indicator]:shrink-0"/></div>}
         </div>
         <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
