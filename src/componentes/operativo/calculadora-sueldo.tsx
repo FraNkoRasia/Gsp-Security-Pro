@@ -5,6 +5,8 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
+import { cargarFeriadosArgentina } from '@/utilidades/feriados-argentina'
+import { supabase } from '@/servicios/supabase'
 
 type ConfiguracionSalarial = {
   basico: number
@@ -39,19 +41,25 @@ const formatoHoras = (valor: number) => {
 }
 const fechaLocal = (fecha: Date) => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
 
-function obtenerHorasPorFranja(turno: Turno) {
+const fechaClave = (fecha: Date) =>
+  `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+
+function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
   const { inicio, fin } = obtenerIntervaloTurno(turno)
   let diurnos = 0
   let nocturnos = 0
   let feriado = 0
-  const feriadoTurno = Boolean(turno.es_feriado)
+  // La marca es_feriado del turno identifica el día de inicio de la celda de grilla.
+  // El resto de las fechas se reconoce por el calendario de feriados de la grilla.
+  const feriadosReconocidos = turno.es_feriado
+    ? { ...feriados, [turno.fecha]: feriados[turno.fecha] || 'Feriado marcado en grilla' }
+    : feriados
   for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
     const fecha = new Date(cursor)
     const hora = fecha.getHours()
     if (hora >= 21 || hora < 6) nocturnos++
     else diurnos++
-    // La marca de feriado de la grilla se aplica al turno correspondiente.
-    if (feriadoTurno) feriado++
+    if (feriadosReconocidos[fechaClave(fecha)]) feriado++
   }
   return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriado: feriado / 60 }
 }
@@ -63,6 +71,25 @@ export const CalculadoraSueldo: React.FC = () => {
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
+  const [feriados, setFeriados] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let cancelado = false
+    const anio = Number(mes.slice(0, 4))
+    const cargar = async () => {
+      const nacionales = await cargarFeriadosArgentina(anio)
+      let fechasEmpresa: Record<string, string> = {}
+      if (supabase && usuario?.id_empresa) {
+        const desde = `${anio}-01-01`
+        const hasta = `${anio}-12-31`
+        const { data, error } = await supabase.from('feriados').select('fecha').gte('fecha', desde).lte('fecha', hasta).or(`id_empresa.is.null,id_empresa.eq.${usuario.id_empresa}`)
+        if (!error) for (const item of data || []) fechasEmpresa[String(item.fecha)] = 'Feriado de grilla'
+      }
+      if (!cancelado) setFeriados({ ...nacionales, ...fechasEmpresa })
+    }
+    void cargar()
+    return () => { cancelado = true }
+  }, [mes, usuario?.id_empresa])
 
   useEffect(() => {
     const guardado = window.localStorage.getItem('gsp-calculadora-sueldo-config')
@@ -90,13 +117,13 @@ export const CalculadoraSueldo: React.FC = () => {
   )), [turnos, usuario?.id, mes])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
-    const parte = obtenerHorasPorFranja(turno)
+    const parte = obtenerHorasPorFranja(turno, feriados)
     total.diurnas += parte.diurnos
     total.nocturnas += parte.nocturnos
     total.feriado += parte.feriado
     total.extras += Number(turno.horas_extra || 0)
     return total
-  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes])
+  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes, feriados])
 
   const liquidacion = useMemo(() => {
     const valorHora = config.divisorHora > 0 ? config.basico / config.divisorHora : 0
