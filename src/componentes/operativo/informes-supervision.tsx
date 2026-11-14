@@ -14,8 +14,8 @@ type Informe = {
   id_objetivo: string
   id_supervisor: string
   supervisor_nombre: string
-  id_vigilador: string
-  nombre_vigilante: string
+  id_vigilador: string | null
+  nombre_vigilante: string | null
   tipo: TipoInforme
   gravedad: GravedadInforme
   descripcion: string
@@ -150,7 +150,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
 
   useEffect(() => {
     const cargarVigiladores = async () => {
-      if (!supabase || !usuario || !objetivoId || !esSupervisor) { setVigiladoresObjetivo([]); setVigiladorId(''); return }
+      if (!supabase || !usuario || !objetivoId || (!esSupervisor && !esEncargado)) { setVigiladoresObjetivo([]); setVigiladorId(''); return }
       const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
       const { data: asignaciones, error: errorAsignaciones } = await supabase.from('asignaciones')
         .select('id_vigilador')
@@ -174,14 +174,14 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       setVigiladorId(actual => lista.some(v => v.id === actual) ? actual : lista[0]?.id || '')
     }
     void cargarVigiladores()
-  }, [objetivoId, usuario?.id, usuario?.id_empresa, esSupervisor])
+  }, [objetivoId, usuario?.id, usuario?.id_empresa, esSupervisor, esEncargado])
 
   const crearInforme = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase || !usuario || !esSupervisor) return
+    if (!supabase || !usuario || (!esSupervisor && !esEncargado)) return
     if (!objetivosVisibles.some(o => o.id === objetivoId && o.activo)) { setError('Seleccioná uno de tus objetivos asignados.'); return }
     const vigilador = vigiladoresObjetivo.find(v => v.id === vigiladorId)
-    if (!vigilador) { setError('Seleccioná un vigilador actualmente asignado a ese objetivo.'); return }
+    if (esSupervisor && !vigilador) { setError('Seleccioná un vigilador actualmente asignado a ese objetivo.'); return }
     if (descripcion.trim().length < 10) { setError('La descripción debe tener al menos 10 caracteres para que el informe sea claro.'); return }
     setGuardando(true); setError('')
     const nombreSupervisor = (usuario.nombre + ' ' + usuario.apellido).trim()
@@ -190,8 +190,8 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       id_objetivo: objetivoId,
       id_supervisor: usuario.id,
       supervisor_nombre: nombreSupervisor,
-      id_vigilador: vigilador.id,
-      nombre_vigilante: (vigilador.apellido + ', ' + vigilador.nombre).trim(),
+      id_vigilador: vigilador?.id || null,
+      nombre_vigilante: vigilador ? (vigilador.apellido + ', ' + vigilador.nombre).trim() : null,
       tipo,
       gravedad,
       descripcion: descripcion.trim(),
@@ -281,7 +281,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">{totalPendientes} pendientes</span>
-          {esSupervisor && <button type="button" onClick={abrirNuevo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Plus className="h-4 w-4" />{tipoInicial === 'supervision' ? 'Registrar supervisión' : esEncargado ? 'Nuevo informe operativo' : 'Nuevo informe'}</button>}
+          {(esSupervisor || esEncargado) && <button type="button" onClick={abrirNuevo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Plus className="h-4 w-4" />{tipoInicial === 'supervision' ? 'Registrar supervisión' : esEncargado ? 'Nuevo informe operativo' : 'Nuevo informe'}</button>}
         </div>
       </header>
 
@@ -295,7 +295,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       {mensaje && <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">{mensaje}</div>}
 
       {cargando ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-[#0C121E]"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin" />Cargando informes…</div>
-      : informesFiltrados.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" /><p className="font-semibold text-slate-700 dark:text-slate-200">Todavía no hay informes para mostrar</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{esSupervisor ? 'Cuando registres una supervisión o novedad, aparecerá en este historial.' : 'Los informes de los objetivos autorizados aparecerán en esta sección.'}</p></div>
+      : informesFiltrados.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700"><FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" /><p className="font-semibold text-slate-700 dark:text-slate-200">Todavía no hay informes para mostrar</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{esSupervisor || esEncargado ? 'Cuando registres una novedad, aparecerá en este historial.' : 'Los informes de los objetivos autorizados aparecerán en esta sección.'}</p></div>
       : <div className="space-y-3">
         {informesFiltrados.map(informe => {
           const acciones = actuacionesDe(informe.id)
@@ -310,7 +310,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
                     <span className={'rounded-full border px-2.5 py-1 text-[10px] font-bold ' + claseEstado(informe.estado)}>{etiquetaEstado(informe.estado)}</span>
                     <span className={'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ' + claseGravedad(informe.gravedad)}><AlertTriangle className="h-3.5 w-3.5" />{etiquetaGravedad(informe.gravedad)}</span>
                   </div>
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{objetivo} · {informe.nombre_vigilante}</p>
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{objetivo}{informe.nombre_vigilante ? ' · ' + informe.nombre_vigilante : ''}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><Clock3 className="h-3.5 w-3.5" />{fechaHora(informe.creado_en)}</div>
               </div>
