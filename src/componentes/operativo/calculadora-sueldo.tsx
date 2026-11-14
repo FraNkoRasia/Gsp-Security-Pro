@@ -20,7 +20,6 @@ type ConfiguracionSalarial = {
   descuentoLey19032: number
   descuentoObraSocial: number
   descuentoSindicato: number
-  descuentoViaticos: number
   descuentoObraSocialNoRemunerativo: number
   descuentoSindicatoViaticos: number
   redondeo: number
@@ -39,7 +38,6 @@ const CONFIG_INICIAL: ConfiguracionSalarial = {
   descuentoLey19032: 3,
   descuentoObraSocial: 3,
   descuentoSindicato: 3,
-  descuentoViaticos: 3,
   descuentoObraSocialNoRemunerativo: 3,
   descuentoSindicatoViaticos: 3,
   redondeo: 0.45,
@@ -182,15 +180,15 @@ export const CalculadoraSueldo: React.FC = () => {
     const descuentoObraSocial = redondearImporte(remunerativo * config.descuentoObraSocial / 100)
     const descuentoSindicato = redondearImporte(remunerativo * config.descuentoSindicato / 100)
     const descuentoRem = descuentoJubilacion + descuentoLey19032 + descuentoObraSocial + descuentoSindicato
-    const descuentoViaticos = redondearImporte(config.viaticos * config.descuentoViaticos / 100)
     const descuentoSindicatoViaticos = redondearImporte(config.viaticos * config.descuentoSindicatoViaticos / 100)
     const descuentoNoRem = redondearImporte(config.noRemunerativo * config.descuentoObraSocialNoRemunerativo / 100)
     const netoRem = remunerativo - descuentoRem
-    const netoViaticos = config.viaticos - descuentoViaticos - descuentoSindicatoViaticos
+    // El recibo aplica un único descuento del 3% sobre viáticos: sindicato s/AC.
+    const netoViaticos = config.viaticos - descuentoSindicatoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
     const valorHoraNocturna = valorHora * (1 + config.porcentajeNocturno / 100)
     const neto = netoRem + netoViaticos + netoNoRem + config.redondeo
-    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoViaticos, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
+    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
 
   const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
@@ -286,7 +284,6 @@ export const CalculadoraSueldo: React.FC = () => {
               ['descuentoLey19032', 'Ley 19.032 (%)'],
               ['descuentoObraSocial', 'Obra social remunerativa (%)'],
               ['descuentoSindicato', 'Sindicato remunerativo (%)'],
-              ['descuentoViaticos', 'Obra social sobre viáticos (%)'],
               ['descuentoSindicatoViaticos', 'Sindicato sobre viáticos (%)'],
               ['descuentoObraSocialNoRemunerativo', 'Obra social no remunerativa (%)'],
               ['redondeo', 'Redondeo del recibo ($)'],
