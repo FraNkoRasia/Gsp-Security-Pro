@@ -190,15 +190,60 @@ export const VistaPanelControl: React.FC = () => {
                 <GestionObjetivos
                   idEmpresaSeleccionada={empresaSeleccionadaId}
                   modoConsulta
-                  onSeleccionarObjetivo={setObjetivoSeleccionadoId}
+                  onSeleccionarObjetivo={(id) => { setObjetivoSeleccionadoId(id); setVistaObjetivo('detalle') }}
                 />
-              ) : (
-                <GestionVigiladores
-                  idEmpresaSeleccionada={empresaSeleccionadaId}
-                  idObjetivoSeleccionado={objetivoSeleccionadoId}
-                  modoConsulta
-                />
-              )}
+              ) : (() => {
+                const objetivo = objetivos.find((item) => item.id === objetivoSeleccionadoId)
+                if (!objetivo) return <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500">No se encontró el objetivo seleccionado.</div>
+                if (vistaObjetivo === 'vigiladores') return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Boton variante="secundario" tamano="chico" onClick={() => setVistaObjetivo('detalle')} icono={<ArrowLeft className="w-4 h-4" />}>Volver al objetivo</Boton>
+                      <Insignia variante="azul">Vigiladores del objetivo</Insignia>
+                    </div>
+                    <GestionVigiladores idEmpresaSeleccionada={objetivo.id_empresa} idObjetivoSeleccionado={objetivo.id} modoConsulta />
+                  </div>
+                )
+                if (vistaObjetivo === 'encargados' || vistaObjetivo === 'supervisores') return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Boton variante="secundario" tamano="chico" onClick={() => setVistaObjetivo('detalle')} icono={<ArrowLeft className="w-4 h-4" />}>Volver al objetivo</Boton>
+                      <Insignia variante="azul">{vistaObjetivo === 'encargados' ? 'Encargados del objetivo' : 'Supervisores del objetivo'}</Insignia>
+                    </div>
+                    <GestionPersonalObjetivo rol={vistaObjetivo === 'encargados' ? 'encargado_empresa' : 'supervisor'} idEmpresaSeleccionada={objetivo.id_empresa} idObjetivoSeleccionado={objetivo.id} modoConsulta />
+                  </div>
+                )
+                return (
+                  <div className="space-y-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Boton variante="secundario" tamano="chico" onClick={() => { setObjetivoSeleccionadoId(null); setVistaObjetivo('detalle') }} icono={<ArrowLeft className="w-4 h-4" />}>Volver a Objetivos</Boton>
+                      <Insignia variante={objetivo.activo ? 'verde' : 'gris'}>{objetivo.activo ? 'Operativo' : 'Inactivo'}</Insignia>
+                    </div>
+                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#0C121E]">
+                      <div className="border-b border-slate-200 p-5 dark:border-slate-800 sm:p-6">
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white">{objetivo.nombre}</h3>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{objetivo.localidad}, {objetivo.provincia}</p>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{objetivo.direccion}</p>
+                      </div>
+                      <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Elementos a cargo</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">{objetivo.elementos_a_cargo || 'No informados'}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Descripción / puntos de cobertura</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">{objetivo.descripcion || 'Sin descripción'}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 border-t border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:flex-wrap sm:p-6">
+                        <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('vigiladores')} icono={<Users className="h-4 w-4" />}>Vigiladores</Boton>
+                        <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('encargados')} icono={<Users className="h-4 w-4" />}>Encargados</Boton>
+                        <Boton variante="secundario" className="w-full sm:flex-1" onClick={() => setVistaObjetivo('supervisores')} icono={<Shield className="h-4 w-4" />}>Supervisores</Boton>
+                      </div>
+                    </section>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
