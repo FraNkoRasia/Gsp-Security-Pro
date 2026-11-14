@@ -50,18 +50,21 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
   let diurnos = 0
   let nocturnos = 0
   let feriado = 0
-  // La marca es_feriado del turno identifica el día de inicio de la celda de grilla.
-  // El resto de las fechas se reconoce por el calendario de feriados de la grilla.
-  const feriadosReconocidos = turno.es_feriado
-    ? { ...feriados, [turno.fecha]: feriados[turno.fecha] || 'Feriado marcado en grilla' }
-    : feriados
+
+  // Recorremos el turno por minutos y consultamos la fecha real de cada minuto.
+  // Nunca usamos turno.es_feriado para extender el feriado a toda la jornada:
+  // esa marca corresponde al casillero de inicio, no a las 12 horas completas.
   for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
     const fecha = new Date(cursor)
     const hora = fecha.getHours()
-    if (hora >= 21 || hora < 6) nocturnos++
+    const esNocturna = hora >= 21 || hora < 6
+    if (esNocturna) nocturnos++
     else diurnos++
-    if (feriadosReconocidos[fechaClave(fecha)]) feriado++
+
+    const fechaServicio = fechaClave(fecha)
+    if (Object.prototype.hasOwnProperty.call(feriados, fechaServicio)) feriado++
   }
+
   return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriado: feriado / 60 }
 }
 
