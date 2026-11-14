@@ -49,6 +49,8 @@ const formatoHoras = (valor: number) => {
   const minutos = Math.round(valor * 60)
   return `${Math.floor(minutos / 60)} h ${String(minutos % 60).padStart(2, '0')} min`
 }
+const HORAS_BASE_MENSUAL = 200
+
 const fechaLocal = (fecha: Date) => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
 
 const fechaClave = (fecha: Date) =>
@@ -156,9 +158,13 @@ export const CalculadoraSueldo: React.FC = () => {
     total.nocturnas += parte.nocturnos
     total.feriadoDiurno += parte.feriadoDiurno
     total.feriadoNocturno += parte.feriadoNocturno
-    total.extras += Number(turno.horas_extra || 0)
+    total.totales += parte.diurnos + parte.nocturnos
     return total
-  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
+  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, totales: 0 }), [turnosMes, feriadosPorObjetivo])
+
+  // El convenio liquida como extras las horas que superan las 200 horas mensuales.
+  // No dependemos del campo horas_extra de cada turno, que puede permanecer en cero.
+  horas.extras = Math.max(0, horas.totales - HORAS_BASE_MENSUAL)
 
   const horasFeriado = horas.feriadoDiurno + horas.feriadoNocturno
 
@@ -226,6 +232,7 @@ export const CalculadoraSueldo: React.FC = () => {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: 'Jornadas', value: String(turnosMes.length), icon: <CalendarDays className="h-4 w-4" /> },
+          { label: 'Horas trabajadas', value: formatoHoras(horas.totales), icon: <CalendarDays className="h-4 w-4" /> },
           { label: 'Horas diurnas', value: formatoHoras(horas.diurnas), icon: <Sun className="h-4 w-4 text-amber-500" /> },
           { label: 'Horas nocturnas', value: formatoHoras(horas.nocturnas), icon: <Moon className="h-4 w-4 text-blue-500" /> },
           { label: 'Horas feriado', value: formatoHoras(horasFeriado), icon: <CalendarDays className="h-4 w-4 text-amber-600" /> },
@@ -288,7 +295,7 @@ export const CalculadoraSueldo: React.FC = () => {
               ['descuentoObraSocialNoRemunerativo', 'Obra social no remunerativa (%)'],
               ['redondeo', 'Redondeo del recibo ($)'],
             ] as [keyof ConfiguracionSalarial, string][]).map(([campo, etiqueta]) => <label key={campo} className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300"><span>{etiqueta}</span><input type="number" min="0" step="any" value={config[campo]} onChange={e => actualizar(campo, e.target.value)} className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white" /></label>)}
-            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en este dispositivo. Las horas extras se toman de las horas aprobadas registradas en cada turno y se liquidan con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
+            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en este dispositivo. Las horas extras se calculan automáticamente sobre el total mensual trabajado: toda hora que supere las 200 horas se liquida con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
           </div>}
         </TarjetaContenido>
       </Tarjeta>
