@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, Search, ClipboardCheck, Plus } from 'lucide-react'
+import { Activity, CalendarDays, FileText, MapPin, Users, ShieldCheck, Clock3, RefreshCw, Search, ClipboardCheck, Plus, ChevronDown } from 'lucide-react'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { supabase } from '@/servicios/supabase'
@@ -77,6 +77,8 @@ export const InicioSupervisor: React.FC = () => {
   const [informes, setInformes] = useState<InformeResumen[]>([])
   const [cargandoInformes, setCargandoInformes] = useState(false)
   const [errorInformes, setErrorInformes] = useState('')
+  const [objetivosServicioAbiertos, setObjetivosServicioAbiertos] = useState<Set<string>>(() => new Set())
+  const [objetivosRelevosAbiertos, setObjetivosRelevosAbiertos] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     let vigente = true
@@ -126,7 +128,11 @@ export const InicioSupervisor: React.FC = () => {
     .map(t => ({ turno: t, ...obtenerRangoTurno(t.fecha, t.hora_inicio, t.hora_fin) }))
     .filter(t => t.desde > ahora)
     .sort((a, b) => a.desde - b.desde)
-    .slice(0, 4)
+  const servicioPorObjetivo = objetivosSupervisor.map(objetivo => ({ objetivo, turnos: turnosEnCurso.filter(item => item.turno.id_objetivo === objetivo.id) }))
+  const relevosPorObjetivo = objetivosSupervisor.map(objetivo => ({ objetivo, turnos: proximosTurnos.filter(item => item.turno.id_objetivo === objetivo.id) }))
+  const alternarObjetivo = (actualizar: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
+    actualizar(actual => { const siguiente = new Set(actual); if (siguiente.has(id)) siguiente.delete(id); else siguiente.add(id); return siguiente })
+  }
   const novedadesRecientes = novedades.filter(n => idsObjetivos.has(n.id_objetivo)).slice(0, 4)
   const informesPendientes = informes.filter(i => i.estado !== 'resuelto').length
   const supervisionesRecientes = informes.filter(i => i.tipo === 'supervision').slice(0, 3)
@@ -155,37 +161,29 @@ export const InicioSupervisor: React.FC = () => {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
-          <div className="flex items-center gap-2">
-            <Clock3 className="h-5 w-5 text-blue-500" />
-            <h2 className="font-black text-slate-900 dark:text-white">Personal en servicio</h2>
+          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-blue-500" /><h2 className="font-black text-slate-900 dark:text-white">Personal en servicio</h2></div><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">{turnosEnCurso.length} en total</span></div>
+          <div className="mt-3 space-y-2">
+            {servicioPorObjetivo.map(({ objetivo, turnos: items }) => { const abierto = objetivosServicioAbiertos.has(objetivo.id); return <div key={objetivo.id} className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+              <button type="button" aria-expanded={abierto} onClick={() => alternarObjetivo(setObjetivosServicioAbiertos, objetivo.id)} className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60">
+                <span className="min-w-0"><span className="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">{objetivo.nombre}</span><span className="mt-0.5 block text-xs text-slate-500">{items.length ? `${items.length} vigilador${items.length === 1 ? '' : 'es'} en servicio` : 'Sin personal en servicio'}</span></span>
+                <span className="flex shrink-0 items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${items.length ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>{items.length}</span><ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${abierto ? 'rotate-180' : ''}`} /></span>
+              </button>
+              {abierto && <div className="space-y-2 border-t border-slate-200 p-2 dark:border-slate-700">{items.length ? items.map(({ turno }) => { const vigilador = vigiladores.find(v => v.id === turno.id_vigilador); return <div key={turno.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900/60"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800 dark:text-slate-200">{vigilador ? `${vigilador.apellido}, ${vigilador.nombre}` : 'Vigilador'}</p><p className="truncate text-xs text-slate-500">{turno.hora_inicio.slice(0,5)} a {turno.hora_fin.slice(0,5)}</p></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">En servicio</span></div> }) : <p className="px-2 py-3 text-xs text-slate-500">Este objetivo no tiene vigiladores trabajando en este momento.</p>}</div>}
+            </div> })}
           </div>
-          {turnosEnCurso.length ? <div className="mt-3 space-y-2">
-            {turnosEnCurso.slice(0, 5).map(({ turno }) => {
-              const vigilador = vigiladores.find(v => v.id === turno.id_vigilador)
-              const objetivo = objetivosSupervisor.find(o => o.id === turno.id_objetivo)
-              return <div key={turno.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
-                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800 dark:text-slate-200">{vigilador ? `${vigilador.apellido}, ${vigilador.nombre}` : 'Vigilador'}</p><p className="truncate text-xs text-slate-500">{objetivo?.nombre || 'Objetivo'} · {turno.hora_inicio.slice(0,5)} a {turno.hora_fin.slice(0,5)}</p></div>
-                <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">En servicio</span>
-              </div>
-            })}
-          </div> : <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">No hay turnos en curso en este momento.</p>}
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-blue-500" />
-            <h2 className="font-black text-slate-900 dark:text-white">Próximos relevos</h2>
+          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-blue-500" /><h2 className="font-black text-slate-900 dark:text-white">Próximos relevos</h2></div><span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">{proximosTurnos.length} en total</span></div>
+          <div className="mt-3 space-y-2">
+            {relevosPorObjetivo.map(({ objetivo, turnos: items }) => { const abierto = objetivosRelevosAbiertos.has(objetivo.id); const primero = items[0]?.turno; return <div key={objetivo.id} className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+              <button type="button" aria-expanded={abierto} onClick={() => alternarObjetivo(setObjetivosRelevosAbiertos, objetivo.id)} className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60">
+                <span className="min-w-0"><span className="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">{objetivo.nombre}</span><span className="mt-0.5 block text-xs text-slate-500">{items.length ? `Próximo relevo: ${primero?.fecha.split('-').reverse().join('/')} · ${primero?.hora_inicio.slice(0,5)}` : 'Sin próximos relevos cargados'}</span></span>
+                <span className="flex shrink-0 items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${items.length ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>{items.length}</span><ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${abierto ? 'rotate-180' : ''}`} /></span>
+              </button>
+              {abierto && <div className="space-y-2 border-t border-slate-200 p-2 dark:border-slate-700">{items.length ? items.map(({ turno }) => { const vigilador = vigiladores.find(v => v.id === turno.id_vigilador); return <div key={turno.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900/60"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800 dark:text-slate-200">{vigilador ? `${vigilador.apellido}, ${vigilador.nombre}` : 'Vigilador'}</p><p className="truncate text-xs text-slate-500">{turno.fecha.split('-').reverse().join('/')} · {turno.hora_inicio.slice(0,5)}</p></div><span className="shrink-0 text-[11px] font-semibold text-slate-500">{horaArgentina(new Date(`${turno.fecha}T${turno.hora_inicio.slice(0,5)}:00-03:00`))}</span></div> }) : <p className="px-2 py-3 text-xs text-slate-500">Este objetivo no tiene próximos turnos cargados.</p>}</div>}
+            </div> })}
           </div>
-          {proximosTurnos.length ? <div className="mt-3 space-y-2">
-            {proximosTurnos.map(({ turno }) => {
-              const vigilador = vigiladores.find(v => v.id === turno.id_vigilador)
-              const objetivo = objetivosSupervisor.find(o => o.id === turno.id_objetivo)
-              return <div key={turno.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
-                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800 dark:text-slate-200">{vigilador ? `${vigilador.apellido}, ${vigilador.nombre}` : 'Vigilador'}</p><p className="truncate text-xs text-slate-500">{objetivo?.nombre || 'Objetivo'} · {turno.fecha.split('-').reverse().join('/')} · {turno.hora_inicio.slice(0,5)}</p></div>
-                <span className="shrink-0 text-[11px] font-semibold text-slate-500">{horaArgentina(new Date(`${turno.fecha}T${turno.hora_inicio.slice(0,5)}:00-03:00`))}</span>
-              </div>
-            })}
-          </div> : <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">No hay próximos turnos cargados.</p>}
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-[#0C121E]">
