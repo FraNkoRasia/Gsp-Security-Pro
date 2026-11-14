@@ -65,7 +65,30 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean; objetivoInici
   const [personal,setPersonal] = useState<Personal[]>([])
   const [asistencias,setAsistencias] = useState<Asistencia[]>([])
   const [fecha,setFecha] = useState(fechaLocal())
-  const selectorFechaRef = useRef<HTMLInputElement>(null)
+  const [calendarioAbierto,setCalendarioAbierto] = useState(false)
+  const [mesCalendario,setMesCalendario] = useState(() => {
+    const [anio, mes] = fechaLocal().split('-').map(Number)
+    return new Date(anio, mes - 1, 1)
+  })
+  const diasCalendario = useMemo(() => {
+    const inicio = new Date(mesCalendario.getFullYear(), mesCalendario.getMonth(), 1)
+    const desplazamiento = (inicio.getDay() + 6) % 7
+    const cantidad = new Date(mesCalendario.getFullYear(), mesCalendario.getMonth() + 1, 0).getDate()
+    return Array.from({ length: Math.ceil((desplazamiento + cantidad) / 7) * 7 }, (_, i) => {
+      const dia = i - desplazamiento + 1
+      return dia < 1 || dia > cantidad ? null : new Date(mesCalendario.getFullYear(), mesCalendario.getMonth(), dia)
+    })
+  }, [mesCalendario])
+  const fechaLegible = useMemo(() => {
+    const [anio, mes, dia] = fecha.split('-').map(Number)
+    return new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(anio, mes - 1, dia))
+  }, [fecha])
+  const claveFecha = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return y + '-' + m + '-' + d
+  }
   const [busqueda,setBusqueda] = useState('')
   const [categoriaFiltro,setCategoriaFiltro] = useState('Todas')
   const [nombre,setNombre] = useState('')
@@ -321,7 +344,28 @@ export const AsistenciaPersonal: React.FC<{ modoGestion?: boolean; objetivoInici
           {modoGestion && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Administrá las altas, los datos y el estado del personal de tu objetivo.</p>}{soloLectura && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Consulta de registros de asistencia. No podés modificar marcas ni horarios.</p>}</div>
           {modoGestion
             ? <button type="button" onClick={abrirAltaPersonal} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><UserRoundPlus className="h-4 w-4"/>Agregar personal</button>
-            : <div className="flex h-11 w-full shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-[#0C121E] dark:text-slate-200 sm:w-auto"><label className="sr-only" htmlFor="fecha-asistencia-encargado">Fecha de asistencia</label><input ref={selectorFechaRef} id="fecha-asistencia-encargado" aria-label="Fecha de asistencia" type="date" value={fecha} onChange={e=>setFecha(e.target.value)} className="h-full w-full min-w-0 flex-1 cursor-pointer bg-transparent leading-none outline-none sm:w-[145px] sm:flex-none [&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:mr-0 [&::-webkit-calendar-picker-indicator]:shrink-0"/><button type="button" aria-label="Abrir calendario" title="Seleccionar fecha" onClick={()=>{const input=selectorFechaRef.current;if(!input)return;try{if(typeof input.showPicker==='function')input.showPicker();else input.focus()}catch{input.focus()}}} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><CalendarDays className="h-4 w-4"/></button></div>}
+            : <div className="relative w-full shrink-0 sm:w-[260px]">
+                <button type="button" aria-haspopup="dialog" aria-expanded={calendarioAbierto} onClick={() => { setMesCalendario(new Date(Number(fecha.slice(0,4)), Number(fecha.slice(5,7)) - 1, 1)); setCalendarioAbierto(v => !v) }} className="group flex h-12 w-full items-center gap-3 rounded-xl border border-slate-300 bg-white px-3.5 text-left shadow-sm transition hover:border-blue-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-[#0C121E] dark:hover:border-blue-500">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300"><CalendarDays className="h-[18px] w-[18px]"/></span>
+                  <span className="min-w-0 flex-1"><span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">Fecha de asistencia</span><span className="mt-0.5 block truncate text-sm font-bold capitalize text-slate-800 dark:text-slate-100">{fechaLegible}</span></span>
+                  <span className="text-slate-400 transition group-hover:text-blue-500"><CalendarDays className="h-4 w-4"/></span>
+                </button>
+                {calendarioAbierto && <div role="dialog" aria-label="Seleccionar fecha de asistencia" className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(320px,calc(100vw-32px))] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]">
+                  <div className="mb-4 flex items-center justify-between gap-2">
+                    <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Seleccionar día</p><p className="mt-0.5 text-base font-black capitalize text-slate-900 dark:text-white">{new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(mesCalendario)}</p></div>
+                    <div className="flex gap-1"><button type="button" aria-label="Mes anterior" onClick={() => setMesCalendario(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><span aria-hidden="true">‹</span></button><button type="button" aria-label="Mes siguiente" onClick={() => setMesCalendario(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><span aria-hidden="true">›</span></button></div>
+                  </div>
+                  <div className="mb-2 grid grid-cols-7 gap-1">{['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(d => <span key={d} className="py-1 text-center text-[10px] font-bold uppercase text-slate-400">{d}</span>)}</div>
+                  <div className="grid grid-cols-7 gap-1">{diasCalendario.map((dia, i) => {
+                    if (!dia) return <span key={'vacio-'+i} className="h-9"/>
+                    const valorDia = claveFecha(dia)
+                    const seleccionado = valorDia === fecha
+                    const hoy = valorDia === fechaLocal()
+                    return <button key={valorDia} type="button" onClick={() => { setFecha(valorDia); setCalendarioAbierto(false) }} aria-pressed={seleccionado} className={`h-9 rounded-lg text-xs font-semibold transition ${seleccionado ? 'bg-blue-600 text-white shadow-sm' : hoy ? 'border border-blue-400 text-blue-600 dark:text-blue-300' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}>{dia.getDate()}</button>
+                  })}</div>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800"><button type="button" onClick={() => { const hoy = fechaLocal(); setFecha(hoy); setMesCalendario(new Date(Number(hoy.slice(0,4)), Number(hoy.slice(5,7)) - 1, 1)); setCalendarioAbierto(false) }} className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-300">Hoy</button><button type="button" onClick={() => setCalendarioAbierto(false)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button></div>
+                </div>}
+              </div>
         </div>
         <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input type="search" value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por nombre o apellido" aria-label="Buscar personal por nombre o apellido" className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-900 outline-none focus:border-blue-500/60 dark:border-slate-700 dark:bg-[#0C121E] dark:text-white"/></label>
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por categoría">
