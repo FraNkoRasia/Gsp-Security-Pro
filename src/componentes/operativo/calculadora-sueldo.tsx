@@ -59,7 +59,7 @@ function obtenerHorasPorFranja(turno: Turno) {
 export const CalculadoraSueldo: React.FC = () => {
   const { turnos } = useOperativo()
   const { usuario } = useAutenticacion()
-  const [ahora, setAhora] = useState(() => new Date())
+  const ahora = new Date()
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
