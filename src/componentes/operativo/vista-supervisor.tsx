@@ -109,7 +109,7 @@ export const InicioSupervisor: React.FC = () => {
           .select('id,id_objetivo,id_vigilador,resultado,observaciones,fecha_supervision')
           .in('id_objetivo', objetivosSupervisor.map(o => o.id))
           .order('fecha_supervision', { ascending: false })
-          .limit(3)
+          .limit(1)
       ])
       if (!vigente) return
       if (error) setErrorInformes('No se pudo actualizar el resumen de informes.')
@@ -145,7 +145,7 @@ export const InicioSupervisor: React.FC = () => {
   const proximosTurnos = turnos
     .filter(t => idsObjetivos.has(t.id_objetivo) && t.estado !== 'ausente' && t.estado !== 'reemplazado' && t.horas_totales > 0)
     .map(t => ({ turno: t, ...obtenerRangoTurno(t.fecha, t.hora_inicio, t.hora_fin) }))
-    .filter(t => t.desde > ahora)
+    .filter(t => t.desde > ahora && t.desde <= ahora + 24 * 60 * 60 * 1000)
     .sort((a, b) => a.desde - b.desde)
   const servicioPorObjetivo = objetivosSupervisor.map(objetivo => ({ objetivo, turnos: turnosEnCurso.filter(item => item.turno.id_objetivo === objetivo.id) }))
   const relevosPorObjetivo = objetivosSupervisor.map(objetivo => ({ objetivo, turnos: proximosTurnos.filter(item => item.turno.id_objetivo === objetivo.id) }))
@@ -154,7 +154,7 @@ export const InicioSupervisor: React.FC = () => {
   }
   const novedadesRecientes = novedades.filter(n => idsObjetivos.has(n.id_objetivo)).slice(0, 4)
   const informesPendientes = informes.filter(i => i.estado !== 'resuelto').length
-  const supervisionesRecientes = supervisiones
+  const supervisionesRecientes = supervisiones.slice(0, 1)
 
   if (!objetivosSupervisor.length) return <SinObjetivos />
 
