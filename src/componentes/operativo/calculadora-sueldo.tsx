@@ -15,25 +15,38 @@ type ConfiguracionSalarial = {
   divisorHora: number
   porcentajeNocturno: number
   recargoFeriado: number
-  descuentoRemunerativo: number
+  recargoHorasExtras: number
+  descuentoJubilacion: number
+  descuentoLey19032: number
+  descuentoObraSocial: number
+  descuentoSindicato: number
   descuentoViaticos: number
-  descuentoNoRemunerativo: number
+  descuentoObraSocialNoRemunerativo: number
+  descuentoSindicatoViaticos: number
+  redondeo: number
 }
 
 const CONFIG_INICIAL: ConfiguracionSalarial = {
-  basico: 1069000,
+  basico: 1053200,
   presentismo: 180000,
-  viaticos: 545000,
-  noRemunerativo: 70000,
+  viaticos: 534000,
+  noRemunerativo: 60000,
   divisorHora: 200,
-  porcentajeNocturno: 0.1,
+  porcentajeNocturno: 20,
   recargoFeriado: 100,
-  descuentoRemunerativo: 20,
+  recargoHorasExtras: 50,
+  descuentoJubilacion: 11,
+  descuentoLey19032: 3,
+  descuentoObraSocial: 3,
+  descuentoSindicato: 3,
   descuentoViaticos: 3,
-  descuentoNoRemunerativo: 3,
+  descuentoObraSocialNoRemunerativo: 3,
+  descuentoSindicatoViaticos: 3,
+  redondeo: 0.45,
 }
 
-const formatoPesos = (valor: number) => valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 })
+const formatoPesos = (valor: number) => valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const redondearImporte = (valor: number) => Math.round((valor + Number.EPSILON) * 100) / 100
 const formatoHoras = (valor: number) => {
   const minutos = Math.round(valor * 60)
   return `${Math.floor(minutos / 60)} h ${String(minutos % 60).padStart(2, '0')} min`
@@ -159,15 +172,25 @@ export const CalculadoraSueldo: React.FC = () => {
     const adicionalFeriadoDiurno = horas.feriadoDiurno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriadoNocturno = horas.feriadoNocturno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriado = adicionalFeriadoDiurno + adicionalFeriadoNocturno
-    const remunerativo = config.basico + config.presentismo + adicionalNocturno + adicionalFeriado
-    const descuentoRem = remunerativo * config.descuentoRemunerativo / 100
-    const descuentoViaticos = config.viaticos * config.descuentoViaticos / 100
-    const descuentoNoRem = config.noRemunerativo * config.descuentoNoRemunerativo / 100
+    // Las horas extra aprobadas en cada turno se abonan completas más su recargo.
+    const adicionalHorasExtras = horas.extras * valorHora * (1 + config.recargoHorasExtras / 100)
+    const remunerativo = config.basico + config.presentismo + adicionalNocturno + adicionalFeriado + adicionalHorasExtras
+
+    // Cada concepto se redondea individualmente, como en el recibo oficial.
+    const descuentoJubilacion = redondearImporte(remunerativo * config.descuentoJubilacion / 100)
+    const descuentoLey19032 = redondearImporte(remunerativo * config.descuentoLey19032 / 100)
+    const descuentoObraSocial = redondearImporte(remunerativo * config.descuentoObraSocial / 100)
+    const descuentoSindicato = redondearImporte(remunerativo * config.descuentoSindicato / 100)
+    const descuentoRem = descuentoJubilacion + descuentoLey19032 + descuentoObraSocial + descuentoSindicato
+    const descuentoViaticos = redondearImporte(config.viaticos * config.descuentoViaticos / 100)
+    const descuentoSindicatoViaticos = redondearImporte(config.viaticos * config.descuentoSindicatoViaticos / 100)
+    const descuentoNoRem = redondearImporte(config.noRemunerativo * config.descuentoObraSocialNoRemunerativo / 100)
     const netoRem = remunerativo - descuentoRem
-    const netoViaticos = config.viaticos - descuentoViaticos
+    const netoViaticos = config.viaticos - descuentoViaticos - descuentoSindicatoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
     const valorHoraNocturna = valorHora * (1 + config.porcentajeNocturno / 100)
-    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, remunerativo, descuentoRem, descuentoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto: netoRem + netoViaticos + netoNoRem }
+    const neto = netoRem + netoViaticos + netoNoRem + config.redondeo
+    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoViaticos, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
 
   const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
@@ -208,6 +231,7 @@ export const CalculadoraSueldo: React.FC = () => {
           { label: 'Horas diurnas', value: formatoHoras(horas.diurnas), icon: <Sun className="h-4 w-4 text-amber-500" /> },
           { label: 'Horas nocturnas', value: formatoHoras(horas.nocturnas), icon: <Moon className="h-4 w-4 text-blue-500" /> },
           { label: 'Horas feriado', value: formatoHoras(horasFeriado), icon: <CalendarDays className="h-4 w-4 text-amber-600" /> },
+          { label: 'Horas extras', value: formatoHoras(horas.extras), icon: <CalendarDays className="h-4 w-4 text-rose-500" /> },
         ].map(item => <Tarjeta key={item.label}><TarjetaContenido className="p-3"><div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">{item.icon}{item.label}</div><p className="mt-2 text-lg font-black tabular-nums text-slate-900 dark:text-white">{item.value}</p></TarjetaContenido></Tarjeta>)}
       </div>
 
@@ -218,19 +242,24 @@ export const CalculadoraSueldo: React.FC = () => {
             ['Sueldo básico', config.basico],
             ['Presentismo', config.presentismo],
             [`Plus nocturno · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
+            [`Horas extras al ${config.recargoHorasExtras}% · ${horas.extras.toFixed(2)} hs`, liquidacion.adicionalHorasExtras],
             ['Valor de una hora diurna', liquidacion.valorHora],
             ['Valor de una hora nocturna (incluye plus)', liquidacion.valorHoraNocturna],
             [`Feriado diurno · ${horas.feriadoDiurno.toFixed(2)} hs`, liquidacion.adicionalFeriadoDiurno],
             [`Feriado nocturno · ${horas.feriadoNocturno.toFixed(2)} hs`, liquidacion.adicionalFeriadoNocturno],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
+            ['Redondeo', config.redondeo],
           ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm dark:border-slate-800"><span className="text-slate-600 dark:text-slate-300">{label}</span><strong className="tabular-nums text-slate-900 dark:text-white">{formatoPesos(Number(value))}</strong></div>)}
           <div className="space-y-2 pt-2">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Descuentos estimados</h4>
             {[
-              [`Descuentos remunerativos · ${config.descuentoRemunerativo}%`, liquidacion.descuentoRem],
-              [`Descuento sobre viáticos · ${config.descuentoViaticos}%`, liquidacion.descuentoViaticos],
-              [`Obra social no remunerativa · ${config.descuentoNoRemunerativo}%`, liquidacion.descuentoNoRem],
+              [`Jubilación · ${config.descuentoJubilacion}%`, liquidacion.descuentoJubilacion],
+              [`Ley 19.032 · ${config.descuentoLey19032}%`, liquidacion.descuentoLey19032],
+              [`Obra social remunerativa · ${config.descuentoObraSocial}%`, liquidacion.descuentoObraSocial],
+              [`Sindicato remunerativo · ${config.descuentoSindicato}%`, liquidacion.descuentoSindicato],
+              [`Sindicato sobre viáticos · ${config.descuentoSindicatoViaticos}%`, liquidacion.descuentoSindicatoViaticos],
+              [`Obra social no remunerativa · ${config.descuentoObraSocialNoRemunerativo}%`, liquidacion.descuentoNoRem],
             ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-500 dark:text-slate-400">{label}</span><span className="tabular-nums text-red-500">− {formatoPesos(Number(value))}</span></div>)}
           </div>
           <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-black dark:border-slate-700"><span>Neto estimado</span><span className="tabular-nums text-emerald-600 dark:text-emerald-400">{formatoPesos(liquidacion.neto)}</span></div>
@@ -252,11 +281,17 @@ export const CalculadoraSueldo: React.FC = () => {
               ['divisorHora', 'Divisor para valor hora'],
               ['porcentajeNocturno', 'Plus nocturno (%) por hora'],
               ['recargoFeriado', 'Recargo feriado (%)'],
-              ['descuentoRemunerativo', 'Descuentos remunerativos (%)'],
-              ['descuentoViaticos', 'Descuento viáticos (%)'],
-              ['descuentoNoRemunerativo', 'Descuento no remunerativo (%)'],
+              ['recargoHorasExtras', 'Recargo horas extras (%)'],
+              ['descuentoJubilacion', 'Jubilación (%)'],
+              ['descuentoLey19032', 'Ley 19.032 (%)'],
+              ['descuentoObraSocial', 'Obra social remunerativa (%)'],
+              ['descuentoSindicato', 'Sindicato remunerativo (%)'],
+              ['descuentoViaticos', 'Obra social sobre viáticos (%)'],
+              ['descuentoSindicatoViaticos', 'Sindicato sobre viáticos (%)'],
+              ['descuentoObraSocialNoRemunerativo', 'Obra social no remunerativa (%)'],
+              ['redondeo', 'Redondeo del recibo ($)'],
             ] as [keyof ConfiguracionSalarial, string][]).map(([campo, etiqueta]) => <label key={campo} className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300"><span>{etiqueta}</span><input type="number" min="0" step="any" value={config[campo]} onChange={e => actualizar(campo, e.target.value)} className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white" /></label>)}
-            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en este dispositivo. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
+            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en este dispositivo. Las horas extras se toman de las horas aprobadas registradas en cada turno y se liquidan con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
           </div>}
         </TarjetaContenido>
       </Tarjeta>
