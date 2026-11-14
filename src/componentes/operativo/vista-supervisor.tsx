@@ -6,7 +6,7 @@ import { supabase } from '@/servicios/supabase'
 import { GestionVigiladores } from '@/componentes/operativo/gestion-vigiladores'
 import { GrillaMensual } from '@/componentes/operativo/grilla-mensual'
 
-type InformeResumen = {
+type SupervisionResumen = {\n  id: string\n  id_objetivo: string\n  id_vigilador: string | null\n  resultado: 'conforme' | 'con_observaciones'\n  observaciones: string\n  fecha_supervision: string\n}\n\ntype InformeResumen = {
   id: string
   id_objetivo: string
   tipo: 'incumplimiento' | 'observacion' | 'incidente' | 'supervision'
@@ -74,7 +74,7 @@ export const InicioSupervisor: React.FC = () => {
   )
   const idsObjetivos = useMemo(() => new Set(objetivosSupervisor.map(o => o.id)), [objetivosSupervisor])
   const claveObjetivos = objetivosSupervisor.map(o => o.id).sort().join('|')
-  const [informes, setInformes] = useState<InformeResumen[]>([])
+  const [informes, setInformes] = useState<InformeResumen[]>([])\n  const [supervisiones, setSupervisiones] = useState<SupervisionResumen[]>([])
   const [cargandoInformes, setCargandoInformes] = useState(false)
   const [errorInformes, setErrorInformes] = useState('')
   const [objetivosServicioAbiertos, setObjetivosServicioAbiertos] = useState<Set<string>>(() => new Set())
@@ -89,14 +89,23 @@ export const InicioSupervisor: React.FC = () => {
       }
       setCargandoInformes(true)
       setErrorInformes('')
-      const { data, error } = await supabase
-        .from('informes_supervision')
-        .select('id,id_objetivo,tipo,estado,nombre_vigilante,descripcion,creado_en')
-        .order('creado_en', { ascending: false })
-        .limit(30)
+      const [{ data, error }, { data: datosSupervisiones, error: errorSupervisiones }] = await Promise.all([
+        supabase.from('informes_supervision')
+          .select('id,id_objetivo,tipo,estado,nombre_vigilante,descripcion,creado_en')
+          .in('id_objetivo', objetivosSupervisor.map(o => o.id))
+          .order('creado_en', { ascending: false })
+          .limit(30),
+        supabase.from('supervisiones_operativas')
+          .select('id,id_objetivo,id_vigilador,resultado,observaciones,fecha_supervision')
+          .in('id_objetivo', objetivosSupervisor.map(o => o.id))
+          .order('fecha_supervision', { ascending: false })
+          .limit(3)
+      ])
       if (!vigente) return
       if (error) setErrorInformes('No se pudo actualizar el resumen de informes.')
       else setInformes((data || []) as InformeResumen[])
+      if (errorSupervisiones) setErrorInformes('No se pudieron cargar las últimas supervisiones.')
+      else setSupervisiones((datosSupervisiones || []) as SupervisionResumen[])
       setCargandoInformes(false)
     }
     void cargar()
@@ -135,7 +144,7 @@ export const InicioSupervisor: React.FC = () => {
   }
   const novedadesRecientes = novedades.filter(n => idsObjetivos.has(n.id_objetivo)).slice(0, 4)
   const informesPendientes = informes.filter(i => i.estado !== 'resuelto').length
-  const supervisionesRecientes = informes.filter(i => i.tipo === 'supervision').slice(0, 3)
+  const supervisionesRecientes = supervisiones
 
   if (!objetivosSupervisor.length) return <SinObjetivos />
 
@@ -206,10 +215,14 @@ export const InicioSupervisor: React.FC = () => {
             {cargandoInformes && <RefreshCw className="ml-auto h-4 w-4 animate-spin text-slate-400" />}
           </div>
           {supervisionesRecientes.length ? <div className="mt-3 space-y-2">
-            {supervisionesRecientes.map(i => <div key={i.id} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
-              <div className="flex items-center justify-between gap-2"><p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">{objetivosSupervisor.find(o => o.id === i.id_objetivo)?.nombre || 'Objetivo'} · {i.nombre_vigilante}</p><span className="shrink-0 text-[10px] text-slate-500">{fechaHora(i.creado_en)}</span></div>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600 dark:text-slate-400">{i.descripcion}</p>
-            </div>)}
+            {supervisionesRecientes.map(i => {
+              const vigilador = vigiladores.find(v => v.id === i.id_vigilador)
+              return <div key={i.id} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+                <div className="flex items-center justify-between gap-2"><p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">{objetivosSupervisor.find(o => o.id === i.id_objetivo)?.nombre || 'Objetivo'}{vigilador ? ` · ${vigilador.apellido}, ${vigilador.nombre}` : ''}</p><span className="shrink-0 text-[10px] text-slate-500">{fechaHora(i.fecha_supervision)}</span></div>
+                <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${i.resultado === 'conforme' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}>{i.resultado === 'conforme' ? 'Conforme' : 'Con observaciones'}</span>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600 dark:text-slate-400">{i.observaciones}</p>
+              </div>
+            })}
           </div> : <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">{errorInformes || 'Todavía no hay supervisiones registradas.'}</p>}
           {errorInformes && supervisionesRecientes.length > 0 && <p className="mt-2 text-xs text-amber-600">{errorInformes}</p>}
         </article>
