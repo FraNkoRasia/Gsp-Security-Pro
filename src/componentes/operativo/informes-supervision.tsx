@@ -154,8 +154,11 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
     setCargando(false)
   }, [usuarioId])
 
-  // La consulta inicial se realiza una sola vez por sesión. Evitamos suscripciones
-  // realtime que provocaban recargas repetidas mientras se actualizaban los informes.
+  // Cargar los informes al entrar a la sección o cuando cambia el usuario.
+  // No se usa Realtime para evitar recargas automáticas repetidas.
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
 
   const abrirNuevo = () => {
     setObjetivoId(objetivosVisibles.find(o => o.activo)?.id || '')
