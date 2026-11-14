@@ -350,13 +350,25 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     }
   }
 
-  // Total diario de horas del servicio
+  // Total diario de horas del servicio y meta según el día de la semana.
   const calcularTotalDiario = (dia: number) => {
     const diaStr = dia < 10 ? `0${dia}` : `${dia}`
     const fecha = `${mesSeleccionado}-${diaStr}`
     const turnosDia = turnosVisibles.filter((t) => t.id_objetivo === objetivoSeleccionado && t.fecha === fecha)
     return turnosDia.reduce((acc, t) => acc + t.horas_totales + t.horas_extra, 0)
   }
+
+  const obtenerMetaDiaria = (dia: number) => {
+    const diaStr = dia < 10 ? `0${dia}` : `${dia}`
+    const fecha = `${mesSeleccionado}-${diaStr}`
+    if (nombreFeriadoEnFecha(fecha)) return 24
+    const diaSemana = new Date(`${fecha}T12:00:00`).getDay()
+    if (diaSemana === 0) return 24
+    if (diaSemana === 6) return 32
+    return 34
+  }
+
+  const mostrarValidacionDiaria = usuario?.rol === 'administrador' && !soloLectura && !soloLecturaEfectiva
 
   const obtenerEtiquetaTurno = (t?: Turno) => {
     if (!t) return <span className="text-slate-400 dark:text-slate-600">-</span>
@@ -753,12 +765,24 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
                 </td>
                 {Array.from({ length: totalDiasMes }, (_, i) => i + 1).map((dia) => {
                   const total = calcularTotalDiario(dia)
+                  const meta = obtenerMetaDiaria(dia)
+                  const totalMinutos = Math.round(total * 60)
+                  const metaMinutos = meta * 60
+                  const estado = totalMinutos === metaMinutos ? 'correcto' : totalMinutos > metaMinutos ? 'superior' : 'inferior'
+                  const clasesEstado = estado === 'correcto'
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                    : estado === 'superior'
+                      ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800'
+                      : 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
                   return (
                     <td
                       key={dia}
-                      className={`p-1 text-center border-r border-slate-200 dark:border-slate-800/70 text-blue-700 dark:text-blue-400 font-mono ${'bg-slate-50 dark:bg-[#101827]'}`}
+                      className="p-1 text-center border-r border-slate-200 dark:border-slate-800/70 font-mono bg-slate-50 dark:bg-[#101827]"
+                      title={mostrarValidacionDiaria ? `Total: ${formatearTotalDiario(total)} h · Objetivo: ${meta} h${estado === 'correcto' ? ' · Completo' : estado === 'superior' ? ' · Supera el objetivo' : ' · Faltan horas'}` : undefined}
                     >
-                      {formatearTotalDiario(total)}h
+                      {mostrarValidacionDiaria
+                        ? <span className={`inline-flex min-w-[42px] justify-center rounded-md px-1.5 py-0.5 font-bold ${clasesEstado}`}>{formatearTotalDiario(total)}h</span>
+                        : <span className="text-blue-700 dark:text-blue-400">{formatearTotalDiario(total)}h</span>}
                     </td>
                   )
                 })}
