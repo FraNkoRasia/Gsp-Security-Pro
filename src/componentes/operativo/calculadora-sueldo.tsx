@@ -165,7 +165,7 @@ export const CalculadoraSueldo: React.FC = () => {
     total.feriadoNocturno += parte.feriadoNocturno
     total.totales += parte.diurnos + parte.nocturnos
     return total
-  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, totales: 0 }), [turnosMes, feriadosPorObjetivo])
+  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, totales: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
 
   // El convenio liquida como extras las horas que superan las 200 horas mensuales.
   // No dependemos del campo horas_extra de cada turno, que puede permanecer en cero.
