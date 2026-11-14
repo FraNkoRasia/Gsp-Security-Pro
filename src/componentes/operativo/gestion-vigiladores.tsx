@@ -35,7 +35,7 @@ const etiquetaEstadoCambio = (estado: string, administrador?: string | null) => 
   return estado
 }
 
-export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idObjetivoSeleccionado?: string; modoConsulta?: boolean; ocultarAlta?: boolean }> = ({ idEmpresaSeleccionada, idObjetivoSeleccionado, modoConsulta = false, ocultarAlta = false }) => {
+export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idObjetivoSeleccionado?: string; modoConsulta?: boolean; ocultarAlta?: boolean; ocultarTitulo?: boolean }> = ({ idEmpresaSeleccionada, idObjetivoSeleccionado, modoConsulta = false, ocultarAlta = false, ocultarTitulo = false }) => {
   const { vigiladores, asignaciones, objetivos, turnos, novedades, solicitudesCambio, avisos, solicitudesHorasExtra, crearVigilador, editarVigilador, cambiarEstadoVigilador } = useOperativo()
   const { usuario } = useAutenticacion()
 
@@ -374,7 +374,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {!ocultarTitulo && <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-black text-slate-900 dark:text-white font-['Outfit']">
             Plantel de Vigiladores
@@ -390,7 +390,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
         >
           Nuevo Vigilador
         </Boton>}
-      </div>
+      </div>}
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 p-2">
         <button type="button" onClick={() => setFiltroEstadoVigiladores('activos')} aria-pressed={filtroEstadoVigiladores === 'activos'} className={`flex-1 min-w-[150px] rounded-lg px-4 py-3 text-sm font-bold transition-colors ${filtroEstadoVigiladores === 'activos' ? 'bg-emerald-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
