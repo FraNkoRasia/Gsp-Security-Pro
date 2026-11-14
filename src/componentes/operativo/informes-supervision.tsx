@@ -197,7 +197,8 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       descripcion: descripcion.trim(),
       accion_tomada: accionTomada.trim() || null,
       observaciones: observaciones.trim() || null,
-      creado_por: usuario.id
+      creado_por: usuario.id,
+      rol_creador: esEncargado ? 'encargado_empresa' : 'supervisor'
     })
     if (errorCrear) { setError(errorCrear.message); setGuardando(false); return }
     setModalAbierto(false)
@@ -274,13 +275,13 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-300"><ClipboardList className="h-5 w-5" /></div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">{tipoInicial === 'supervision' ? 'Supervisiones' : 'Informes de Supervisión'}</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">{tipoInicial === 'supervision' ? 'Supervisiones' : esEncargado ? 'Informes operativos' : 'Informes de Supervisión'}</h2>
           </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tipoInicial === 'supervision' ? 'Registro de controles operativos realizados en tus objetivos.' : 'Registro formal de incumplimientos, observaciones, incidentes y controles operativos.'}</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tipoInicial === 'supervision' ? 'Registro de controles operativos realizados en tus objetivos.' : esEncargado ? 'Novedades e incidentes de tus objetivos asignados.' : 'Registro formal de incumplimientos, observaciones, incidentes y controles operativos.'}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">{totalPendientes} pendientes</span>
-          {esSupervisor && <button type="button" onClick={abrirNuevo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Plus className="h-4 w-4" />{tipoInicial === 'supervision' ? 'Registrar supervisión' : 'Nuevo informe'}</button>}
+          {esSupervisor && <button type="button" onClick={abrirNuevo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Plus className="h-4 w-4" />{tipoInicial === 'supervision' ? 'Registrar supervisión' : esEncargado ? 'Nuevo informe operativo' : 'Nuevo informe'}</button>}
         </div>
       </header>
 
@@ -358,7 +359,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
             {!tipoInicial && <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Tipo de informe<select value={tipo} onChange={e => setTipo(e.target.value as TipoInforme)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">{tipos.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></label>}
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Gravedad<select value={gravedad} onChange={e => setGravedad(e.target.value as GravedadInforme)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">{gravedades.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}</select></label>
           </div>
-          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Descripción del hecho<textarea required minLength={10} rows={4} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Describí objetivamente qué ocurrió, cuándo y en qué circunstancias." className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label>
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Descripción del hecho<textarea required minLength={10} rows={4} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder={esEncargado ? 'Describí la novedad, incidente o situación ocurrida en el objetivo.' : 'Describí objetivamente qué ocurrió, cuándo y en qué circunstancias.'} className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Acción tomada<textarea rows={2} value={accionTomada} onChange={e => setAccionTomada(e.target.value)} placeholder="Medidas adoptadas en el momento, comunicación realizada, etc." className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Observaciones adicionales<textarea rows={2} value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Información complementaria (opcional)." className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></label>
           {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-300">{error}</div>}
