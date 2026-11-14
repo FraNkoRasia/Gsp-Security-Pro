@@ -153,7 +153,27 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
         }
         const perfil = await cargarPerfil(data.user)
         if (activo) {
-          setUsuario(perfil)
+          // No reemplazar el objeto del usuario si el perfil sigue igual:
+          // hacerlo cada 30 segundos fuerza renders y recargas innecesarias
+          // en todos los componentes que consumen el contexto.
+          setUsuario(actual => {
+            if (
+              actual &&
+              perfil &&
+              actual.id === perfil.id &&
+              actual.email === perfil.email &&
+              actual.nombre === perfil.nombre &&
+              actual.apellido === perfil.apellido &&
+              actual.rol === perfil.rol &&
+              actual.id_empresa === perfil.id_empresa &&
+              actual.empresa_nombre === perfil.empresa_nombre &&
+              actual.telefono === perfil.telefono &&
+              actual.activo === perfil.activo &&
+              actual.debe_cambiar_contrasena === perfil.debe_cambiar_contrasena &&
+              actual.creado_en === perfil.creado_en
+            ) return actual
+            return perfil
+          })
           setErrorAuth(null)
         }
       } catch (err) {
