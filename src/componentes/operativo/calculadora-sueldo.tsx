@@ -3,10 +3,9 @@ import { Calculator, CalendarDays, Moon, Sun, Settings2, ChevronDown } from 'luc
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
+import { supabase } from '@/servicios/supabase'
 import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
-import { cargarFeriadosManuales } from '@/utilidades/feriados-manuales'
-import { cargarFeriadosArgentina } from '@/utilidades/feriados-argentina'
 
 type ConfiguracionSalarial = {
   basico: number
@@ -71,7 +70,6 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
 export const CalculadoraSueldo: React.FC = () => {
   const { turnos } = useOperativo()
   const { usuario } = useAutenticacion()
-  const [feriadosNacionales, setFeriadosNacionales] = useState<Record<string, string>>({})
   const ahora = new Date()
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
@@ -102,40 +100,41 @@ export const CalculadoraSueldo: React.FC = () => {
     t.horas_totales > 0
   )), [turnos, usuario?.id, mes])
 
-  // Usa exactamente el conjunto de fechas que la cabecera de la grilla
-  // muestra como "Fer": feriados nacionales no ocultos + feriados manuales.
+  // Lee las fechas activas compartidas por objetivo y mes desde Supabase.
+  // No reconstruye feriados con el calendario del dispositivo: utiliza la
+  // misma lista que administra la cabecera de la grilla.
+  const [feriadosPorObjetivo, setFeriadosPorObjetivo] = useState<Record<string, Record<string, string>>>({})
   useEffect(() => {
     let cancelado = false
-    cargarFeriadosArgentina(Number(mes.slice(0, 4))).then((fechas) => {
-      if (!cancelado) setFeriadosNacionales(fechas)
-    })
-    return () => { cancelado = true }
-  }, [mes])
-
-  const feriadosPorObjetivo = useMemo(() => {
-    const resultado: Record<string, Record<string, string>> = {}
-    const empresa = usuario?.id_empresa || ''
-    const objetivos = new Set(turnosMes.map(turno => turno.id_objetivo).filter(Boolean))
-    for (const idObjetivo of objetivos) {
-      const fechas: Record<string, string> = {}
-      const claveIgnorados = `gsp-feriados-nacionales-ignorados:${empresa || 'sin-empresa'}:${idObjetivo}`
-      let ignorados: string[] = []
-      try {
-        const guardados = window.localStorage.getItem(claveIgnorados)
-        ignorados = guardados ? JSON.parse(guardados) as string[] : []
-      } catch {
-        ignorados = []
+    const cargar = async () => {
+      const idsObjetivos = [...new Set(turnosMes.map(turno => turno.id_objetivo).filter(Boolean))]
+      if (!idsObjetivos.length) {
+        setFeriadosPorObjetivo({})
+        return
       }
-      for (const [fecha, nombre] of Object.entries(feriadosNacionales)) {
-        if (!ignorados.includes(fecha)) fechas[fecha] = nombre
+      const { data, error } = await supabase
+        .from('feriados_grilla_objetivo')
+        .select('id_objetivo, fechas')
+        .in('id_objetivo', idsObjetivos)
+        .eq('mes', `${mes}-01`)
+      if (cancelado) return
+      if (error) {
+        console.error('No se pudieron cargar los feriados configurados en la grilla:', error)
+        setFeriadosPorObjetivo({})
+        return
       }
-      for (const fecha of cargarFeriadosManuales(empresa, idObjetivo)) {
-        fechas[fecha] = 'Feriado manual'
+      const resultado: Record<string, Record<string, string>> = {}
+      for (const fila of data || []) {
+        resultado[fila.id_objetivo] = {}
+        for (const fecha of fila.fechas || []) {
+          resultado[fila.id_objetivo][String(fecha).slice(0, 10)] = 'Feriado marcado en grilla'
+        }
       }
-      resultado[idObjetivo] = fechas
+      setFeriadosPorObjetivo(resultado)
     }
-    return resultado
-  }, [feriadosNacionales, turnosMes, usuario?.id_empresa])
+    void cargar()
+    return () => { cancelado = true }
+  }, [turnosMes, mes])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
     const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
