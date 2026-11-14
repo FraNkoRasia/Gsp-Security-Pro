@@ -6,6 +6,7 @@ import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
 import { cargarFeriadosArgentina } from '@/utilidades/feriados-argentina'
+import { cargarFeriadosManuales } from '@/utilidades/feriados-manuales'
 import { supabase } from '@/servicios/supabase'
 
 type ConfiguracionSalarial = {
@@ -116,14 +117,25 @@ export const CalculadoraSueldo: React.FC = () => {
     t.horas_totales > 0
   )), [turnos, usuario?.id, mes])
 
+  const feriadosCompletos = useMemo(() => {
+    const resultado = { ...feriados }
+    const objetivos = new Set(turnosMes.map(turno => turno.id_objetivo))
+    for (const idObjetivo of objetivos) {
+      for (const fecha of cargarFeriadosManuales(usuario?.id_empresa || '', idObjetivo)) {
+        resultado[fecha] = resultado[fecha] || 'Feriado manual de grilla'
+      }
+    }
+    return resultado
+  }, [feriados, turnosMes, usuario?.id_empresa])
+
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
-    const parte = obtenerHorasPorFranja(turno, feriados)
+    const parte = obtenerHorasPorFranja(turno, feriadosCompletos)
     total.diurnas += parte.diurnos
     total.nocturnas += parte.nocturnos
     total.feriado += parte.feriado
     total.extras += Number(turno.horas_extra || 0)
     return total
-  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes, feriados])
+  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes, feriadosCompletos])
 
   const liquidacion = useMemo(() => {
     const valorHora = config.divisorHora > 0 ? config.basico / config.divisorHora : 0
