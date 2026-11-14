@@ -41,7 +41,7 @@ const fechaClave = (fecha: Date) =>
 
 type OperacionGrilla = { id_vigilador: string; fecha: string; codigo: string; id_tipo_turno?: string | null }
 
-export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: boolean; onCambiosPendientesChange?: (pendientes: boolean) => void }> = ({ objetivoInicial = '', soloLectura = false, onCambiosPendientesChange }) => {
+export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: boolean; ocultarTitulo?: boolean; onCambiosPendientesChange?: (pendientes: boolean) => void }> = ({ objetivoInicial = '', soloLectura = false, ocultarTitulo = false, onCambiosPendientesChange }) => {
   const { objetivos, vigiladores, asignaciones, turnos, tiposTurno, guardarGrillaMensual } = useOperativo()
   const { idioma } = useTraduccion()
   const { usuario } = useAutenticacion()
@@ -554,14 +554,14 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
       {avisoBloqueo && <div role="status" className="fixed bottom-5 left-1/2 z-[10000] -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white shadow-xl">{avisoBloqueo}</div>}
       {/* Controles de la grilla mensual */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div>
+        {!ocultarTitulo && <div>
           <h3 className="text-xl font-black text-slate-900 dark:text-white font-['Outfit']">
             Grilla Mensual Operativa
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {usuario?.rol === 'vigilador' ? 'Consultá los turnos del mes completo.' : usuario?.rol === 'administrador' ? 'Visualizá y administrá los turnos del mes completo.' : usuario?.rol === 'supervisor' ? 'Consultá los turnos del mes completo.' : 'Visualizá los turnos del mes completo.'}
           </p>
-        </div>
+        </div>}
 
         <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-between lg:justify-end">
           <div className="flex items-center gap-2 flex-wrap">
