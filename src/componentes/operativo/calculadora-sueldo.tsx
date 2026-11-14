@@ -75,7 +75,8 @@ export const CalculadoraSueldo: React.FC = () => {
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
-  const [feriados, setFeriados] = useState<Record<string, string>>({})
+  const [feriadosNacionales, setFeriadosNacionales] = useState<Record<string, string>>({})
+  const [feriadosEmpresa, setFeriadosEmpresa] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelado = false
@@ -89,7 +90,10 @@ export const CalculadoraSueldo: React.FC = () => {
         const { data, error } = await supabase.from('feriados').select('fecha').gte('fecha', desde).lte('fecha', hasta).or(`id_empresa.is.null,id_empresa.eq.${usuario.id_empresa}`)
         if (!error) for (const item of data || []) fechasEmpresa[String(item.fecha)] = 'Feriado de grilla'
       }
-      if (!cancelado) setFeriados({ ...nacionales, ...fechasEmpresa })
+      if (!cancelado) {
+        setFeriadosNacionales(nacionales)
+        setFeriadosEmpresa(fechasEmpresa)
+      }
     }
     void cargar()
     return () => { cancelado = true }
@@ -120,25 +124,42 @@ export const CalculadoraSueldo: React.FC = () => {
     t.horas_totales > 0
   )), [turnos, usuario?.id, mes])
 
-  const feriadosCompletos = useMemo(() => {
-    const resultado = { ...feriados }
-    const objetivos = new Set(turnosMes.map(turno => turno.id_objetivo))
+  // Los feriados se resuelven por objetivo, igual que en la grilla:
+  // respeta los feriados nacionales desmarcados en ese objetivo y suma los manuales.
+  const feriadosPorObjetivo = useMemo(() => {
+    const resultado: Record<string, Record<string, string>> = {}
+    const objetivos = new Set(turnosMes.map(turno => turno.id_objetivo).filter(Boolean))
     for (const idObjetivo of objetivos) {
-      for (const fecha of cargarFeriadosManuales(usuario?.id_empresa || '', idObjetivo)) {
-        resultado[fecha] = resultado[fecha] || 'Feriado manual de grilla'
+      const fechas = { ...feriadosNacionales, ...feriadosEmpresa }
+      const claveIgnorados = `gsp-feriados-nacionales-ignorados:${usuario?.id_empresa || 'sin-empresa'}:${idObjetivo}`
+      try {
+        const guardados = window.localStorage.getItem(claveIgnorados)
+        const ignorados = guardados ? JSON.parse(guardados) as string[] : []
+        for (const fecha of ignorados) {
+          // La grilla permite quitar un feriado nacional sin quitar un feriado manual coincidente.
+          if (!cargarFeriadosManuales(usuario?.id_empresa || '', idObjetivo).includes(fecha)) {
+            delete fechas[fecha]
+          }
+        }
+      } catch {
+        // Si no se puede leer la preferencia, se conserva el calendario oficial.
       }
+      for (const fecha of cargarFeriadosManuales(usuario?.id_empresa || '', idObjetivo)) {
+        fechas[fecha] = 'Feriado manual de grilla'
+      }
+      resultado[idObjetivo] = fechas
     }
     return resultado
-  }, [feriados, turnosMes, usuario?.id_empresa])
+  }, [feriadosNacionales, feriadosEmpresa, turnosMes, usuario?.id_empresa])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
-    const parte = obtenerHorasPorFranja(turno, feriadosCompletos)
+    const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
     total.diurnas += parte.diurnos
     total.nocturnas += parte.nocturnos
     total.feriado += parte.feriado
     total.extras += Number(turno.horas_extra || 0)
     return total
-  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes, feriadosCompletos])
+  }, { diurnas: 0, nocturnas: 0, feriado: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
 
   const liquidacion = useMemo(() => {
     const valorHora = config.divisorHora > 0 ? config.basico / config.divisorHora : 0
