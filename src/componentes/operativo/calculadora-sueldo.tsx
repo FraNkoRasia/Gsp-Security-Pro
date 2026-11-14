@@ -165,6 +165,7 @@ export const CalculadoraSueldo: React.FC = () => {
         const esNocturna = hora >= 21 || hora < 6
         const esFeriado = Object.prototype.hasOwnProperty.call(feriados, fechaClave(fecha))
         const esDomingo = fecha.getDay() === 0
+        const esSabadoDespuesDe13 = fecha.getDay() === 6 && (hora > 13 || (hora === 13 && fecha.getMinutes() >= 0))
         const esExtra = minutosAcumulados >= limiteMinutos
         minutosAcumulados++
 
@@ -182,7 +183,7 @@ export const CalculadoraSueldo: React.FC = () => {
             if (esNocturna) resultado.extrasFeriadoNocturno++
             else resultado.extrasFeriadoDiurno++
           }
-          if (esDomingo || esFeriado) resultado.extras100++
+          if (esDomingo || esSabadoDespuesDe13 || esFeriado) resultado.extras100++
           else resultado.extras50++
         }
       }
