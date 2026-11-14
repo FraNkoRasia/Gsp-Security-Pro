@@ -31,7 +31,7 @@ const CONFIG_INICIAL: ConfiguracionSalarial = {
   viaticos: 534000,
   noRemunerativo: 60000,
   divisorHora: 200,
-  porcentajeNocturno: 20,
+  porcentajeNocturno: 0.1,
   recargoFeriado: 100,
   recargoHorasExtras: 50,
   descuentoJubilacion: 11,
@@ -94,7 +94,12 @@ export const CalculadoraSueldo: React.FC = () => {
   useEffect(() => {
     const guardado = window.localStorage.getItem('gsp-calculadora-sueldo-config')
     if (guardado) {
-      try { setConfig({ ...CONFIG_INICIAL, ...JSON.parse(guardado) }) } catch { /* conserva valores iniciales */ }
+      try {
+        const guardadoParseado = JSON.parse(guardado)
+        // Compatibilidad con la versión anterior: 20% del valor hora equivale al 0,10% del básico con divisor 200.
+        if (guardadoParseado.porcentajeNocturno === 20) guardadoParseado.porcentajeNocturno = 0.1
+        setConfig({ ...CONFIG_INICIAL, ...guardadoParseado })
+      } catch { /* conserva valores iniciales */ }
     }
   }, [])
 
@@ -170,9 +175,10 @@ export const CalculadoraSueldo: React.FC = () => {
 
   const liquidacion = useMemo(() => {
     const valorHora = config.divisorHora > 0 ? config.basico / config.divisorHora : 0
-    // El plus nocturno se calcula sobre el valor de una hora, no sobre el sueldo básico completo.
+    // El adicional nocturno es el 0,10% del sueldo básico por cada hora nocturna.
     // Las horas nocturnas feriadas también conservan su adicional nocturno.
-    const adicionalNocturno = horas.nocturnas * valorHora * (config.porcentajeNocturno / 100)
+    const adicionalNocturnoPorHora = config.basico * (config.porcentajeNocturno / 100)
+    const adicionalNocturno = horas.nocturnas * adicionalNocturnoPorHora
     const adicionalFeriadoDiurno = horas.feriadoDiurno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriadoNocturno = horas.feriadoNocturno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriado = adicionalFeriadoDiurno + adicionalFeriadoNocturno
@@ -192,7 +198,7 @@ export const CalculadoraSueldo: React.FC = () => {
     // El recibo aplica un único descuento del 3% sobre viáticos: sindicato s/AC.
     const netoViaticos = config.viaticos - descuentoSindicatoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
-    const valorHoraNocturna = valorHora * (1 + config.porcentajeNocturno / 100)
+    const valorHoraNocturna = valorHora + adicionalNocturnoPorHora
     const neto = netoRem + netoViaticos + netoNoRem + config.redondeo
     return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
@@ -284,7 +290,7 @@ export const CalculadoraSueldo: React.FC = () => {
               ['viaticos', 'Viáticos'],
               ['noRemunerativo', 'Suma no remunerativa'],
               ['divisorHora', 'Divisor para valor hora'],
-              ['porcentajeNocturno', 'Plus nocturno (%) por hora'],
+              ['porcentajeNocturno', 'Plus nocturno (% del sueldo básico por hora)'],
               ['recargoFeriado', 'Recargo feriado (%)'],
               ['recargoHorasExtras', 'Recargo horas extras (%)'],
               ['descuentoJubilacion', 'Jubilación (%)'],
