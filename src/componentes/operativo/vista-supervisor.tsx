@@ -6,7 +6,16 @@ import { supabase } from '@/servicios/supabase'
 import { GestionVigiladores } from '@/componentes/operativo/gestion-vigiladores'
 import { GrillaMensual } from '@/componentes/operativo/grilla-mensual'
 
-type SupervisionResumen = {\n  id: string\n  id_objetivo: string\n  id_vigilador: string | null\n  resultado: 'conforme' | 'con_observaciones'\n  observaciones: string\n  fecha_supervision: string\n}\n\ntype InformeResumen = {
+type SupervisionResumen = {
+  id: string
+  id_objetivo: string
+  id_vigilador: string | null
+  resultado: 'conforme' | 'con_observaciones'
+  observaciones: string
+  fecha_supervision: string
+}
+
+type InformeResumen = {
   id: string
   id_objetivo: string
   tipo: 'incumplimiento' | 'observacion' | 'incidente' | 'supervision'
@@ -74,7 +83,8 @@ export const InicioSupervisor: React.FC = () => {
   )
   const idsObjetivos = useMemo(() => new Set(objetivosSupervisor.map(o => o.id)), [objetivosSupervisor])
   const claveObjetivos = objetivosSupervisor.map(o => o.id).sort().join('|')
-  const [informes, setInformes] = useState<InformeResumen[]>([])\n  const [supervisiones, setSupervisiones] = useState<SupervisionResumen[]>([])
+  const [informes, setInformes] = useState<InformeResumen[]>([])
+  const [supervisiones, setSupervisiones] = useState<SupervisionResumen[]>([])
   const [cargandoInformes, setCargandoInformes] = useState(false)
   const [errorInformes, setErrorInformes] = useState('')
   const [objetivosServicioAbiertos, setObjetivosServicioAbiertos] = useState<Set<string>>(() => new Set())
