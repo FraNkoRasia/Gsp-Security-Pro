@@ -259,7 +259,7 @@ export const VistaPanelControl: React.FC = () => {
         </div>
       ) : (
         <>
-          {!esEncargado && <div className={(esVigilador || esAdmin || usuario.rol === 'supervisor' ? "hidden md:grid" : "grid") + " grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pb-2 border-b border-slate-200 dark:border-slate-800/80"}>
+          <div className={(esVigilador || esAdmin || usuario.rol === 'supervisor' ? "hidden md:grid" : "grid") + " grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pb-2 border-b border-slate-200 dark:border-slate-800/80"}>
             {pestanas.map((p) => {
               const estaActiva = pestanaRenderizada === p.id
               return (
