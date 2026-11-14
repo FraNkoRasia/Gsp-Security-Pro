@@ -274,7 +274,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     }
     void cargar()
     return () => { cancelado = true }
-  }, [objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, feriadosNacionales, feriadosNacionalesIgnorados, feriadosManuales])
+  }, [objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, feriadosNacionales])
 
   useEffect(() => {
     if (!feriadosSincronizadosCargados || !objetivoSeleccionado || !objetivoActual?.id_empresa) return
