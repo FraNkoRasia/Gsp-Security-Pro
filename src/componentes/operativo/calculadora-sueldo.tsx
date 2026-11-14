@@ -76,28 +76,15 @@ export const CalculadoraSueldo: React.FC = () => {
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
   const [feriadosNacionales, setFeriadosNacionales] = useState<Record<string, string>>({})
-  const [feriadosEmpresa, setFeriadosEmpresa] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelado = false
     const anio = Number(mes.slice(0, 4))
-    const cargar = async () => {
-      const nacionales = await cargarFeriadosArgentina(anio)
-      let fechasEmpresa: Record<string, string> = {}
-      if (supabase && usuario?.id_empresa) {
-        const desde = `${anio}-01-01`
-        const hasta = `${anio}-12-31`
-        const { data, error } = await supabase.from('feriados').select('fecha').gte('fecha', desde).lte('fecha', hasta).or(`id_empresa.is.null,id_empresa.eq.${usuario.id_empresa}`)
-        if (!error) for (const item of data || []) fechasEmpresa[String(item.fecha)] = 'Feriado de grilla'
-      }
-      if (!cancelado) {
-        setFeriadosNacionales(nacionales)
-        setFeriadosEmpresa(fechasEmpresa)
-      }
-    }
-    void cargar()
+    cargarFeriadosArgentina(anio).then((nacionales) => {
+      if (!cancelado) setFeriadosNacionales(nacionales)
+    })
     return () => { cancelado = true }
-  }, [mes, usuario?.id_empresa])
+  }, [mes])
 
   useEffect(() => {
     const guardado = window.localStorage.getItem('gsp-calculadora-sueldo-config')
@@ -130,7 +117,7 @@ export const CalculadoraSueldo: React.FC = () => {
     const resultado: Record<string, Record<string, string>> = {}
     const objetivos = new Set(turnosMes.map(turno => turno.id_objetivo).filter(Boolean))
     for (const idObjetivo of objetivos) {
-      const fechas = { ...feriadosNacionales, ...feriadosEmpresa }
+      const fechas = { ...feriadosNacionales }
       const claveIgnorados = `gsp-feriados-nacionales-ignorados:${usuario?.id_empresa || 'sin-empresa'}:${idObjetivo}`
       try {
         const guardados = window.localStorage.getItem(claveIgnorados)
@@ -150,7 +137,7 @@ export const CalculadoraSueldo: React.FC = () => {
       resultado[idObjetivo] = fechas
     }
     return resultado
-  }, [feriadosNacionales, feriadosEmpresa, turnosMes, usuario?.id_empresa])
+  }, [feriadosNacionales, turnosMes, usuario?.id_empresa])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
     const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
