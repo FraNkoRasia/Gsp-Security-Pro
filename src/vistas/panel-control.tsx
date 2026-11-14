@@ -279,7 +279,7 @@ export const VistaPanelControl: React.FC = () => {
                 </button>
               )
             })}
-          </div>}
+          </div>
           <div className="pt-1">
             {pestanaRenderizada === 'objetivos' && esAdmin && <GestionObjetivos onSeleccionarObjetivo={(id) => { setObjetivoGrillaId(id); setVistaObjetivo('detalle'); setPestanaActiva('grillaObjetivo') }} />}
             {pestanaRenderizada === 'grillaObjetivo' && esAdmin && objetivoGrillaId && (() => {
