@@ -60,7 +60,7 @@ const SelectorObjetivo: React.FC<{
   <label className="flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-[#0C121E] dark:text-slate-200">
     <MapPin className="h-4 w-4 shrink-0 text-blue-500" />
     <span className="sr-only">Objetivo</span>
-    <select value={valor} onChange={e => alCambiar(e.target.value)} className="min-w-0 flex-1 bg-transparent py-2 text-sm font-semibold text-slate-900 outline-none dark:text-slate-100">
+    <select value={valor} onChange={e => alCambiar(e.target.value)} className="min-w-0 flex-1 bg-transparent py-2 pl-2 text-sm font-semibold text-slate-900 outline-none dark:text-slate-100">
       {objetivos.map(objetivo => <option key={objetivo.id} value={objetivo.id} className="bg-white text-slate-900 dark:bg-[#0C121E] dark:text-slate-100">{objetivo.nombre}</option>)}
     </select>
   </label>
