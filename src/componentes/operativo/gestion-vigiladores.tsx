@@ -495,7 +495,7 @@ export const GestionVigiladores: React.FC<{ idEmpresaSeleccionada?: string; idOb
                       </span>
                     </div>
                   </div>
-                  <Insignia variante={vig.activo ? "verde" : "rojo"}>{vig.activo ? "En servicio" : "Dado de baja"}</Insignia>
+                  <Insignia variante={vig.activo ? "verde" : "rojo"}>{vig.activo ? "Activo" : "Inactivo"}</Insignia>
                 </div>}
 
                 {/* Acciones de Traslado e Historial (Sección 20 y 21) */}
