@@ -265,14 +265,17 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
         .eq('mes', mesFecha)
         .maybeSingle()
       if (cancelado) return
-      if (!error && data && Array.isArray(data.fechas)) {
+      const locales = [
+        ...Object.keys(feriadosNacionales).filter(fecha => !feriadosNacionalesIgnorados.includes(fecha)),
+        ...feriadosManuales,
+      ]
+      const feriadosLocalesDelMes = [...new Set(locales.filter(fecha => fecha.startsWith(mesSeleccionado)))].sort()
+      if (!error && data && Array.isArray(data.fechas) && (data.fechas.length > 0 || feriadosLocalesDelMes.length === 0)) {
         setFeriadosActivos(data.fechas.map((fecha: string) => String(fecha).slice(0, 10)))
       } else {
-        const locales = [
-          ...Object.keys(feriadosNacionales).filter(fecha => !feriadosNacionalesIgnorados.includes(fecha)),
-          ...feriadosManuales,
-        ]
-        setFeriadosActivos(locales.filter(fecha => fecha.startsWith(mesSeleccionado)))
+        // Repara registros vacíos creados por la sincronización anterior,
+        // tomando la lista que realmente muestra la cabecera de esta grilla.
+        setFeriadosActivos(feriadosLocalesDelMes)
       }
       setFeriadosSincronizadosCargados(true)
     }
