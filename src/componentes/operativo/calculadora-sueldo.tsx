@@ -6,6 +6,7 @@ import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
 import { cargarFeriadosManuales } from '@/utilidades/feriados-manuales'
+import { cargarFeriadosArgentina } from '@/utilidades/feriados-argentina'
 
 type ConfiguracionSalarial = {
   basico: number
@@ -69,6 +70,7 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
 export const CalculadoraSueldo: React.FC = () => {
   const { turnos } = useOperativo()
   const { usuario } = useAutenticacion()
+  const [feriadosNacionalesMes, setFeriadosNacionalesMes] = useState<Record<string, string>>({})
   const ahora = new Date()
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
@@ -99,20 +101,41 @@ export const CalculadoraSueldo: React.FC = () => {
     t.horas_totales > 0
   )), [turnos, usuario?.id, mes])
 
-  // Solo cuentan las fechas marcadas manualmente como feriado en la grilla del objetivo.
-  // No se consulta el calendario nacional ni se infieren feriados desde fuentes externas.
+  // Replica exactamente las fechas que la grilla muestra como "Fer":
+  // feriados nacionales no ignorados para ese objetivo + feriados manuales.
+  useEffect(() => {
+    let cancelado = false
+    const anio = Number(mes.slice(0, 4))
+    cargarFeriadosArgentina(anio).then((fechas) => {
+      if (!cancelado) setFeriadosNacionalesMes(fechas)
+    })
+    return () => { cancelado = true }
+  }, [mes])
+
   const feriadosPorObjetivo = useMemo(() => {
     const resultado: Record<string, Record<string, string>> = {}
+    const empresa = usuario?.id_empresa || ''
     const objetivos = new Set(turnosMes.map(turno => turno.id_objetivo).filter(Boolean))
     for (const idObjetivo of objetivos) {
       const fechas: Record<string, string> = {}
-      for (const fecha of cargarFeriadosManuales(usuario?.id_empresa || '', idObjetivo)) {
-        fechas[fecha] = 'Feriado marcado en grilla'
+      const claveIgnorados = `gsp-feriados-nacionales-ignorados:${empresa || 'sin-empresa'}:${idObjetivo}`
+      let ignorados: string[] = []
+      try {
+        const guardados = window.localStorage.getItem(claveIgnorados)
+        ignorados = guardados ? JSON.parse(guardados) as string[] : []
+      } catch {
+        ignorados = []
+      }
+      for (const [fecha, nombre] of Object.entries(feriadosNacionalesMes)) {
+        if (!ignorados.includes(fecha)) fechas[fecha] = nombre
+      }
+      for (const fecha of cargarFeriadosManuales(empresa, idObjetivo)) {
+        fechas[fecha] = 'Feriado manual'
       }
       resultado[idObjetivo] = fechas
     }
     return resultado
-  }, [turnosMes, usuario?.id_empresa])
+  }, [feriadosNacionalesMes, turnosMes, usuario?.id_empresa])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
     const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
