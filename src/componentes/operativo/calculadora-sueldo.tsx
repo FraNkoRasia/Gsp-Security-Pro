@@ -81,11 +81,13 @@ export const CalculadoraSueldo: React.FC = () => {
     return Array.from(lista).sort((a, b) => b.localeCompare(a))
   }, [turnos, usuario?.id, ahora])
 
+  // Se incluyen todos los turnos asignados en el mes, también los futuros:
+  // la calculadora estima el mes completo según la grilla y no solo lo ya trabajado.
   const turnosMes = useMemo(() => eliminarTurnosDuplicados(turnos.filter(t =>
     t.id_vigilador === usuario?.id && t.fecha.startsWith(mes) &&
     t.tipo !== 'franco' && t.estado !== 'reemplazado' && t.estado !== 'ausente' &&
     t.horas_totales > 0
-  )).filter(t => obtenerIntervaloTurno(t).fin.getTime() <= ahora.getTime()), [turnos, usuario?.id, mes, ahora])
+  )), [turnos, usuario?.id, mes])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
     const parte = obtenerHorasPorFranja(turno)
