@@ -53,7 +53,8 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     if (evento.button !== 0) return
     const contenedor = contenedorDesplazamientoRef.current
     if (!contenedor) return
-    evento.currentTarget.setPointerCapture(evento.pointerId)
+    // No capturar el puntero al iniciar un clic: en escritorio eso puede
+    // retargetear el evento click al contenedor y evitar que se edite la celda.
     arrastreRef.current = {
       activo: true,
       inicioX: evento.clientX,
@@ -68,8 +69,14 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     if (!arrastre.activo || !contenedor) return
     const desplazamiento = evento.clientX - arrastre.inicioX
     if (Math.abs(desplazamiento) > 5) {
-      arrastre.seMovio = true
-      suprimirClickRef.current = true
+      if (!arrastre.seMovio) {
+        arrastre.seMovio = true
+        suprimirClickRef.current = true
+        // Capturar solo después de detectar un arrastre real. Así un clic
+        // normal llega a la celda tanto con mouse como con pantalla táctil.
+        evento.currentTarget.setPointerCapture(evento.pointerId)
+      }
+      evento.preventDefault()
       contenedor.scrollLeft = arrastre.scrollInicial - desplazamiento
     }
   }
