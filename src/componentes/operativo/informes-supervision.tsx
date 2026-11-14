@@ -95,7 +95,7 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
   const [filtroObjetivo, setFiltroObjetivo] = useState('todos')
   const [filtroEstado, setFiltroEstado] = useState('todos')
   // En Administración se separan los informes por el rol real de quien los registró.
-  const [filtroRolCreador, setFiltroRolCreador] = useState<'supervisores' | 'encargados' | 'todos'>('supervisores')
+  const [filtroRolCreador, setFiltroRolCreador] = useState<'supervisores' | 'encargados' | 'todos'>('todos')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [objetivoId, setObjetivoId] = useState('')
   const [vigiladorId, setVigiladorId] = useState('')
@@ -120,7 +120,31 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
       setCargando(false)
       return
     }
-    const lista = (data || []) as Informe[]
+    let lista = (data || []) as Informe[]
+    // El campo rol_creador puede faltar en informes antiguos. Resolver el rol
+    // desde el perfil real del autor evita etiquetar encargados como supervisores.
+    if (lista.length) {
+      const autores = Array.from(new Set(lista.map(informe => informe.id_supervisor).filter(Boolean)))
+      if (autores.length) {
+        const { data: perfilesAutores, error: errorPerfiles } = await supabase
+          .from('perfiles')
+          .select('id, rol, nombre, apellido')
+          .in('id', autores)
+        if (!errorPerfiles && perfilesAutores) {
+          const perfilesPorId = new Map(perfilesAutores.map(perfil => [perfil.id, perfil]))
+          lista = lista.map(informe => {
+            const autor = perfilesPorId.get(informe.id_supervisor)
+            return {
+              ...informe,
+              rol_creador: informe.rol_creador || autor?.rol || null,
+              supervisor_nombre: autor
+                ? (autor.nombre + ' ' + autor.apellido).trim()
+                : informe.supervisor_nombre
+            }
+          })
+        }
+      }
+    }
     setInformes(lista)
     if (lista.length) {
       const { data: acciones, error: errorAcciones } = await supabase.from('informes_supervision_actuaciones').select('*').in('id_informe', lista.map(x => x.id)).order('creado_en', { ascending: true })
@@ -257,14 +281,14 @@ export const InformesSupervision: React.FC<{ tipoInicial?: TipoInforme }> = ({ t
   const informesFiltrados = useMemo(() => informes.filter(informe => {
     const coincideObjetivo = filtroObjetivo === 'todos' || informe.id_objetivo === filtroObjetivo
     const coincideEstado = filtroEstado === 'todos' || informe.estado === filtroEstado
-    const coincideRolCreador = !esAdmin || filtroRolCreador === 'todos' || (filtroRolCreador === 'encargados' ? informe.rol_creador === 'encargado_empresa' : informe.rol_creador !== 'encargado_empresa')
+    const coincideRolCreador = !esAdmin || filtroRolCreador === 'todos' || (filtroRolCreador === 'encargados' ? informe.rol_creador === 'encargado_empresa' : informe.rol_creador === 'supervisor')
     const texto = [informe.nombre_vigilante, informe.supervisor_nombre, informe.descripcion, informe.accion_tomada || '', informe.observaciones || ''].join(' ').toLocaleLowerCase('es-AR')
     return coincideObjetivo && coincideEstado && coincideRolCreador && texto.includes(busqueda.toLocaleLowerCase('es-AR').trim())
   }).filter(informe => !tipoInicial || informe.tipo === tipoInicial), [informes, filtroObjetivo, filtroEstado, filtroRolCreador, busqueda, tipoInicial, esAdmin])
 
   const objetivoNombre = (id: string) => objetivos.find(o => o.id === id)?.nombre || 'Objetivo'
   const actuacionesDe = (id: string) => actuaciones.filter(a => a.id_informe === id)
-  const totalPendientes = informes.filter(i => (!tipoInicial || i.tipo === tipoInicial) && (!esAdmin || filtroRolCreador === 'todos' || (filtroRolCreador === 'encargados' ? i.rol_creador === 'encargado_empresa' : i.rol_creador !== 'encargado_empresa')) && (i.estado === 'registrado' || i.estado === 'pendiente_revision')).length
+  const totalPendientes = informes.filter(i => (!tipoInicial || i.tipo === tipoInicial) && (!esAdmin || filtroRolCreador === 'todos' || (filtroRolCreador === 'encargados' ? i.rol_creador === 'encargado_empresa' : i.rol_creador === 'supervisor')) && (i.estado === 'registrado' || i.estado === 'pendiente_revision')).length
 
   if (!usuario || (!esSupervisor && !esAdmin && !esEncargado)) return null
 
