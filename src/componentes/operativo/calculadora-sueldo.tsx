@@ -198,9 +198,8 @@ export const CalculadoraSueldo: React.FC = () => {
     // El recibo aplica un único descuento del 3% sobre viáticos: sindicato s/AC.
     const netoViaticos = config.viaticos - descuentoSindicatoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
-    const valorHoraNocturna = valorHora + adicionalNocturnoPorHora
     const neto = netoRem + netoViaticos + netoNoRem + config.redondeo
-    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
+    return { adicionalNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
 
   const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
@@ -252,15 +251,11 @@ export const CalculadoraSueldo: React.FC = () => {
           {[
             ['Sueldo básico', config.basico],
             ['Presentismo', config.presentismo],
-            [`Plus nocturno · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
+            [`Horas nocturnas · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
             [`Horas extras al ${config.recargoHorasExtras}% · ${horas.extras.toFixed(2)} hs`, liquidacion.adicionalHorasExtras],
-            ['Valor de una hora diurna', liquidacion.valorHora],
-            ['Valor de una hora nocturna (incluye plus)', liquidacion.valorHoraNocturna],
-            [`Feriado diurno · ${horas.feriadoDiurno.toFixed(2)} hs`, liquidacion.adicionalFeriadoDiurno],
-            [`Feriado nocturno · ${horas.feriadoNocturno.toFixed(2)} hs`, liquidacion.adicionalFeriadoNocturno],
+            [`Feriados · ${(horasFeriado).toFixed(2)} hs`, liquidacion.adicionalFeriado],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
-            ['Redondeo', config.redondeo],
           ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm dark:border-slate-800"><span className="text-slate-600 dark:text-slate-300">{label}</span><strong className="tabular-nums text-slate-900 dark:text-white">{formatoPesos(Number(value))}</strong></div>)}
           <div className="space-y-2 pt-2">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Descuentos estimados</h4>
