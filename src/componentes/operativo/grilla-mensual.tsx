@@ -201,12 +201,14 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const [feriadosNacionalesIgnorados, setFeriadosNacionalesIgnorados] = useState<string[]>([])
   const [feriadosActivos, setFeriadosActivos] = useState<string[]>([])
   const [feriadosSincronizadosCargados, setFeriadosSincronizadosCargados] = useState(false)
+  const [feriadosNacionalesCargados, setFeriadosNacionalesCargados] = useState(false)
+  const [feriadosLocalesCargados, setFeriadosLocalesCargados] = useState(false)
   const claveFeriadosIgnorados = `gsp-feriados-nacionales-ignorados:${claveFeriadosManuales}`
 
   useEffect(() => {
     let cancelado = false
     cargarFeriadosArgentina(anioSeleccionado).then((feriados) => {
-      if (!cancelado) setFeriadosNacionales(feriados)
+      if (!cancelado) { setFeriadosNacionales(feriados); setFeriadosNacionalesCargados(true) }
     })
     return () => { cancelado = true }
   }, [anioSeleccionado])
@@ -222,6 +224,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     } catch {
       setFeriadosNacionalesIgnorados([])
     }
+    setFeriadosLocalesCargados(true)
   }, [claveFeriadosManuales, claveFeriadosIgnorados, objetivoActual?.id_empresa, objetivoSeleccionado])
 
   const alternarFeriadoNacional = (fecha: string) => {
@@ -251,6 +254,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   useEffect(() => {
     let cancelado = false
     setFeriadosSincronizadosCargados(false)
+    if (!feriadosNacionalesCargados || !feriadosLocalesCargados) return
     const cargar = async () => {
       if (!objetivoSeleccionado || !objetivoActual?.id_empresa) return
       const mesFecha = `${mesSeleccionado}-01`
@@ -274,7 +278,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     }
     void cargar()
     return () => { cancelado = true }
-  }, [objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, feriadosNacionales])
+  }, [objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, feriadosNacionales, feriadosNacionalesCargados, feriadosLocalesCargados, feriadosNacionalesIgnorados, feriadosManuales])
 
   useEffect(() => {
     if (!feriadosSincronizadosCargados || !objetivoSeleccionado || !objetivoActual?.id_empresa) return
