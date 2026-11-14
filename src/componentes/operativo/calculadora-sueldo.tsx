@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Calculator, CalendarDays, Moon, Sun, Settings2, ChevronDown } from 'lucide-react'
+import { Calculator, CalendarDays, Moon, Sun, Settings2, ChevronDown, Save } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
@@ -90,22 +90,33 @@ export const CalculadoraSueldo: React.FC = () => {
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
+  const [cambiosPendientes, setCambiosPendientes] = useState(false)
 
+  // Cada mes conserva su propia configuración salarial. Los cambios solo se persisten al pulsar Guardar.
   useEffect(() => {
-    const guardado = window.localStorage.getItem('gsp-calculadora-sueldo-config')
-    if (guardado) {
-      try {
-        const guardadoParseado = JSON.parse(guardado)
-        // Compatibilidad con la versión anterior: 20% del valor hora equivale al 0,10% del básico con divisor 200.
-        if (guardadoParseado.porcentajeNocturno === 20) guardadoParseado.porcentajeNocturno = 0.1
-        setConfig({ ...CONFIG_INICIAL, ...guardadoParseado })
-      } catch { /* conserva valores iniciales */ }
+    const claveMensual = `gsp-calculadora-sueldo-config-${mes}`
+    const guardadoMensual = window.localStorage.getItem(claveMensual)
+    try {
+      if (guardadoMensual) {
+        const valores = JSON.parse(guardadoMensual)
+        if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
+        setConfig({ ...CONFIG_INICIAL, ...valores })
+      } else {
+        // Migra la configuración anterior únicamente al mes actual, sin copiarla a meses históricos o futuros.
+        const legado = mes === fechaLocal(new Date()) ? window.localStorage.getItem('gsp-calculadora-sueldo-config') : null
+        if (legado) {
+          const valores = JSON.parse(legado)
+          if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
+          setConfig({ ...CONFIG_INICIAL, ...valores })
+        } else {
+          setConfig(CONFIG_INICIAL)
+        }
+      }
+    } catch {
+      setConfig(CONFIG_INICIAL)
     }
-  }, [])
-
-  useEffect(() => {
-    window.localStorage.setItem('gsp-calculadora-sueldo-config', JSON.stringify(config))
-  }, [config])
+    setCambiosPendientes(false)
+  }, [mes])
 
   const mesesDisponibles = useMemo(() => {
     const lista = new Set(turnos.filter(t => t.id_vigilador === usuario?.id).map(t => t.fecha.slice(0, 7)))
@@ -206,6 +217,12 @@ export const CalculadoraSueldo: React.FC = () => {
 
   const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
     setConfig(actual => ({ ...actual, [campo]: Math.max(0, Number(valor) || 0) }))
+    setCambiosPendientes(true)
+  }
+
+  const guardarConfiguracion = () => {
+    window.localStorage.setItem(`gsp-calculadora-sueldo-config-${mes}`, JSON.stringify(config))
+    setCambiosPendientes(false)
   }
 
   const nombreMes = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)) - 1, 1))
@@ -298,6 +315,10 @@ export const CalculadoraSueldo: React.FC = () => {
               ['descuentoObraSocialNoRemunerativo', 'Obra social no remunerativa (%)'],
               ['redondeo', 'Redondeo del recibo ($)'],
             ] as [keyof ConfiguracionSalarial, string][]).map(([campo, etiqueta]) => <label key={campo} className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300"><span>{etiqueta}</span><input type="number" min="0" step="any" value={config[campo]} onChange={e => actualizar(campo, e.target.value)} className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white" /></label>)}
+            <div className="sm:col-span-2 flex flex-col gap-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Configuración correspondiente a {nombreMes}. {cambiosPendientes ? 'Tenés cambios sin guardar.' : 'Todos los cambios están guardados.'}</p>
+              <button type="button" onClick={guardarConfiguracion} disabled={!cambiosPendientes} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-4 w-4" />Guardar cambios</button>
+            </div>
             <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en este dispositivo. Las horas extras se calculan automáticamente sobre el total mensual trabajado: toda hora que supere las 200 horas se liquida con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
           </div>}
         </TarjetaContenido>
