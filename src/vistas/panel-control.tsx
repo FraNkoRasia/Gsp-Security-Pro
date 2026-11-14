@@ -96,7 +96,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'inicioSupervisor', label: 'Inicio', icono: <Shield className="w-4 h-4" /> },
         { id: 'personalSupervisor', label: 'Personal', icono: <Users className="w-4 h-4" /> },
         { id: 'grillaSupervisor', label: 'Grilla', icono: <Calendar className="w-4 h-4" /> },
-        { id: 'informesSupervision', label: 'Informes', icono: <FileText className="w-4 h-4" /> },
+        { id: 'informesSupervision', label: 'Informes Operativos', icono: <FileText className="w-4 h-4" /> },
         { id: 'novedadesSupervisor', label: 'Novedades', icono: <BookOpen className="w-4 h-4" /> },
         { id: 'supervisiones', label: 'Supervisiones', icono: <Shield className="w-4 h-4" /> }
       ]
@@ -105,7 +105,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'asistenciaPersonal', label: 'Asistencia', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'personal', label: 'Personal', icono: <UserRoundPlus className="w-4 h-4" /> },
         { id: 'categorias', label: 'Categorías', icono: <Tags className="w-4 h-4" /> },
-        { id: 'informesSupervision', label: 'Informes', icono: <ClipboardCheck className="w-4 h-4" /> }
+        { id: 'informesSupervision', label: 'Informes Operativos', icono: <ClipboardCheck className="w-4 h-4" /> }
       ]
     : esAdmin
     ? [
