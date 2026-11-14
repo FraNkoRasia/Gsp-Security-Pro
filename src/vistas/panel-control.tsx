@@ -113,7 +113,7 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'vigiladores', label: 'Vigiladores', icono: <Users className="w-4 h-4" /> },
         { id: 'encargados', label: 'Encargados', icono: <Users className="w-4 h-4" /> },
         { id: 'supervisores', label: 'Supervisores', icono: <Shield className="w-4 h-4" /> },
-        { id: 'informesSupervision', label: 'Informes de Supervisión', icono: <ClipboardCheck className="w-4 h-4" /> },
+        { id: 'informesSupervision', label: 'Informes Operativos', icono: <ClipboardCheck className="w-4 h-4" /> },
         { id: 'novedades', label: 'Libro de Novedades', contador: novedadesNoLeidas, icono: <BookOpen className="w-4 h-4" /> },
         { id: 'cambios', label: 'Cambios y Reemplazos', contador: solicitudesCambioNoLeidas, icono: <ArrowRightLeft className="w-4 h-4" /> },
         { id: 'avisos', label: 'Avisos', contador: avisosNoLeidos, icono: <Bell className="w-4 h-4" /> },
