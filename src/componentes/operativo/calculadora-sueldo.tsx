@@ -13,6 +13,9 @@ type ConfiguracionSalarial = {
   viaticos: number
   noRemunerativo: number
   divisorHora: number
+  limiteHorasMensuales: number
+  recargoHoraExtra: number
+  recargoHoraExtraDomingoFeriado: number
   porcentajeNocturno: number
   recargoFeriado: number
   descuentoRemunerativo: number
@@ -26,6 +29,9 @@ const CONFIG_INICIAL: ConfiguracionSalarial = {
   viaticos: 545000,
   noRemunerativo: 70000,
   divisorHora: 200,
+  limiteHorasMensuales: 200,
+  recargoHoraExtra: 50,
+  recargoHoraExtraDomingoFeriado: 100,
   porcentajeNocturno: 0.1,
   recargoFeriado: 100,
   descuentoRemunerativo: 20,
@@ -139,15 +145,52 @@ export const CalculadoraSueldo: React.FC = () => {
     return () => { cancelado = true }
   }, [turnosMes, mes])
 
-  const horas = useMemo(() => turnosMes.reduce((total, turno) => {
-    const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
-    total.diurnas += parte.diurnos
-    total.nocturnas += parte.nocturnos
-    total.feriadoDiurno += parte.feriadoDiurno
-    total.feriadoNocturno += parte.feriadoNocturno
-    total.extras += Number(turno.horas_extra || 0)
-    return total
-  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
+  // Distribuye cronológicamente las horas del mes: las primeras 200 son
+  // horas de jornada y cada minuto posterior se clasifica como extra.
+  // La clasificación diurna/nocturna y feriado se conserva minuto a minuto.
+  const horas = useMemo(() => {
+    const resultado = { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, extras: 0, extras50: 0, extras100: 0, extrasDiurnas: 0, extrasNocturnas: 0, extrasFeriadoDiurno: 0, extrasFeriadoNocturno: 0 }
+    const limiteMinutos = Math.max(0, config.limiteHorasMensuales) * 60
+    let minutosAcumulados = 0
+    const intervalos = turnosMes.map(turno => {
+      const intervalo = obtenerIntervaloTurno(turno)
+      return { turno, inicio: intervalo.inicio, fin: intervalo.fin }
+    }).sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
+
+    for (const intervalo of intervalos) {
+      const feriados = feriadosPorObjetivo[intervalo.turno.id_objetivo] || {}
+      for (let cursor = intervalo.inicio.getTime(); cursor < intervalo.fin.getTime(); cursor += 60000) {
+        const fecha = new Date(cursor)
+        const hora = fecha.getHours()
+        const esNocturna = hora >= 21 || hora < 6
+        const esFeriado = Object.prototype.hasOwnProperty.call(feriados, fechaClave(fecha))
+        const esDomingo = fecha.getDay() === 0
+        const esExtra = minutosAcumulados >= limiteMinutos
+        minutosAcumulados++
+
+        if (esNocturna) resultado.nocturnas++
+        else resultado.diurnas++
+        if (esFeriado) {
+          if (esNocturna) resultado.feriadoNocturno++
+          else resultado.feriadoDiurno++
+        }
+        if (esExtra) {
+          resultado.extras++
+          if (esNocturna) resultado.extrasNocturnas++
+          else resultado.extrasDiurnas++
+          if (esFeriado) {
+            if (esNocturna) resultado.extrasFeriadoNocturno++
+            else resultado.extrasFeriadoDiurno++
+          }
+          if (esDomingo || esFeriado) resultado.extras100++
+          else resultado.extras50++
+        }
+      }
+    }
+
+    for (const clave of Object.keys(resultado) as (keyof typeof resultado)[]) resultado[clave] /= 60
+    return resultado
+  }, [turnosMes, feriadosPorObjetivo, config.limiteHorasMensuales])
 
   const horasFeriado = horas.feriadoDiurno + horas.feriadoNocturno
 
@@ -159,7 +202,12 @@ export const CalculadoraSueldo: React.FC = () => {
     const adicionalFeriadoDiurno = horas.feriadoDiurno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriadoNocturno = horas.feriadoNocturno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriado = adicionalFeriadoDiurno + adicionalFeriadoNocturno
-    const remunerativo = config.basico + config.presentismo + adicionalNocturno + adicionalFeriado
+    // Las extras se abonan además del sueldo mensual: hora base completa
+    // más el recargo correspondiente (50% común / 100% domingo o feriado).
+    const adicionalHorasExtras = horas.extras * valorHora
+      + horas.extras50 * valorHora * (config.recargoHoraExtra / 100)
+      + horas.extras100 * valorHora * (config.recargoHoraExtraDomingoFeriado / 100)
+    const remunerativo = config.basico + config.presentismo + adicionalNocturno + adicionalFeriado + adicionalHorasExtras
     const descuentoRem = remunerativo * config.descuentoRemunerativo / 100
     const descuentoViaticos = config.viaticos * config.descuentoViaticos / 100
     const descuentoNoRem = config.noRemunerativo * config.descuentoNoRemunerativo / 100
@@ -167,7 +215,7 @@ export const CalculadoraSueldo: React.FC = () => {
     const netoViaticos = config.viaticos - descuentoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
     const valorHoraNocturna = valorHora * (1 + config.porcentajeNocturno / 100)
-    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, remunerativo, descuentoRem, descuentoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto: netoRem + netoViaticos + netoNoRem }
+    return { valorHora, valorHoraNocturna, adicionalNocturno, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalFeriado, adicionalHorasExtras, remunerativo, descuentoRem, descuentoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto: netoRem + netoViaticos + netoNoRem }
   }, [config, horas])
 
   const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
@@ -208,6 +256,7 @@ export const CalculadoraSueldo: React.FC = () => {
           { label: 'Horas diurnas', value: formatoHoras(horas.diurnas), icon: <Sun className="h-4 w-4 text-amber-500" /> },
           { label: 'Horas nocturnas', value: formatoHoras(horas.nocturnas), icon: <Moon className="h-4 w-4 text-blue-500" /> },
           { label: 'Horas feriado', value: formatoHoras(horasFeriado), icon: <CalendarDays className="h-4 w-4 text-amber-600" /> },
+          { label: 'Horas extras', value: formatoHoras(horas.extras), icon: <CalendarDays className="h-4 w-4 text-rose-500" /> },
         ].map(item => <Tarjeta key={item.label}><TarjetaContenido className="p-3"><div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">{item.icon}{item.label}</div><p className="mt-2 text-lg font-black tabular-nums text-slate-900 dark:text-white">{item.value}</p></TarjetaContenido></Tarjeta>)}
       </div>
 
@@ -220,6 +269,8 @@ export const CalculadoraSueldo: React.FC = () => {
             [`Plus nocturno · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
             ['Valor de una hora diurna', liquidacion.valorHora],
             ['Valor de una hora nocturna (incluye plus)', liquidacion.valorHoraNocturna],
+            [`Horas extras al 50% · ${horas.extras50.toFixed(2)} hs`, horas.extras50 * liquidacion.valorHora * (1 + config.recargoHoraExtra / 100)],
+            [`Horas extras al 100% · ${horas.extras100.toFixed(2)} hs`, horas.extras100 * liquidacion.valorHora * (1 + config.recargoHoraExtraDomingoFeriado / 100)],
             [`Feriado diurno · ${horas.feriadoDiurno.toFixed(2)} hs`, liquidacion.adicionalFeriadoDiurno],
             [`Feriado nocturno · ${horas.feriadoNocturno.toFixed(2)} hs`, liquidacion.adicionalFeriadoNocturno],
             ['Viáticos', config.viaticos],
@@ -250,6 +301,9 @@ export const CalculadoraSueldo: React.FC = () => {
               ['viaticos', 'Viáticos'],
               ['noRemunerativo', 'Suma no remunerativa'],
               ['divisorHora', 'Divisor para valor hora'],
+              ['limiteHorasMensuales', 'Límite mensual de horas'],
+              ['recargoHoraExtra', 'Recargo hora extra común (%)'],
+              ['recargoHoraExtraDomingoFeriado', 'Recargo hora extra domingo/feriado (%)'],
               ['porcentajeNocturno', 'Plus nocturno (%) por hora'],
               ['recargoFeriado', 'Recargo feriado (%)'],
               ['descuentoRemunerativo', 'Descuentos remunerativos (%)'],
