@@ -112,7 +112,7 @@ export const CalculadoraSueldo: React.FC = () => {
         setFeriadosPorObjetivo({})
         return
       }
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('feriados_grilla_objetivo')
         .select('id_objetivo, fechas')
         .in('id_objetivo', idsObjetivos)
