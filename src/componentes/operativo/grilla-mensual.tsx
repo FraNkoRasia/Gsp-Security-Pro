@@ -50,6 +50,10 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const suprimirClickRef = useRef(false)
 
   const iniciarArrastre = (evento: React.PointerEvent<HTMLDivElement>) => {
+    // El arrastre por puntero se reserva para pantallas táctiles.
+    // En escritorio el mouse debe poder hacer clic en cada celda sin que
+    // un pequeño movimiento del cursor convierta el clic en un arrastre.
+    if (evento.pointerType !== 'touch') return
     if (evento.button !== 0) return
     const contenedor = contenedorDesplazamientoRef.current
     if (!contenedor) return
