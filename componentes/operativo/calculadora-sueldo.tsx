@@ -139,6 +139,25 @@ export const CalculadoraSueldo: React.FC = () => {
   // exactamente el respaldo local/nacional que utiliza la cabecera de la grilla.
   // También consulta el mes de finalización para turnos que cruzan de mes.
   const [feriadosPorObjetivo, setFeriadosPorObjetivo] = useState<Record<string, Record<string, string>>>({})
+  const [revisionFeriados, setRevisionFeriados] = useState(0)
+
+  // La grilla puede actualizar feriados mientras esta pantalla sigue montada.
+  // Escuchamos ese cambio para volver a leer la misma selección activa.
+  useEffect(() => {
+    const actualizarFeriados = () => setRevisionFeriados(actual => actual + 1)
+    window.addEventListener('gsp-feriados-grilla-actualizados', actualizarFeriados)
+    window.addEventListener('focus', actualizarFeriados)
+    const actualizarAlVolver = () => {
+      if (document.visibilityState === 'visible') actualizarFeriados()
+    }
+    document.addEventListener('visibilitychange', actualizarAlVolver)
+    return () => {
+      window.removeEventListener('gsp-feriados-grilla-actualizados', actualizarFeriados)
+      window.removeEventListener('focus', actualizarFeriados)
+      document.removeEventListener('visibilitychange', actualizarAlVolver)
+    }
+  }, [])
+
   useEffect(() => {
     let cancelado = false
     const cargar = async () => {
@@ -227,7 +246,7 @@ export const CalculadoraSueldo: React.FC = () => {
 
     void cargar()
     return () => { cancelado = true }
-  }, [turnosMes, mes])
+  }, [turnosMes, mes, revisionFeriados])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
     const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
