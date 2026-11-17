@@ -92,62 +92,61 @@ export const CalculadoraSueldo: React.FC = () => {
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
   const [cambiosPendientes, setCambiosPendientes] = useState(false)
 
-  // Cada mes conserva su propia configuración. Si todavía no tiene una,
-  // hereda los últimos valores guardados en un mes anterior, sin modificarlos.
+  // La configuración salarial se consulta siempre en Supabase.
+  // Si el mes no tiene una fila propia, hereda la última configuración anterior.
   useEffect(() => {
-    const prefijo = 'gsp-calculadora-sueldo-config-'
-    const claveMensual = `${prefijo}${mes}`
-    try {
-      const guardadoMensual = window.localStorage.getItem(claveMensual)
-      if (guardadoMensual) {
-        const valores = JSON.parse(guardadoMensual)
-        if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
-        setConfig({ ...CONFIG_INICIAL, ...valores })
-      } else {
-        // Conserva una configuración antigua del mes actual si existía antes
-        // de implementar el guardado mensual.
-        const legado = mes === fechaLocal(new Date())
-          ? window.localStorage.getItem('gsp-calculadora-sueldo-config')
-          : null
-
-        if (legado) {
-          const valores = JSON.parse(legado)
-          if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
-          setConfig({ ...CONFIG_INICIAL, ...valores })
-        } else {
-          // Busca el mes anterior más cercano que tenga valores guardados.
-          // La comparación YYYY-MM permite ordenar los meses cronológicamente.
-          const mesesGuardados: string[] = []
-          for (let indice = 0; indice < window.localStorage.length; indice++) {
-            const clave = window.localStorage.key(indice)
-            if (!clave?.startsWith(prefijo)) continue
-            const mesGuardado = clave.slice(prefijo.length)
-            if (/^\d{4}-\d{2}$/.test(mesGuardado) && mesGuardado < mes) {
-              mesesGuardados.push(mesGuardado)
-            }
-          }
-          mesesGuardados.sort((a, b) => b.localeCompare(a))
-
-          const mesAnterior = mesesGuardados[0]
-          const valoresAnteriores = mesAnterior
-            ? window.localStorage.getItem(`${prefijo}${mesAnterior}`)
-            : null
-
-          if (valoresAnteriores) {
-            const valores = JSON.parse(valoresAnteriores)
-            if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
-            setConfig({ ...CONFIG_INICIAL, ...valores })
-          } else {
-            setConfig(CONFIG_INICIAL)
-          }
-        }
+    let cancelado = false
+    const cargarConfiguracion = async () => {
+      if (!usuario?.id_empresa) {
+        setConfig(CONFIG_INICIAL)
+        setCambiosPendientes(false)
+        return
       }
-    } catch (error) {
-      console.error('No se pudo cargar la configuración salarial del mes:', error)
-      setConfig(CONFIG_INICIAL)
+
+      try {
+        const { data: configuracionMensual, error: errorMensual } = await supabase
+          .from('configuraciones_salariales_mensuales')
+          .select('valores')
+          .eq('id_empresa', usuario.id_empresa)
+          .eq('mes', `${mes}-01`)
+          .maybeSingle()
+
+        if (errorMensual) throw errorMensual
+
+        let valoresGuardados = configuracionMensual?.valores as Partial<ConfiguracionSalarial> | null
+
+        if (!valoresGuardados) {
+          const { data: configuracionAnterior, error: errorAnterior } = await supabase
+            .from('configuraciones_salariales_mensuales')
+            .select('valores')
+            .eq('id_empresa', usuario.id_empresa)
+            .lt('mes', `${mes}-01`)
+            .order('mes', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (errorAnterior) throw errorAnterior
+          valoresGuardados = configuracionAnterior?.valores as Partial<ConfiguracionSalarial> | null
+        }
+
+        if (cancelado) return
+        const valores = { ...CONFIG_INICIAL, ...(valoresGuardados || {}) }
+        if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
+        setConfig(valores)
+      } catch (error) {
+        console.error('No se pudo cargar la configuración salarial desde Supabase:', error)
+        if (!cancelado) {
+          setConfig(CONFIG_INICIAL)
+          window.alert('No se pudieron cargar los valores salariales desde la base de datos. Verificá tu conexión e intentá nuevamente.')
+        }
+      } finally {
+        if (!cancelado) setCambiosPendientes(false)
+      }
     }
-    setCambiosPendientes(false)
-  }, [mes])
+
+    void cargarConfiguracion()
+    return () => { cancelado = true }
+  }, [mes, usuario?.id_empresa])
 
   const mesesDisponibles = useMemo(() => {
     const lista = new Set(turnos.filter(t => t.id_vigilador === usuario?.id).map(t => t.fecha.slice(0, 7)))
@@ -260,8 +259,28 @@ export const CalculadoraSueldo: React.FC = () => {
     setCambiosPendientes(true)
   }
 
-  const guardarConfiguracion = () => {
-    window.localStorage.setItem(`gsp-calculadora-sueldo-config-${mes}`, JSON.stringify(config))
+  const guardarConfiguracion = async () => {
+    if (!usuario?.id_empresa) {
+      window.alert('No se pudo identificar la empresa para guardar los valores salariales.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('configuraciones_salariales_mensuales')
+      .upsert({
+        id_empresa: usuario.id_empresa,
+        mes: `${mes}-01`,
+        valores: config,
+        actualizado_por: usuario.id,
+        actualizado_en: new Date().toISOString(),
+      }, { onConflict: 'id_empresa,mes' })
+
+    if (error) {
+      console.error('No se pudieron guardar los valores salariales:', error)
+      window.alert('No se pudieron guardar los valores salariales en la base de datos.')
+      return
+    }
+
     setCambiosPendientes(false)
   }
 
@@ -369,7 +388,7 @@ export const CalculadoraSueldo: React.FC = () => {
               <p className="text-xs text-slate-500 dark:text-slate-400">Configuración correspondiente a {nombreMes}. {cambiosPendientes ? 'Tenés cambios sin guardar.' : 'Todos los cambios están guardados.'}</p>
               <button type="button" onClick={guardarConfiguracion} disabled={!cambiosPendientes} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-4 w-4" />Guardar cambios</button>
             </div>
-            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en este dispositivo. Las horas extras se calculan automáticamente sobre el total mensual trabajado: toda hora que supere las 200 horas se liquida con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
+            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en la base de datos. Las horas extras se calculan automáticamente sobre el total mensual trabajado: toda hora que supere las 200 horas se liquida con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
           </div>}
         </TarjetaContenido>
       </Tarjeta>
