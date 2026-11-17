@@ -844,7 +844,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
       </Dialogo>
 
       <Dialogo abierto={modalCambiosSinGuardar} alCerrar={() => setModalCambiosSinGuardar(false)} titulo="Hay cambios sin guardar" tamano="medio">
-        <div className="space-y-4"><p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Si salís ahora, se perderán los cambios que hiciste en esta grilla.</p><div className="flex justify-end gap-2"><Boton variante="secundario" onClick={() => { setModalCambiosSinGuardar(false); setMesPendiente(null) }}>Seguir editando</Boton><Boton variante="peligro" onClick={() => { setBorradores({}); setModalCambiosSinGuardar(false); if (mesPendiente) setMesSeleccionado(mesPendiente); setMesPendiente(null); }}>Descartar cambios</Boton></div></div>
+        <div className="space-y-4"><p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Si salís ahora, se perderán los cambios que hiciste en esta grilla.</p><div className="flex justify-end gap-2"><Boton variante="secundario" onClick={() => { setModalCambiosSinGuardar(false); setMesPendiente(null) }}>Seguir editando</Boton><Boton variante="peligro" onClick={() => { setBorradores({}); setFeriadosActivos([...feriadosGuardados]); setModalCambiosSinGuardar(false); if (mesPendiente) setMesSeleccionado(mesPendiente); setMesPendiente(null); }}>Descartar cambios</Boton></div></div>
       </Dialogo>
 
       {/* Modal Interactivo de Asignación / Edición de Celda de Turno */}
