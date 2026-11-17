@@ -115,6 +115,11 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const [cargandoEstadoGrilla, setCargandoEstadoGrilla] = useState(true)
   const [borradores, setBorradores] = useState<Record<string, OperacionGrilla>>({})
   const [guardandoCambios, setGuardandoCambios] = useState(false)
+  const [feriadosActivos, setFeriadosActivos] = useState<string[]>([])
+  const [feriadosGuardados, setFeriadosGuardados] = useState<string[]>([])
+  const hayCambiosFeriadosPendientes = JSON.stringify(feriadosActivos) !== JSON.stringify(feriadosGuardados)
+  const hayCambiosPendientes = hayCambiosTurnosPendientes || hayCambiosFeriadosPendientes
+  useEffect(() => { onCambiosPendientesChange?.(hayCambiosPendientes) }, [hayCambiosPendientes, onCambiosPendientesChange])
   const [modalPrimeraCreacion, setModalPrimeraCreacion] = useState(false)
   const [modalCambiosSinGuardar, setModalCambiosSinGuardar] = useState(false)
   const [mesPendiente, setMesPendiente] = useState<string | null>(null)
@@ -196,21 +201,13 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   // Los feriados se administran exclusivamente desde esta grilla y se comparten
   // mediante Supabase por objetivo y mes. No se consultan calendarios automáticos
   // ni almacenamiento local para decidir qué fecha es feriado.
-  const [feriadosActivos, setFeriadosActivos] = useState<string[]>([])
-  const [feriadosGuardados, setFeriadosGuardados] = useState<string[]>([])
-  const [feriadosSincronizadosCargados, setFeriadosSincronizadosCargados] = useState(false)
-  const hayCambiosFeriadosPendientes = JSON.stringify(feriadosActivos) !== JSON.stringify(feriadosGuardados)
-  const hayCambiosPendientes = hayCambiosTurnosPendientes || hayCambiosFeriadosPendientes
-  useEffect(() => { onCambiosPendientesChange?.(hayCambiosPendientes) }, [hayCambiosPendientes, onCambiosPendientesChange])
 
   useEffect(() => {
     let cancelado = false
-    setFeriadosSincronizadosCargados(false)
     setFeriadosActivos([])
     setFeriadosGuardados([])
     const cargar = async () => {
       if (!objetivoSeleccionado || !objetivoActual?.id_empresa) {
-        setFeriadosSincronizadosCargados(true)
         return
       }
       const { data, error } = await (supabase as any)
@@ -229,7 +226,6 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
         setFeriadosActivos(fechasGuardadas)
         setFeriadosGuardados(fechasGuardadas)
       }
-      setFeriadosSincronizadosCargados(true)
     }
     void cargar()
     return () => { cancelado = true }
