@@ -117,11 +117,16 @@ export const CalculadoraSueldo: React.FC = () => {
         } else {
           // Busca el mes anterior más cercano que tenga valores guardados.
           // La comparación YYYY-MM permite ordenar los meses cronológicamente.
-          const mesesGuardados = Object.keys(window.localStorage)
-            .filter(clave => clave.startsWith(prefijo))
-            .map(clave => clave.slice(prefijo.length))
-            .filter(mesGuardado => /^\\d{4}-\\d{2}$/.test(mesGuardado) && mesGuardado < mes)
-            .sort((a, b) => b.localeCompare(a))
+          const mesesGuardados: string[] = []
+          for (let indice = 0; indice < window.localStorage.length; indice++) {
+            const clave = window.localStorage.key(indice)
+            if (!clave?.startsWith(prefijo)) continue
+            const mesGuardado = clave.slice(prefijo.length)
+            if (/^\d{4}-\d{2}$/.test(mesGuardado) && mesGuardado < mes) {
+              mesesGuardados.push(mesGuardado)
+            }
+          }
+          mesesGuardados.sort((a, b) => b.localeCompare(a))
 
           const mesAnterior = mesesGuardados[0]
           const valoresAnteriores = mesAnterior
