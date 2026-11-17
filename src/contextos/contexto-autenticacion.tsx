@@ -120,24 +120,32 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
 
     inicializarSesion()
 
-    const { data: listener } = clienteSupabase.auth.onAuthStateChange(async (_evento, session) => {
+    const { data: listener } = clienteSupabase.auth.onAuthStateChange((evento, session) => {
       if (!activo) return
 
-      try {
-        if (!session?.user) {
-          setUsuario(null)
-          return
-        }
-
-        const perfil = await cargarPerfil(session.user)
-        if (activo) setUsuario(perfil)
-      } catch (err) {
-        console.error('Error al actualizar sesión:', err)
-        if (activo) {
-          setUsuario(null)
-          setErrorAuth(err instanceof Error ? err.message : 'No se pudo cargar el perfil.')
-        }
+      // Solo un cierre de sesión explícito debe quitar inmediatamente al usuario.
+      // La inicialización/renovación puede emitir eventos sin sesión durante una
+      // transición breve; no debemos confundirlos con un logout real.
+      if (!session?.user) {
+        if (evento === 'SIGNED_OUT') setUsuario(null)
+        return
       }
+
+      // No ejecutar consultas de perfil dentro del callback de Auth.
+      // Se difiere el trabajo para no bloquear el procesamiento de eventos/token refresh.
+      window.setTimeout(() => {
+        void cargarPerfil(session.user).then(perfil => {
+          if (activo) {
+            setUsuario(perfil)
+            setErrorAuth(null)
+          }
+        }).catch(err => {
+          console.error('Error al actualizar el perfil de sesión:', err)
+          // Mantener la sesión visual actual ante errores temporales de red/Auth.
+          // Los errores definitivos de perfil se informan, pero no se simula un logout.
+          if (activo) setErrorAuth(err instanceof Error ? err.message : 'No se pudo cargar el perfil.')
+        })
+      }, 0)
     })
 
     // Revalidar el perfil al volver a la pestaña y periódicamente. Esto permite
@@ -177,10 +185,22 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
           setErrorAuth(null)
         }
       } catch (err) {
+        const mensaje = err instanceof Error ? err.message : 'No se pudo validar el perfil.'
+        // getUser puede devolver Auth session missing durante una renovación o
+        // una carrera temporal. No equivale a que el usuario haya cerrado sesión.
+        const sesionTemporalmenteNoDisponible =
+          /auth session missing|session missing|session_not_found|AuthSessionMissingError/i.test(mensaje)
+
+        if (sesionTemporalmenteNoDisponible) {
+          console.warn('Revalidación temporal sin sesión disponible; se conserva el acceso actual:', mensaje)
+          return
+        }
+
         console.error('Error al revalidar el perfil:', err)
         if (activo) {
-          setUsuario(null)
-          setErrorAuth(err instanceof Error ? err.message : 'No se pudo validar el perfil.')
+          // No expulsar al usuario por fallos transitorios de consulta del perfil.
+          // El cierre real se procesa mediante el evento SIGNED_OUT.
+          setErrorAuth(mensaje)
         }
       }
     }
