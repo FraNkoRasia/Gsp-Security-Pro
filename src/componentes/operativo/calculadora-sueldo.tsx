@@ -119,7 +119,7 @@ export const CalculadoraSueldo: React.FC = () => {
           const { data: configuracionAnterior, error: errorAnterior } = await supabase
             .from('configuraciones_salariales_mensuales')
             .select('valores')
-            .eq('id_empresa', usuario.id)
+            .eq('id_usuario', usuario.id)
             .lt('mes', `${mes}-01`)
             .order('mes', { ascending: false })
             .limit(1)
@@ -261,7 +261,7 @@ export const CalculadoraSueldo: React.FC = () => {
 
   const guardarConfiguracion = async () => {
     if (!usuario?.id) {
-      window.alert('No se pudo identificar la empresa para guardar los valores salariales.')
+      window.alert('No se pudo identificar el usuario para guardar los valores salariales.')
       return
     }
 
