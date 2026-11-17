@@ -114,12 +114,13 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const [grillasVigiladoresCreadas, setGrillasVigiladoresCreadas] = useState<string[]>([])
   const [cargandoEstadoGrilla, setCargandoEstadoGrilla] = useState(true)
   const [borradores, setBorradores] = useState<Record<string, OperacionGrilla>>({})
+  const [guardandoCambios, setGuardandoCambios] = useState(false)
   const [modalPrimeraCreacion, setModalPrimeraCreacion] = useState(false)
   const [modalCambiosSinGuardar, setModalCambiosSinGuardar] = useState(false)
   const [mesPendiente, setMesPendiente] = useState<string | null>(null)
   const [avisoBloqueo, setAvisoBloqueo] = useState('')
   const [errorGuardado, setErrorGuardado] = useState('')
-  const hayCambiosPendientes = Object.keys(borradores).length > 0
+  const hayCambiosTurnosPendientes = Object.keys(borradores).length > 0
   useEffect(() => { onCambiosPendientesChange?.(hayCambiosPendientes) }, [hayCambiosPendientes, onCambiosPendientesChange])
   useEffect(() => {
     let cancelado = false
@@ -197,12 +198,16 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   // mediante Supabase por objetivo y mes. No se consultan calendarios automáticos
   // ni almacenamiento local para decidir qué fecha es feriado.
   const [feriadosActivos, setFeriadosActivos] = useState<string[]>([])
+  const [feriadosGuardados, setFeriadosGuardados] = useState<string[]>([])
   const [feriadosSincronizadosCargados, setFeriadosSincronizadosCargados] = useState(false)
+  const hayCambiosFeriadosPendientes = JSON.stringify(feriadosActivos) !== JSON.stringify(feriadosGuardados)
+  const hayCambiosPendientes = hayCambiosTurnosPendientes || hayCambiosFeriadosPendientes
 
   useEffect(() => {
     let cancelado = false
     setFeriadosSincronizadosCargados(false)
     setFeriadosActivos([])
+    setFeriadosGuardados([])
     const cargar = async () => {
       if (!objetivoSeleccionado || !objetivoActual?.id_empresa) {
         setFeriadosSincronizadosCargados(true)
@@ -218,37 +223,17 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
       if (error) {
         console.error('No se pudieron cargar los feriados configurados en la grilla:', error)
         setFeriadosActivos([])
+        setFeriadosGuardados([])
       } else {
-        const fechasGuardadas = Array.isArray(data?.fechas) ? data.fechas as string[] : []
-        setFeriadosActivos([...new Set(fechasGuardadas.map(fecha => String(fecha).slice(0, 10)))].sort())
+        const fechasGuardadas = [...new Set((Array.isArray(data?.fechas) ? data.fechas as string[] : []).map(fecha => String(fecha).slice(0, 10)))].sort()
+        setFeriadosActivos(fechasGuardadas)
+        setFeriadosGuardados(fechasGuardadas)
       }
       setFeriadosSincronizadosCargados(true)
     }
     void cargar()
     return () => { cancelado = true }
   }, [objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado])
-
-  useEffect(() => {
-    if (!feriadosSincronizadosCargados || !objetivoSeleccionado || !objetivoActual?.id_empresa) return
-    if (usuario?.rol !== 'administrador' && usuario?.rol !== 'super_administrador') return
-    let cancelado = false
-    const guardar = async () => {
-      const { error } = await (supabase as any).from('feriados_grilla_objetivo').upsert({
-        id_objetivo: objetivoSeleccionado,
-        id_empresa: objetivoActual.id_empresa,
-        mes: `${mesSeleccionado}-01`,
-        fechas: feriadosActivos,
-        actualizado_en: new Date().toISOString(),
-        actualizado_por: usuario?.id || null,
-      }, { onConflict: 'id_objetivo,mes' })
-      if (!cancelado && !error) {
-        window.dispatchEvent(new CustomEvent('gsp-feriados-grilla-actualizados'))
-      }
-      if (error) console.error('No se pudieron guardar los feriados de la grilla:', error)
-    }
-    void guardar()
-    return () => { cancelado = true }
-  }, [feriadosSincronizadosCargados, feriadosActivos, objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, usuario?.id, usuario?.rol])
 
   const alternarFeriadoActivo = (fecha: string) => {
     setFeriadosActivos(actuales => actuales.includes(fecha)
@@ -329,18 +314,47 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   }
 
   const guardarCambios = async () => {
-    if (!objetivoSeleccionado || !hayCambiosPendientes) return
+    if (!objetivoSeleccionado || !hayCambiosPendientes || guardandoCambios) return
     setErrorGuardado('')
-    const operaciones = Object.values(borradores)
-    const error = await guardarGrillaMensual(objetivoSeleccionado, mesSeleccionado, operaciones)
-    if (error) { setErrorGuardado(error); return }
-    setBorradores({})
-    setGrillaCreada(true)
-    setModalPrimeraCreacion(false)
-    setModalCambiosSinGuardar(false)
+    setGuardandoCambios(true)
+    try {
+      if (hayCambiosTurnosPendientes) {
+        const operaciones = Object.values(borradores)
+        const error = await guardarGrillaMensual(objetivoSeleccionado, mesSeleccionado, operaciones)
+        if (error) throw new Error(error)
+        setBorradores({})
+        setGrillaCreada(true)
+      }
+
+      if (hayCambiosFeriadosPendientes) {
+        if (!supabase || !objetivoActual?.id_empresa) throw new Error('No se pudo identificar el objetivo para guardar los feriados.')
+        const { error } = await (supabase as any).from('feriados_grilla_objetivo').upsert({
+          id_objetivo: objetivoSeleccionado,
+          id_empresa: objetivoActual.id_empresa,
+          mes: `${mesSeleccionado}-01`,
+          fechas: feriadosActivos,
+          actualizado_en: new Date().toISOString(),
+          actualizado_por: usuario?.id || null,
+        }, { onConflict: 'id_objetivo,mes' })
+        if (error) throw error
+        setFeriadosGuardados([...feriadosActivos])
+        window.dispatchEvent(new CustomEvent('gsp-feriados-grilla-actualizados'))
+      }
+
+      setModalPrimeraCreacion(false)
+      setModalCambiosSinGuardar(false)
+    } catch (error) {
+      console.error('No se pudieron guardar los cambios de la grilla:', error)
+      setErrorGuardado(error instanceof Error ? error.message : 'No se pudieron guardar los cambios de la grilla.')
+    } finally {
+      setGuardandoCambios(false)
+    }
   }
 
-  const iniciarGuardado = () => { if (!hayCambiosPendientes || cargandoEstadoGrilla) return; if (!grillaCreada) setModalPrimeraCreacion(true); else void guardarCambios() }
+  const iniciarGuardado = () => {
+    if (!hayCambiosPendientes || cargandoEstadoGrilla || guardandoCambios) return
+    setModalPrimeraCreacion(true)
+  }
 
   // Cálculos por vigilador (Sección 24)
   const calcularTotalesVigilador = (idVig: string) => {
@@ -576,7 +590,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
         <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-between lg:justify-end">
           <div className="flex items-center gap-2 flex-wrap">
             {!soloLectura && (
-              <Boton type="button" variante="primario" tamano="chico" disabled={!hayCambiosPendientes || cargandoEstadoGrilla || soloLecturaEfectiva} onClick={iniciarGuardado}>Guardar cambios{hayCambiosPendientes ? ` (${Object.keys(borradores).length})` : ''}</Boton>
+              <Boton type="button" variante="primario" tamano="chico" disabled={!hayCambiosPendientes || cargandoEstadoGrilla || soloLecturaEfectiva || guardandoCambios} onClick={iniciarGuardado}>Guardar cambios{hayCambiosPendientes ? ` (${Object.keys(borradores).length + (hayCambiosFeriadosPendientes ? 1 : 0)})` : ''}</Boton>
             )}
             <Boton
               type="button"
@@ -617,7 +631,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
 
       {!soloLecturaEfectiva && (
         <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-          Usá el botón de cada día para marcar o quitar feriados, incluidos los nacionales automáticos. Los cambios se guardan en este navegador para este objetivo y no se comparten con otros usuarios.
+          Usá el botón de cada día para marcar o quitar feriados. Recordá confirmar los cambios para guardarlos en la base de datos y compartirlos con la calculadora.
         </p>
       )}
 
@@ -814,8 +828,19 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
 
       {errorGuardado && <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{errorGuardado}</div>}
 
-      <Dialogo abierto={modalPrimeraCreacion} alCerrar={() => setModalPrimeraCreacion(false)} titulo="Confirmar creación de grilla" subtitulo={nombreMesSeleccionado} tamano="medio">
-        <div className="space-y-4"><p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Esta es la primera vez que se guarda la grilla de este objetivo para este mes. Después de guardar, las fechas que ya pasaron, incluido el día de hoy, quedarán bloqueadas y no podrán editarse. Esta regla no afectará las grillas de otros objetivos ni otros meses.</p><div className="flex justify-end gap-2"><Boton variante="secundario" onClick={() => setModalPrimeraCreacion(false)}>Cancelar</Boton><Boton variante="primario" onClick={() => void guardarCambios()}>Confirmar</Boton></div></div>
+      <Dialogo abierto={modalPrimeraCreacion} alCerrar={() => { if (!guardandoCambios) setModalPrimeraCreacion(false) }} titulo="Confirmar cambios de la grilla" subtitulo={nombreMesSeleccionado} tamano="medio">
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">¿Querés guardar los cambios realizados en la grilla de este objetivo?</p>
+          <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            <p>{hayCambiosTurnosPendientes ? `• ${Object.keys(borradores).length} modificación(es) de turnos` : ''}</p>
+            <p>{hayCambiosFeriadosPendientes ? '• Cambios en los feriados del mes' : ''}</p>
+          </div>
+          {!grillaCreada && hayCambiosTurnosPendientes && <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">Es la primera vez que se guarda esta grilla. Después de guardar, las fechas que ya pasaron, incluido el día de hoy, quedarán bloqueadas y no podrán editarse. Esta regla no afectará otros objetivos ni otros meses.</p>}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Boton variante="secundario" disabled={guardandoCambios} onClick={() => setModalPrimeraCreacion(false)}>Cancelar</Boton>
+            <Boton variante="primario" disabled={guardandoCambios} onClick={() => void guardarCambios()}>{guardandoCambios ? 'Guardando...' : 'Confirmar cambios'}</Boton>
+          </div>
+        </div>
       </Dialogo>
 
       <Dialogo abierto={modalCambiosSinGuardar} alCerrar={() => setModalCambiosSinGuardar(false)} titulo="Hay cambios sin guardar" tamano="medio">
