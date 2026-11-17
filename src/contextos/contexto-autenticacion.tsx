@@ -153,13 +153,18 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
     // depender de que el vigilador cierre sesión manualmente.
     const refrescarPerfilActual = async () => {
       try {
-        const { data, error } = await clienteSupabase.auth.getUser()
+        // La revalidación periódica debe usar la sesión persistida localmente.
+        // getUser() fuerza una consulta remota y puede devolver "Auth session missing"
+        // durante una renovación; eso no significa que el usuario haya cerrado sesión.
+        const { data, error } = await clienteSupabase.auth.getSession()
         if (error) throw error
-        if (!data.user) {
-          if (activo) setUsuario(null)
+        const authUser = data.session?.user
+        if (!authUser) {
+          // No borrar el usuario por una lectura momentánea sin sesión.
+          // El cierre explícito se gestiona desde cerrarSesion / SIGNED_OUT.
           return
         }
-        const perfil = await cargarPerfil(data.user)
+        const perfil = await cargarPerfil(authUser)
         if (activo) {
           // No reemplazar el objeto del usuario si el perfil sigue igual:
           // hacerlo cada 30 segundos fuerza renders y recargas innecesarias
