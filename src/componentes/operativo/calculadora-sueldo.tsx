@@ -97,7 +97,7 @@ export const CalculadoraSueldo: React.FC = () => {
   useEffect(() => {
     let cancelado = false
     const cargarConfiguracion = async () => {
-      if (!usuario?.id_empresa) {
+      if (!usuario?.id) {
         setConfig(CONFIG_INICIAL)
         setCambiosPendientes(false)
         return
@@ -107,7 +107,7 @@ export const CalculadoraSueldo: React.FC = () => {
         const { data: configuracionMensual, error: errorMensual } = await supabase
           .from('configuraciones_salariales_mensuales')
           .select('valores')
-          .eq('id_empresa', usuario.id_empresa)
+          .eq('id_usuario', usuario.id)
           .eq('mes', `${mes}-01`)
           .maybeSingle()
 
@@ -119,7 +119,7 @@ export const CalculadoraSueldo: React.FC = () => {
           const { data: configuracionAnterior, error: errorAnterior } = await supabase
             .from('configuraciones_salariales_mensuales')
             .select('valores')
-            .eq('id_empresa', usuario.id_empresa)
+            .eq('id_empresa', usuario.id)
             .lt('mes', `${mes}-01`)
             .order('mes', { ascending: false })
             .limit(1)
@@ -146,7 +146,7 @@ export const CalculadoraSueldo: React.FC = () => {
 
     void cargarConfiguracion()
     return () => { cancelado = true }
-  }, [mes, usuario?.id_empresa])
+  }, [mes, usuario?.id])
 
   const mesesDisponibles = useMemo(() => {
     const lista = new Set(turnos.filter(t => t.id_vigilador === usuario?.id).map(t => t.fecha.slice(0, 7)))
@@ -260,7 +260,7 @@ export const CalculadoraSueldo: React.FC = () => {
   }
 
   const guardarConfiguracion = async () => {
-    if (!usuario?.id_empresa) {
+    if (!usuario?.id) {
       window.alert('No se pudo identificar la empresa para guardar los valores salariales.')
       return
     }
@@ -268,12 +268,12 @@ export const CalculadoraSueldo: React.FC = () => {
     const { error } = await supabase
       .from('configuraciones_salariales_mensuales')
       .upsert({
-        id_empresa: usuario.id_empresa,
+        id_usuario: usuario.id,
         mes: `${mes}-01`,
         valores: config,
         actualizado_por: usuario.id,
         actualizado_en: new Date().toISOString(),
-      }, { onConflict: 'id_empresa,mes' })
+      }, { onConflict: 'id_usuario,mes' })
 
     if (error) {
       console.error('No se pudieron guardar los valores salariales:', error)
