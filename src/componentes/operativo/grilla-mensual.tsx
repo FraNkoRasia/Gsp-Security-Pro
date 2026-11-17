@@ -232,24 +232,29 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   useEffect(() => {
     if (!feriadosSincronizadosCargados || !objetivoSeleccionado || !objetivoActual?.id_empresa) return
     if (usuario?.rol !== 'administrador' && usuario?.rol !== 'super_administrador') return
-    void (supabase as any).from('feriados_grilla_objetivo').upsert({
-      id_objetivo: objetivoSeleccionado,
-      id_empresa: objetivoActual.id_empresa,
-      mes: `${mesSeleccionado}-01`,
-      fechas: feriadosActivos,
-      actualizado_en: new Date().toISOString(),
-      actualizado_por: usuario?.id || null,
-    }, { onConflict: 'id_objetivo,mes' })
+    let cancelado = false
+    const guardar = async () => {
+      const { error } = await (supabase as any).from('feriados_grilla_objetivo').upsert({
+        id_objetivo: objetivoSeleccionado,
+        id_empresa: objetivoActual.id_empresa,
+        mes: `${mesSeleccionado}-01`,
+        fechas: feriadosActivos,
+        actualizado_en: new Date().toISOString(),
+        actualizado_por: usuario?.id || null,
+      }, { onConflict: 'id_objetivo,mes' })
+      if (!cancelado && !error) {
+        window.dispatchEvent(new CustomEvent('gsp-feriados-grilla-actualizados'))
+      }
+      if (error) console.error('No se pudieron guardar los feriados de la grilla:', error)
+    }
+    void guardar()
+    return () => { cancelado = true }
   }, [feriadosSincronizadosCargados, feriadosActivos, objetivoSeleccionado, objetivoActual?.id_empresa, mesSeleccionado, usuario?.id, usuario?.rol])
 
   const alternarFeriadoActivo = (fecha: string) => {
-    setFeriadosActivos(actuales => {
-      const nuevasFechas = actuales.includes(fecha)
-        ? actuales.filter(dia => dia !== fecha)
-        : [...actuales, fecha].sort()
-      window.dispatchEvent(new CustomEvent('gsp-feriados-grilla-actualizados'))
-      return nuevasFechas
-    })
+    setFeriadosActivos(actuales => actuales.includes(fecha)
+      ? actuales.filter(dia => dia !== fecha)
+      : [...actuales, fecha].sort())
   }
 
   const nombreFeriadoEnFecha = (fecha: string) =>
