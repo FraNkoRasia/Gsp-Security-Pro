@@ -117,7 +117,7 @@ export const CalculadoraSueldo: React.FC = () => {
         let valoresGuardados = configuracionMensual?.valores as Partial<ConfiguracionSalarial> | null
 
         if (!valoresGuardados) {
-          const { data: configuracionAnterior, error: errorAnterior } = await supabase
+          const { data: configuracionAnterior, error: errorAnterior } = await clienteSupabase
             .from('configuraciones_salariales_mensuales')
             .select('valores')
             .eq('id_usuario', usuario.id)
