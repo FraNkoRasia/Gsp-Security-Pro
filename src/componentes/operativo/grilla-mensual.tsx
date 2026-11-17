@@ -674,7 +674,7 @@ td.total{border-left:.3mm solid #9cc9ee;background:linear-gradient(145deg,#f3faf
                         </span>
                       </div>
                       <div className="font-extrabold text-sm">{dia}</div>
-                      {!(soloLecturaEfectiva || (!esAdministrador && claveFecha < fechaHoyClave)) ? (
+                      {esAdministrador && !soloLecturaEfectiva ? (
                         <button
                           type="button"
                           onClick={() => alternarFeriadoActivo(claveFecha)}
