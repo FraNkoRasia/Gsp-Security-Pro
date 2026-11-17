@@ -159,13 +159,22 @@ export const CalculadoraSueldo: React.FC = () => {
       for (const fila of data || []) {
         resultado[fila.id_objetivo] = {}
         for (const fecha of fila.fechas || []) {
-          resultado[fila.id_objetivo][String(fecha).slice(0, 10)] = 'Feriado marcado en grilla'
+          resultado[fila.id_objetivo][String(fecha).slice(0, 10)] = 'Feriado marcado por administrador'
         }
       }
       setFeriadosPorObjetivo(resultado)
     }
+    const recargar = () => { void cargar() }
     void cargar()
-    return () => { cancelado = true }
+    window.addEventListener('gsp-feriados-grilla-actualizados', recargar)
+    window.addEventListener('focus', recargar)
+    document.addEventListener('visibilitychange', recargar)
+    return () => {
+      cancelado = true
+      window.removeEventListener('gsp-feriados-grilla-actualizados', recargar)
+      window.removeEventListener('focus', recargar)
+      document.removeEventListener('visibilitychange', recargar)
+    }
   }, [turnosMes, mes])
 
   const horas = useMemo(() => turnosMes.reduce((total, turno) => {
