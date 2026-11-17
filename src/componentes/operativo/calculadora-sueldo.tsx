@@ -285,11 +285,17 @@ export const CalculadoraSueldo: React.FC = () => {
             [`Feriado nocturno · ${horas.feriadoNocturno.toFixed(2)} hs`, liquidacion.adicionalFeriadoNocturno],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
-          ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm dark:border-slate-800"><span className="text-slate-600 dark:text-slate-300">{label}</span><strong className="tabular-nums text-slate-900 dark:text-white">{formatoPesos(Number(value))}</strong></div>)}
-          <div className="-mt-2 flex flex-col gap-1 border-b border-slate-100 pb-3 pl-3 text-xs dark:border-slate-800">
-            <div className="flex items-center justify-between gap-3"><span className="text-slate-500 dark:text-slate-400">Horas feriadas diurnas</span><span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{horas.feriadoDiurno.toFixed(2)} hs</span></div>
-            <div className="flex items-center justify-between gap-3"><span className="text-slate-500 dark:text-slate-400">Horas feriadas nocturnas</span><span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{horas.feriadoNocturno.toFixed(2)} hs</span></div>
-          </div>
+          ].map(([label, value]) => (
+            <React.Fragment key={String(label)}>
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 text-sm dark:border-slate-800"><span className="text-slate-600 dark:text-slate-300">{label}</span><strong className="tabular-nums text-slate-900 dark:text-white">{formatoPesos(Number(value))}</strong></div>
+              {String(label).startsWith('Feriados') && (
+                <div className="-mt-2 flex flex-col gap-1 border-b border-slate-100 pb-3 pl-3 text-xs dark:border-slate-800">
+                  <div className="flex items-center justify-between gap-3"><span className="text-slate-500 dark:text-slate-400">Horas feriadas diurnas</span><span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{horas.feriadoDiurno.toFixed(2)} hs</span></div>
+                  <div className="flex items-center justify-between gap-3"><span className="text-slate-500 dark:text-slate-400">Horas feriadas nocturnas</span><span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{horas.feriadoNocturno.toFixed(2)} hs</span></div>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
           <div className="space-y-2 pt-2">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Descuentos estimados</h4>
             {[
