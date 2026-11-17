@@ -219,9 +219,8 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
         console.error('No se pudieron cargar los feriados configurados en la grilla:', error)
         setFeriadosActivos([])
       } else {
-        setFeriadosActivos(Array.isArray(data?.fechas)
-          ? [...new Set(data.fechas.map((fecha: string) => String(fecha).slice(0, 10)))].sort()
-          : [])
+        const fechasGuardadas = Array.isArray(data?.fechas) ? data.fechas as string[] : []
+        setFeriadosActivos([...new Set(fechasGuardadas.map(fecha => String(fecha).slice(0, 10)))].sort())
       }
       setFeriadosSincronizadosCargados(true)
     }
