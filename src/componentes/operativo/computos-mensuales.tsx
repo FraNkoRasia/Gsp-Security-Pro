@@ -3,7 +3,6 @@ import { Download, FileSpreadsheet, CalendarDays, Users, Clock3 } from 'lucide-r
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
-import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
 
 type FilaComputo = {
@@ -64,7 +63,7 @@ export const ComputosMensuales: React.FC = () => {
         setError('No se pudieron cargar los feriados configurados para este objetivo.')
         setFeriados([])
       } else {
-        const permitidas = (data || []).flatMap(fila => (fila.fechas || []).map(fecha => String(fecha).slice(0,10)))
+        const permitidas = (data || []).flatMap((fila: { fechas: string[] | null }) => (fila.fechas || []).map((fecha: string) => String(fecha).slice(0,10)))
         setFeriados([...new Set(permitidas.filter(fecha => fecha.startsWith(mes + '-') || fecha.startsWith(mesSiguiente + '-')))])
       }
       setCargandoFeriados(false)
