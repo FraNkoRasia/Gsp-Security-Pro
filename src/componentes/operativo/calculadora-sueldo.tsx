@@ -92,27 +92,53 @@ export const CalculadoraSueldo: React.FC = () => {
   const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
   const [cambiosPendientes, setCambiosPendientes] = useState(false)
 
-  // Cada mes conserva su propia configuración salarial. Los cambios solo se persisten al pulsar Guardar.
+  // Cada mes conserva su propia configuración. Si todavía no tiene una,
+  // hereda los últimos valores guardados en un mes anterior, sin modificarlos.
   useEffect(() => {
-    const claveMensual = `gsp-calculadora-sueldo-config-${mes}`
-    const guardadoMensual = window.localStorage.getItem(claveMensual)
+    const prefijo = 'gsp-calculadora-sueldo-config-'
+    const claveMensual = `${prefijo}${mes}`
     try {
+      const guardadoMensual = window.localStorage.getItem(claveMensual)
       if (guardadoMensual) {
         const valores = JSON.parse(guardadoMensual)
         if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
         setConfig({ ...CONFIG_INICIAL, ...valores })
       } else {
-        // Migra la configuración anterior únicamente al mes actual, sin copiarla a meses históricos o futuros.
-        const legado = mes === fechaLocal(new Date()) ? window.localStorage.getItem('gsp-calculadora-sueldo-config') : null
+        // Conserva una configuración antigua del mes actual si existía antes
+        // de implementar el guardado mensual.
+        const legado = mes === fechaLocal(new Date())
+          ? window.localStorage.getItem('gsp-calculadora-sueldo-config')
+          : null
+
         if (legado) {
           const valores = JSON.parse(legado)
           if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
           setConfig({ ...CONFIG_INICIAL, ...valores })
         } else {
-          setConfig(CONFIG_INICIAL)
+          // Busca el mes anterior más cercano que tenga valores guardados.
+          // La comparación YYYY-MM permite ordenar los meses cronológicamente.
+          const mesesGuardados = Object.keys(window.localStorage)
+            .filter(clave => clave.startsWith(prefijo))
+            .map(clave => clave.slice(prefijo.length))
+            .filter(mesGuardado => /^\\d{4}-\\d{2}$/.test(mesGuardado) && mesGuardado < mes)
+            .sort((a, b) => b.localeCompare(a))
+
+          const mesAnterior = mesesGuardados[0]
+          const valoresAnteriores = mesAnterior
+            ? window.localStorage.getItem(`${prefijo}${mesAnterior}`)
+            : null
+
+          if (valoresAnteriores) {
+            const valores = JSON.parse(valoresAnteriores)
+            if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
+            setConfig({ ...CONFIG_INICIAL, ...valores })
+          } else {
+            setConfig(CONFIG_INICIAL)
+          }
         }
       }
-    } catch {
+    } catch (error) {
+      console.error('No se pudo cargar la configuración salarial del mes:', error)
       setConfig(CONFIG_INICIAL)
     }
     setCambiosPendientes(false)
