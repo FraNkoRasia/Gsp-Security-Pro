@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Download, FileSpreadsheet, CalendarDays, Users, Clock3 } from 'lucide-react'
+import { FileDown, FileText, CalendarDays, Users, Clock3 } from 'lucide-react'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
@@ -23,7 +23,7 @@ const nombreMes = (mes: string) => {
   const [anio, numero] = mes.split('-').map(Number)
   return new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(anio, numero - 1, 1))
 }
-const escaparCsv = (valor: string | number) => `"${String(valor).replace(/"/g, '""')}"`
+const escaparHtml = (valor: string | number) => String(valor).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 export const ComputosMensuales: React.FC = () => {
   const { usuario } = useAutenticacion()
@@ -112,25 +112,47 @@ export const ComputosMensuales: React.FC = () => {
     }).sort((a,b) => a.nombre.localeCompare(b.nombre))
   }, [objetivoId, mes, vigiladores, asignaciones, turnos, feriados])
 
-  const exportarExcel = () => {
+  const exportarPdf = () => {
     const objetivo = objetivos.find(o => o.id === objetivoId)
-    const encabezados = ['N°','VIGILADOR','HS TOTALES','HS EXTRAS','HS NOCTURNAS','BASICO','PRESENTISMO','VIATICOS','FERIADOS DIURNOS','FERIADOS NOCTURNOS','LICENCIAS','AUSENCIAS','SUSPENSIONES','OBSERVACIONES']
-    const lineas = filas.map((fila, indice) => [
+    const nombreObjetivo = objetivo?.nombre || 'Objetivo'
+    const encabezados = ['N°','Vigilador','Hs. totales','Hs. extras','Hs. nocturnas','Básico','Presentismo','Viáticos','Feriados diurnos','Feriados nocturnos','Licencias','Ausencias','Suspensiones','Observaciones']
+    const celdas = filas.map((fila, indice) => [
       indice + 1, fila.nombre, formatoHoras(fila.horas), formatoHoras(fila.extras), formatoHoras(fila.nocturnas),
-      'Sin registro en GSP', 'Sin registro en GSP', 'Sin registro en GSP',
-      formatoHoras(fila.feriadoDiurno), formatoHoras(fila.feriadoNocturno),
-      'Sin registro en GSP', fila.ausencias, 'Sin registro en GSP', ''
+      '—', '—', '—', formatoHoras(fila.feriadoDiurno), formatoHoras(fila.feriadoNocturno),
+      '—', fila.ausencias, '—', '—'
     ])
-    const csv = [encabezados, ...lineas].map(linea => linea.map(escaparCsv).join(';')).join('\r\n')
-    const blob = new Blob(['\\uFEFF', csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const enlace = document.createElement('a')
-    enlace.href = url
-    enlace.download = `Computos_${(objetivo?.nombre || 'Objetivo').replace(/[^a-z0-9-_]/gi, '_')}_${mes}.csv`
-    document.body.appendChild(enlace)
-    enlace.click()
-    enlace.remove()
-    URL.revokeObjectURL(url)
+    const renderFila = (linea: (string | number)[], encabezado = false) =>
+      '<tr>' + linea.map(valor => encabezado ? '<th>' + escaparHtml(valor) + '</th>' : '<td>' + escaparHtml(valor) + '</td>').join('') + '</tr>'
+    const totalNocturnas = filas.reduce((s, f) => s + f.nocturnas, 0)
+    const fechaEmision = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long' }).format(new Date())
+    const ventana = window.open('', '_blank')
+    if (!ventana) {
+      setError('El navegador bloqueó la ventana del PDF. Permití las ventanas emergentes e intentá nuevamente.')
+      return
+    }
+    const cuerpo = celdas.map(fila => renderFila(fila)).join('')
+    ventana.document.open()
+    ventana.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Cómputos - ' + escaparHtml(nombreObjetivo) + ' - ' + escaparHtml(nombreMes(mes)) + '</title><style>' +
+      '@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{margin:0;color:#172033;font-family:Arial,Helvetica,sans-serif;font-size:9px}' +
+      'header{display:flex;justify-content:space-between;gap:20px;padding-bottom:12px;border-bottom:2px solid #2563eb}.eyebrow{margin:0 0 5px;color:#2563eb;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}' +
+      'h1{margin:0;font-size:20px}.periodo{margin:5px 0 0;color:#64748b;font-size:11px;text-transform:capitalize}.meta{text-align:right;color:#64748b;line-height:1.6}.meta strong{display:block;color:#172033;font-size:11px}' +
+      '.tabla-wrap{margin-top:16px}table{width:100%;border-collapse:collapse}thead{display:table-header-group}th{padding:8px 5px;background:#172b4d;color:white;font-size:7.5px;text-align:left;white-space:nowrap}' +
+      'td{padding:8px 5px;border-bottom:1px solid #e2e8f0;white-space:nowrap}tbody tr:nth-child(even){background:#f8fafc}td:nth-child(2){font-weight:700}td:nth-child(9){color:#b45309;font-weight:700}td:nth-child(10){color:#4338ca;font-weight:700}' +
+      'tfoot td{background:#eaf0f8;font-weight:700;border-top:1px solid #cbd5e1}.totales{margin-top:18px}.totales h2{margin:0 0 9px;font-size:12px}.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}' +
+      '.indicador{padding:11px 12px;border:1px solid #dbe3ee;border-radius:7px;background:#f8fafc}.indicador span{display:block;margin-bottom:5px;color:#64748b;font-size:8px}.indicador strong{font-size:17px}' +
+      '.nota{margin-top:14px;color:#64748b;font-size:8px;line-height:1.5}footer{margin-top:18px;padding-top:7px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:8px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
+      '</style></head><body><header><div><p class="eyebrow">Gestión de Seguridad Profesional</p><h1>Cómputos mensuales</h1><p class="periodo">' + escaparHtml(nombreObjetivo) + ' · ' + escaparHtml(nombreMes(mes)) +
+      '</p></div><div class="meta"><strong>' + filas.length + ' vigiladores</strong>Reporte por objetivo<br>Emitido el ' + escaparHtml(fechaEmision) + '</div></header>' +
+      '<div class="tabla-wrap"><table><thead>' + renderFila(encabezados, true) + '</thead><tbody>' + cuerpo + '</tbody><tfoot>' +
+      '<tr><td colspan="2">Totales</td><td>' + formatoHoras(totalHoras) + '</td><td>' + formatoHoras(totalExtras) + '</td><td>' + formatoHoras(totalNocturnas) +
+      '</td><td colspan="3">—</td><td>' + formatoHoras(totalFeriadosDiurnos) + '</td><td>' + formatoHoras(totalFeriadosNocturnos) + '</td><td colspan="4">—</td></tr></tfoot></table></div>' +
+      '<section class="totales"><h2>Resumen del objetivo</h2><div class="resumen">' +
+      '<div class="indicador"><span>Vigiladores</span><strong>' + filas.length + '</strong></div><div class="indicador"><span>Horas totales</span><strong>' + formatoHoras(totalHoras) +
+      '</strong></div><div class="indicador"><span>Feriados diurnos</span><strong>' + formatoHoras(totalFeriadosDiurnos) + ' h</strong></div><div class="indicador"><span>Feriados nocturnos</span><strong>' +
+      formatoHoras(totalFeriadosNocturnos) + ' h</strong></div></div></section><p class="nota">Los guiones indican conceptos que todavía no tienen un registro estructurado en GSP. Las horas extras se calculan sobre las 200 horas mensuales. Los feriados corresponden a las fechas configuradas para este objetivo.</p>' +
+      '<footer>GSP Security Pro · Cómputos del objetivo: ' + escaparHtml(nombreObjetivo) + '</footer><script>window.addEventListener("load",function(){window.focus();window.print()})</script></body></html>')
+    ventana.document.close()
+    setError('')
   }
 
   const totalHoras = filas.reduce((s,f) => s + f.horas, 0)
@@ -142,7 +164,7 @@ export const ComputosMensuales: React.FC = () => {
     <div className="space-y-5">
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#0C121E] sm:p-5">
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500"><FileSpreadsheet className="h-5 w-5" /></div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500"><FileText className="h-5 w-5" /></div>
           <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Cómputos mensuales</h2><p className="text-sm text-slate-500 dark:text-slate-400">Resumen de horas por objetivo y período</p></div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -171,7 +193,7 @@ export const ComputosMensuales: React.FC = () => {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#0C121E]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-800">
           <div><h3 className="font-bold text-slate-900 dark:text-white">{objetivos.find(o => o.id === objetivoId)?.nombre || 'Seleccioná un objetivo'}</h3><p className="text-xs capitalize text-slate-500 dark:text-slate-400">{nombreMes(mes)} · {filas.length} vigiladores</p></div>
-          <button type="button" onClick={exportarExcel} disabled={!filas.length || cargandoFeriados} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-4 w-4"/>Exportar Excel</button>
+          <button type="button" onClick={exportarPdf} disabled={!filas.length || cargandoFeriados} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"><FileDown className="h-4 w-4"/>Exportar PDF</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1250px] border-collapse text-left text-sm">
