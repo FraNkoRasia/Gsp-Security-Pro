@@ -177,11 +177,15 @@ export const CalculadoraSueldo: React.FC = () => {
         setFeriadosPorObjetivo({})
         return
       }
+      const [anioMes, numeroMes] = mes.split('-').map(Number)
+      const fechaMesSiguiente = new Date(anioMes, numeroMes, 1)
+      const mesSiguiente = `${fechaMesSiguiente.getFullYear()}-${String(fechaMesSiguiente.getMonth() + 1).padStart(2, '0')}`
+      const mesesConsulta = [`${mes}-01`, `${mesSiguiente}-01`]
       const { data, error } = await (supabase as any)
         .from('feriados_grilla_objetivo')
         .select('id_objetivo, fechas')
         .in('id_objetivo', idsObjetivos)
-        .eq('mes', `${mes}-01`)
+        .in('mes', mesesConsulta)
       if (cancelado) return
       if (error) {
         console.error('No se pudieron cargar los feriados configurados en la grilla:', error)
@@ -192,7 +196,11 @@ export const CalculadoraSueldo: React.FC = () => {
       for (const fila of data || []) {
         resultado[fila.id_objetivo] = {}
         for (const fecha of fila.fechas || []) {
-          resultado[fila.id_objetivo][String(fecha).slice(0, 10)] = 'Feriado marcado por administrador'
+          const fechaClave = String(fecha).slice(0, 10)
+          // Un turno puede cruzar al mes siguiente, pero no debe heredar fechas antiguas.
+          if (fechaClave.startsWith(`${mes}-`) || fechaClave.startsWith(`${mesSiguiente}-`)) {
+            resultado[fila.id_objetivo][fechaClave] = 'Feriado marcado por administrador'
+          }
         }
       }
       setFeriadosPorObjetivo(resultado)
