@@ -222,7 +222,9 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
         setFeriadosActivos([])
         setFeriadosGuardados([])
       } else {
-        const fechasGuardadas = [...new Set((Array.isArray(data?.fechas) ? data.fechas as string[] : []).map(fecha => String(fecha).slice(0, 10)))].sort()
+        const fechasGuardadas = [...new Set((Array.isArray(data?.fechas) ? data.fechas as string[] : [])
+          .map(fecha => String(fecha).slice(0, 10))
+          .filter(fecha => fecha.startsWith(`${mesSeleccionado}-`)))].sort()
         setFeriadosActivos(fechasGuardadas)
         setFeriadosGuardados(fechasGuardadas)
       }
@@ -328,7 +330,8 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
           id_objetivo: objetivoSeleccionado,
           id_empresa: objetivoActual.id_empresa,
           mes: `${mesSeleccionado}-01`,
-          fechas: feriadosActivos,
+          // Guardar únicamente fechas pertenecientes al mes de esta grilla.
+          fechas: feriadosActivos.filter(fecha => fecha.startsWith(`${mesSeleccionado}-`)),
           actualizado_en: new Date().toISOString(),
           actualizado_por: usuario?.id || null,
         }, { onConflict: 'id_objetivo,mes' })
