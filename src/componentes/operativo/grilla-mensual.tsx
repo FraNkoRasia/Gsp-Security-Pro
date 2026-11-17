@@ -117,7 +117,8 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const [guardandoCambios, setGuardandoCambios] = useState(false)
   const [feriadosActivos, setFeriadosActivos] = useState<string[]>([])
   const [feriadosGuardados, setFeriadosGuardados] = useState<string[]>([])
-  const hayCambiosFeriadosPendientes = JSON.stringify(feriadosActivos) !== JSON.stringify(feriadosGuardados)
+  const hayCambiosTurnosPendientes = Object.keys(borradores).length > 0
+  const hayCambiosFeriadosPendientes = feriadosActivos.length !== feriadosGuardados.length || feriadosActivos.some(fecha => !feriadosGuardados.includes(fecha))
   const hayCambiosPendientes = hayCambiosTurnosPendientes || hayCambiosFeriadosPendientes
   useEffect(() => { onCambiosPendientesChange?.(hayCambiosPendientes) }, [hayCambiosPendientes, onCambiosPendientesChange])
   const [modalPrimeraCreacion, setModalPrimeraCreacion] = useState(false)
@@ -125,7 +126,6 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
   const [mesPendiente, setMesPendiente] = useState<string | null>(null)
   const [avisoBloqueo, setAvisoBloqueo] = useState('')
   const [errorGuardado, setErrorGuardado] = useState('')
-  const hayCambiosTurnosPendientes = Object.keys(borradores).length > 0
   useEffect(() => {
     let cancelado = false
     setCargandoEstadoGrilla(true)
