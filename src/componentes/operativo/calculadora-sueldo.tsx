@@ -96,15 +96,16 @@ export const CalculadoraSueldo: React.FC = () => {
   // Si el mes no tiene una fila propia, hereda la última configuración anterior.
   useEffect(() => {
     let cancelado = false
+    const clienteSupabase = supabase
     const cargarConfiguracion = async () => {
-      if (!usuario?.id) {
+      if (!usuario?.id || !clienteSupabase) {
         setConfig(CONFIG_INICIAL)
         setCambiosPendientes(false)
         return
       }
 
       try {
-        const { data: configuracionMensual, error: errorMensual } = await supabase
+        const { data: configuracionMensual, error: errorMensual } = await clienteSupabase
           .from('configuraciones_salariales_mensuales')
           .select('valores')
           .eq('id_usuario', usuario.id)
@@ -260,12 +261,13 @@ export const CalculadoraSueldo: React.FC = () => {
   }
 
   const guardarConfiguracion = async () => {
-    if (!usuario?.id) {
+    const clienteSupabase = supabase
+    if (!usuario?.id || !clienteSupabase) {
       window.alert('No se pudo identificar el usuario para guardar los valores salariales.')
       return
     }
 
-    const { error } = await supabase
+    const { error } = await clienteSupabase
       .from('configuraciones_salariales_mensuales')
       .upsert({
         id_usuario: usuario.id,
