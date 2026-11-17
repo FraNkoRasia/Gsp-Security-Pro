@@ -281,8 +281,7 @@ export const CalculadoraSueldo: React.FC = () => {
             ['Presentismo', config.presentismo],
             [`Horas nocturnas · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
             [`Horas extras al ${config.recargoHorasExtras}% · ${horas.extras.toFixed(2)} hs`, liquidacion.adicionalHorasExtras],
-            [`Feriado diurno · ${horas.feriadoDiurno.toFixed(2)} hs`, liquidacion.adicionalFeriadoDiurno],
-            [`Feriado nocturno · ${horas.feriadoNocturno.toFixed(2)} hs`, liquidacion.adicionalFeriadoNocturno],
+            [`Feriados · ${horasFeriado.toFixed(2)} hs`, liquidacion.adicionalFeriado],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
           ].map(([label, value]) => (
