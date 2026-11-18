@@ -31,6 +31,7 @@ export const ComputosMensuales: React.FC = () => {
   const [objetivoId, setObjetivoId] = useState('')
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
   const [feriados, setFeriados] = useState<string[]>([])
+  const [versionFeriados, setVersionFeriados] = useState(0)
   const [cargandoFeriados, setCargandoFeriados] = useState(false)
   const [error, setError] = useState('')
 
@@ -45,9 +46,15 @@ export const ComputosMensuales: React.FC = () => {
   }, [objetivosEmpresa, objetivoId])
 
   useEffect(() => {
+    const actualizarFeriados = () => setVersionFeriados(version => version + 1)
+    window.addEventListener('gsp-feriados-grilla-actualizados', actualizarFeriados)
+    return () => window.removeEventListener('gsp-feriados-grilla-actualizados', actualizarFeriados)
+  }, [])
+
+  useEffect(() => {
     let cancelado = false
     const cargar = async () => {
-      if (!supabase || !objetivoId) { setFeriados([]); return }
+      if (!supabase || !objetivoId) { setFeriados([]); setCargandoFeriados(false); return }
       setCargandoFeriados(true)
       setError('')
       const [anio, numero] = mes.split('-').map(Number)
@@ -70,7 +77,7 @@ export const ComputosMensuales: React.FC = () => {
     }
     void cargar()
     return () => { cancelado = true }
-  }, [objetivoId, mes])
+  }, [objetivoId, mes, versionFeriados])
 
   const filas = useMemo<FilaComputo[]>(() => {
     if (!objetivoId) return []
