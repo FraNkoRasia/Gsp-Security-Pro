@@ -5,6 +5,7 @@ import { Boton } from '@/componentes/ui/boton'
 import { Insignia } from '@/componentes/ui/insignia'
 import { Dialogo } from '@/componentes/ui/dialogo'
 import { Entrada } from '@/componentes/ui/entrada'
+import { SelectorFecha } from '@/componentes/ui/selector-fecha'
 import { Etiqueta } from '@/componentes/ui/etiqueta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
@@ -185,11 +186,11 @@ export const CambiosTurnos: React.FC = () => {
       <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 dark:border-slate-800 p-3">
         <div>
           <label htmlFor="cambios-desde" className="mb-1 block text-[11px] font-semibold text-slate-500">Turnos desde</label>
-          <Entrada id="cambios-desde" type="date" value={historialDesde} onChange={(e) => setHistorialDesde(e.target.value)} />
+          <SelectorFecha id="cambios-desde"  value={historialDesde} onChange={(e) => setHistorialDesde(e.target.value)} />
         </div>
         <div>
           <label htmlFor="cambios-hasta" className="mb-1 block text-[11px] font-semibold text-slate-500">Turnos hasta</label>
-          <Entrada id="cambios-hasta" type="date" min={historialDesde || undefined} value={historialHasta} onChange={(e) => setHistorialHasta(e.target.value)} />
+          <SelectorFecha id="cambios-hasta"  min={historialDesde || undefined} value={historialHasta} onChange={(e) => setHistorialHasta(e.target.value)} />
         </div>
         <div className="col-span-2">
           <label htmlFor="cambios-estado" className="mb-1 block text-[11px] font-semibold text-slate-500">Estado de solicitud</label>
@@ -315,8 +316,8 @@ export const CambiosTurnos: React.FC = () => {
         <form onSubmit={manejarCrearSolicitud} className="space-y-4">
           <div>
             <Etiqueta requerido>Fecha del Turno a Cambiar</Etiqueta>
-            <Entrada
-              type="date"
+            <SelectorFecha
+              
               value={fechaTurno}
               onChange={(e) => setFechaTurno(e.target.value)}
             />
@@ -378,8 +379,8 @@ export const CambiosTurnos: React.FC = () => {
         <div className="space-y-4">
           <div>
             <Etiqueta>Seleccionar Fecha a Cubrir</Etiqueta>
-            <Entrada
-              type="date"
+            <SelectorFecha
+              
               value={fechaReemplazo}
               onChange={(e) => setFechaReemplazo(e.target.value)}
             />
