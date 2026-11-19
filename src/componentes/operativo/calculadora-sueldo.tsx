@@ -183,7 +183,7 @@ export const CalculadoraSueldo: React.FC = () => {
       const mesesConsulta = [`${mes}-01`, `${mesSiguiente}-01`]
       const { data, error } = await (supabase as any)
         .from('feriados_grilla_objetivo')
-        .select('id_objetivo, fechas')
+        .select('id_objetivo, mes, fechas')
         .in('id_objetivo', idsObjetivos)
         .in('mes', mesesConsulta)
       if (cancelado) return
@@ -194,14 +194,15 @@ export const CalculadoraSueldo: React.FC = () => {
       }
       const resultado: Record<string, Record<string, string>> = {}
       for (const fila of data || []) {
-        // Un objetivo puede tener una fila por cada mes consultado.
-        // No reiniciar el mapa: eso borraba las fechas del primer mes al leer el segundo.
+        // Cada fila solo aporta fechas del mes que identifica su columna "mes",
+        // igual que en Cómputos mensuales del administrador.
+        const mesDeLaFila = String(fila.mes).slice(0, 7)
+        if (mesDeLaFila !== mes && mesDeLaFila !== mesSiguiente) continue
         resultado[fila.id_objetivo] ||= {}
         for (const fecha of fila.fechas || []) {
           const fechaClave = String(fecha).trim().slice(0, 10)
-          // Un turno puede cruzar al mes siguiente; se conservan ambos meses.
           if (/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaClave) &&
-            (fechaClave.startsWith(`${mes}-`) || fechaClave.startsWith(`${mesSiguiente}-`))) {
+            fechaClave.startsWith(`${mesDeLaFila}-`)) {
             resultado[fila.id_objetivo][fechaClave] = 'Feriado marcado por administrador'
           }
         }
