@@ -195,12 +195,14 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
     const descuentoRem = descuentoJubilacion + descuentoLey19032 + descuentoObraSocial + descuentoSindicato
     const descuentoSindicatoViaticos = redondearImporte(config.viaticos * config.descuentoSindicatoViaticos / 100)
     const descuentoNoRem = redondearImporte(config.noRemunerativo * config.descuentoObraSocialNoRemunerativo / 100)
+    const totalHaberes = remunerativo + config.viaticos + config.noRemunerativo
+    const totalDescuentos = descuentoRem + descuentoSindicatoViaticos + descuentoNoRem
     const netoRem = remunerativo - descuentoRem
     // El recibo aplica un único descuento del 3% sobre viáticos: sindicato s/AC.
     const netoViaticos = config.viaticos - descuentoSindicatoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
-    const neto = netoRem + netoViaticos + netoNoRem + config.redondeo
-    return { adicionalNocturno, recargoNocturnoExtras, adicionalFeriado, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
+    const neto = totalHaberes - totalDescuentos + config.redondeo
+    return { adicionalNocturno, recargoNocturnoExtras, adicionalFeriado, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalHorasExtras, remunerativo, totalHaberes, totalDescuentos, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
 
 
@@ -269,6 +271,10 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
               )}
             </React.Fragment>
           ))}
+          <div className="flex items-center justify-between border-t-2 border-slate-200 pt-3 text-sm font-black dark:border-slate-700">
+            <span>Total haberes</span>
+            <span className="tabular-nums text-slate-900 dark:text-white">{formatoPesos(liquidacion.totalHaberes)}</span>
+          </div>
           <div className="space-y-2 pt-2">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Descuentos estimados</h4>
             {[
@@ -279,6 +285,10 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
               [`Sindicato sobre viáticos · ${config.descuentoSindicatoViaticos}%`, liquidacion.descuentoSindicatoViaticos],
               [`Obra social no remunerativa · ${config.descuentoObraSocialNoRemunerativo}%`, liquidacion.descuentoNoRem],
             ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-500 dark:text-slate-400">{label}</span><span className="tabular-nums text-red-500">− {formatoPesos(Number(value))}</span></div>)}
+          </div>
+          <div className="flex items-center justify-between border-t-2 border-slate-200 pt-3 text-sm font-black dark:border-slate-700">
+            <span>Total descuentos</span>
+            <span className="tabular-nums text-red-500">− {formatoPesos(liquidacion.totalDescuentos)}</span>
           </div>
           <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-black dark:border-slate-700"><span>Neto estimado</span><span className="tabular-nums text-emerald-600 dark:text-emerald-400">{formatoPesos(liquidacion.neto)}</span></div>
         </TarjetaContenido>
