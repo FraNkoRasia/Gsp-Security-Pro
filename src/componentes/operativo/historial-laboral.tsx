@@ -83,7 +83,6 @@ export const HistorialLaboral: React.FC = () => {
     [turnosVigilador, mesSeleccionado, feriadosPorObjetivo, ahora]
   )
   const horasNormales = resumen.horasTurno
-  const horasExtra = resumen.horasExtra
   const horasExtraDiurnas = resumen.horasExtraDiurnas
   const horasExtraNocturnas = resumen.horasExtraNocturnas
   const horasDiurnas = resumen.horasDiurnas
