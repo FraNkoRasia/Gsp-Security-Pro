@@ -5,7 +5,6 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
 import { CONFIG_INICIAL, type ConfiguracionSalarial } from '@/componentes/operativo/valores-salariales'
-import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
 
 const formatoPesos = (valor: number) => valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -20,33 +19,6 @@ const fechaLocal = (fecha: Date) => `${fecha.getFullYear()}-${String(fecha.getMo
 
 const fechaClave = (fecha: Date) =>
   `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
-
-function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
-  const { inicio, fin } = obtenerIntervaloTurno(turno)
-  let diurnos = 0
-  let nocturnos = 0
-  let feriadoDiurno = 0
-  let feriadoNocturno = 0
-
-  // Recorremos el turno por minutos y consultamos la fecha real de cada minuto.
-  // Nunca usamos turno.es_feriado para extender el feriado a toda la jornada:
-  // esa marca corresponde al casillero de inicio, no a las 12 horas completas.
-  for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
-    const fecha = new Date(cursor)
-    const hora = fecha.getHours()
-    const esNocturna = hora >= 21 || hora < 6
-    const esFeriado = Object.prototype.hasOwnProperty.call(feriados, fechaClave(fecha))
-    if (esNocturna) {
-      nocturnos++
-      if (esFeriado) feriadoNocturno++
-    } else {
-      diurnos++
-      if (esFeriado) feriadoDiurno++
-    }
-  }
-
-  return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriadoDiurno: feriadoDiurno / 60, feriadoNocturno: feriadoNocturno / 60 }
-}
 
 type CalculadoraSueldoProps = { vigiladorId?: string; mesInicial?: string; mostrarEncabezadoVigilador?: boolean }
 
