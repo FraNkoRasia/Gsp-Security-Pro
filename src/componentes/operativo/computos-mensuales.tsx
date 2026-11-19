@@ -246,7 +246,8 @@ export const ComputosMensuales: React.FC = () => {
   }
 
   const totalHoras = filas.reduce((s,f) => s + f.horas, 0)
-  const totalExtras = filas.reduce((s,f) => s + f.extras, 0)
+  const totalExtrasDiurnas = filas.reduce((s,f) => s + f.extrasDiurnas, 0)
+  const totalExtrasNocturnas = filas.reduce((s,f) => s + f.extrasNocturnas, 0)
   const totalFeriadosDiurnos = filas.reduce((s,f) => s + f.feriadoDiurno, 0)
   const totalFeriadosNocturnos = filas.reduce((s,f) => s + f.feriadoNocturno, 0)
 
@@ -306,9 +307,9 @@ export const ComputosMensuales: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filas.map((fila,i)=><tr key={fila.id} className="text-slate-700 dark:text-slate-200"><td className="px-3 py-3 text-slate-400">{i+1}</td><td className="whitespace-nowrap px-3 py-3 font-semibold">{fila.nombre}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.horas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.extrasDiurnas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.extrasNocturnas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.nocturnas)}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 font-semibold text-amber-600 dark:text-amber-300 tabular-nums">{formatoHoras(fila.feriadoDiurno)}</td><td className="px-3 py-3 font-semibold text-indigo-600 dark:text-indigo-300 tabular-nums">{formatoHoras(fila.feriadoNocturno)}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 tabular-nums">{fila.ausencias}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td></tr>)}
-              {!filas.length && <tr><td colSpan={14} className="px-4 py-10 text-center text-sm text-slate-500">{objetivoId ? 'No hay vigiladores asignados ni turnos para este objetivo en el período.' : 'Seleccioná un objetivo para consultar los cómputos.'}</td></tr>}
+              {!filas.length && <tr><td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-500">{objetivoId ? 'No hay vigiladores asignados ni turnos para este objetivo en el período.' : 'Seleccioná un objetivo para consultar los cómputos.'}</td></tr>}
             </tbody>
-            {filas.length > 0 && <tfoot className="bg-slate-50 font-bold text-slate-900 dark:bg-slate-900/70 dark:text-white"><tr><td colSpan={2} className="px-3 py-3">Totales</td><td className="px-3 py-3">{formatoHoras(totalHoras)}</td><td className="px-3 py-3">{formatoHoras(totalExtras)}</td><td className="px-3 py-3">{formatoHoras(filas.reduce((s,f)=>s+f.nocturnas,0))}</td><td colSpan={3}/><td className="px-3 py-3">{formatoHoras(totalFeriadosDiurnos)}</td><td className="px-3 py-3">{formatoHoras(totalFeriadosNocturnos)}</td><td colSpan={4}/></tr></tfoot>}
+            {filas.length > 0 && <tfoot className="bg-slate-50 font-bold text-slate-900 dark:bg-slate-900/70 dark:text-white"><tr><td colSpan={2} className="px-3 py-3">Totales</td><td className="px-3 py-3">{formatoHoras(totalHoras)}</td><td className="px-3 py-3">{formatoHoras(totalExtrasDiurnas)}</td><td className="px-3 py-3">{formatoHoras(totalExtrasNocturnas)}</td><td className="px-3 py-3">{formatoHoras(filas.reduce((s,f)=>s+f.nocturnas,0))}</td><td colSpan={3}/><td className="px-3 py-3">{formatoHoras(totalFeriadosDiurnos)}</td><td className="px-3 py-3">{formatoHoras(totalFeriadosNocturnos)}</td><td colSpan={4}/></tr></tfoot>}
           </table>
         </div>
         <p className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">Los guiones indican conceptos que todavía no tienen un registro estructurado en GSP. Las horas extras se calculan sobre las 200 horas mensuales, igual que en la calculadora actual. Los feriados se leen de las marcas manuales de la grilla del objetivo.</p>
