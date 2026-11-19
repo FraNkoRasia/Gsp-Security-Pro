@@ -96,9 +96,10 @@ export const ComputosMensuales: React.FC = () => {
   // Si el administrador modifica los feriados desde otra pestaña/sesión,
   // volver a consultar al recibir cambios en tiempo real o al regresar a la vista.
   useEffect(() => {
-    if (!supabase || !objetivoId) return
+    const clienteSupabase = supabase
+    if (!clienteSupabase || !objetivoId) return
     const refrescar = () => setVersionFeriados(version => version + 1)
-    const canal = supabase
+    const canal = clienteSupabase
       .channel(`computos-feriados-${objetivoId}`)
       .on('postgres_changes', {
         event: '*',
@@ -110,7 +111,7 @@ export const ComputosMensuales: React.FC = () => {
     window.addEventListener('focus', refrescar)
     return () => {
       window.removeEventListener('focus', refrescar)
-      void supabase.removeChannel(canal)
+      void clienteSupabase.removeChannel(canal)
     }
   }, [objetivoId])
 
