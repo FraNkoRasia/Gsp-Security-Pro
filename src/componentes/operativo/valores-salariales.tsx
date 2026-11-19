@@ -46,7 +46,6 @@ export const ValoresSalariales: React.FC = () => {
  const { usuario } = useAutenticacion()
  const [mes,setMes]=useState(()=>fechaLocal(new Date()))
  const [calendarioAbierto,setCalendarioAbierto]=useState(false)
- const [calendarioArriba,setCalendarioArriba]=useState(false)
  const calendarioRef=useRef<HTMLDivElement>(null)
  const botonCalendarioRef=useRef<HTMLButtonElement>(null)
  useEffect(()=>{
@@ -54,8 +53,6 @@ export const ValoresSalariales: React.FC = () => {
   const cerrarFuera=(evento:PointerEvent)=>{if(!calendarioRef.current?.contains(evento.target as Node)&&!(evento.target as HTMLElement).closest?.('[data-calendar-popup]'))setCalendarioAbierto(false)}
   const cerrarEscape=(evento:KeyboardEvent)=>{if(evento.key==='Escape')setCalendarioAbierto(false)}
   document.addEventListener('pointerdown',cerrarFuera);document.addEventListener('keydown',cerrarEscape)
-  const rect=botonCalendarioRef.current?.getBoundingClientRect()
-  if(rect)setCalendarioArriba(window.innerHeight-rect.bottom<290&&rect.top>290)
   return()=>{document.removeEventListener('pointerdown',cerrarFuera);document.removeEventListener('keydown',cerrarEscape)}
  },[calendarioAbierto])
  const [anioCalendario,setAnioCalendario]=useState(()=>Number(fechaLocal(new Date()).slice(0,4)))
