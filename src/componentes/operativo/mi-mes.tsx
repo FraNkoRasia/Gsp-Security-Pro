@@ -80,7 +80,7 @@ export const MiMes: React.FC = () => {
         resultado[fila.id_objetivo] ||= {}
         for (const fecha of fila.fechas || []) {
           const clave = String(fecha).trim().slice(0, 10)
-          if (/^\\d{4}-\\d{2}-\\d{2}$/.test(clave) && clave.startsWith(`${mesFila}-`)) resultado[fila.id_objetivo][clave] = 'Feriado marcado por administrador'
+          if (/^\d{4}-\d{2}-\d{2}$/.test(clave) && clave.startsWith(`${mesFila}-`)) resultado[fila.id_objetivo][clave] = 'Feriado marcado por administrador'
         }
       }
       setFeriadosPorObjetivo(resultado)
