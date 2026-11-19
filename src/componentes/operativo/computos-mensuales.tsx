@@ -54,30 +54,65 @@ export const ComputosMensuales: React.FC = () => {
   useEffect(() => {
     let cancelado = false
     const cargar = async () => {
-      if (!supabase || !objetivoId) { setFeriados([]); setCargandoFeriados(false); return }
+      // Nunca conservar feriados del objetivo/mes anterior mientras llega la consulta nueva.
+      setFeriados([])
       setCargandoFeriados(true)
       setError('')
+      if (!supabase || !objetivoId) {
+        setCargandoFeriados(false)
+        return
+      }
+
       const [anio, numero] = mes.split('-').map(Number)
       const siguiente = new Date(anio, numero, 1)
       const mesSiguiente = fechaLocal(siguiente)
       const { data, error: errorConsulta } = await supabase
         .from('feriados_grilla_objetivo')
-        .select('fechas')
+        .select('mes, fechas')
         .eq('id_objetivo', objetivoId)
         .in('mes', [`${mes}-01`, `${mesSiguiente}-01`])
+
       if (cancelado) return
       if (errorConsulta) {
-        setError('No se pudieron cargar los feriados configurados para este objetivo.')
+        console.error('Error leyendo feriados para cómputos:', errorConsulta)
+        setError('No se pudieron cargar los feriados configurados para este objetivo. Los totales de feriados no se actualizaron.')
         setFeriados([])
       } else {
-        const permitidas = (data || []).flatMap((fila: { fechas: string[] | null }) => (fila.fechas || []).map((fecha: string) => String(fecha).slice(0,10)))
-        setFeriados([...new Set(permitidas.filter(fecha => fecha.startsWith(mes + '-') || fecha.startsWith(mesSiguiente + '-')))])
+        const fechasVigentes = (data || []).flatMap((fila: { mes: string; fechas: string[] | null }) =>
+          (Array.isArray(fila.fechas) ? fila.fechas : [])
+            .map((fecha: string) => String(fecha).trim().slice(0, 10))
+            .filter((fecha: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(fecha))
+            .filter((fecha: string) => fecha.startsWith(mes + '-') || fecha.startsWith(mesSiguiente + '-'))
+        )
+        setFeriados([...new Set(fechasVigentes)])
       }
       setCargandoFeriados(false)
     }
+
     void cargar()
     return () => { cancelado = true }
   }, [objetivoId, mes, versionFeriados])
+
+  // Si el administrador modifica los feriados desde otra pestaña/sesión,
+  // volver a consultar al recibir cambios en tiempo real o al regresar a la vista.
+  useEffect(() => {
+    if (!supabase || !objetivoId) return
+    const refrescar = () => setVersionFeriados(version => version + 1)
+    const canal = supabase
+      .channel(`computos-feriados-${objetivoId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'feriados_grilla_objetivo',
+        filter: `id_objetivo=eq.${objetivoId}`
+      }, refrescar)
+      .subscribe()
+    window.addEventListener('focus', refrescar)
+    return () => {
+      window.removeEventListener('focus', refrescar)
+      void supabase.removeChannel(canal)
+    }
+  }, [objetivoId])
 
   const filas = useMemo<FilaComputo[]>(() => {
     if (!objetivoId) return []
