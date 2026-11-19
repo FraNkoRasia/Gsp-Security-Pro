@@ -78,12 +78,16 @@ export const ComputosMensuales: React.FC = () => {
         setError('No se pudieron cargar los feriados configurados para este objetivo. Los totales de feriados no se actualizaron.')
         setFeriados([])
       } else {
-        const fechasVigentes = (data || []).flatMap((fila: { mes: string; fechas: string[] | null }) =>
-          (Array.isArray(fila.fechas) ? fila.fechas : [])
+        const fechasVigentes = (data || []).flatMap((fila: { mes: string; fechas: string[] | null }) => {
+          // Cada fila solo puede aportar feriados del mes que identifica su columna "mes".
+          // Evita que fechas antiguas copiadas en filas futuras vuelvan a activarse.
+          const mesDeLaFila = String(fila.mes).slice(0, 7)
+          if (mesDeLaFila !== mes && mesDeLaFila !== mesSiguiente) return []
+          return (Array.isArray(fila.fechas) ? fila.fechas : [])
             .map((fecha: string) => String(fecha).trim().slice(0, 10))
             .filter((fecha: string) => /^\d{4}-\d{2}-\d{2}$/.test(fecha))
-            .filter((fecha: string) => fecha.startsWith(mes + '-') || fecha.startsWith(mesSiguiente + '-'))
-        )
+            .filter((fecha: string) => fecha.startsWith(mesDeLaFila + '-'))
+        })
         setFeriados([...new Set(fechasVigentes)])
       }
       setCargandoFeriados(false)
