@@ -211,104 +211,25 @@ export const ComputosMensuales: React.FC = () => {
     }
     const cuerpo = celdas.map(fila => renderFila(fila)).join('')
     ventana.document.open()
-    ventana.document.write(`
-      <!doctype html>
-      <html lang="es">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Cómputos - ${escaparHtml(nombreObjetivo)} - ${escaparHtml(nombreMes(mes))}</title>
-        <style>
-          @page{size:A4 landscape;margin:8mm}
-          *{box-sizing:border-box}
-          html,body{margin:0;padding:0}
-          body{background:#07101f;color:#eef4ff;font-family:Arial,Helvetica,sans-serif;font-size:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-          .documento{width:100%;margin:0 auto}
-          .marca-superior{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 0 12px;border-bottom:2px solid #2878ff}
-          .identidad{display:flex;align-items:center;gap:10px;min-width:0}
-          .escudo{width:38px;height:42px;flex:0 0 38px}
-          .marca{font-size:15px;font-weight:800;letter-spacing:-.3px;color:#fff}
-          .descripcion-marca{margin-top:3px;color:#a9bddb;font-size:8px}
-          .emision{text-align:right;color:#9eb2d0;font-size:8px;line-height:1.6;white-space:nowrap}
-          .emision strong{display:block;color:#eef4ff;font-size:9px}
-          .empresa{display:flex;align-items:center;gap:7px;color:#dceaff;font-weight:700;font-size:10px;white-space:nowrap}
-          .empresa-marca{color:#347dff;font-size:20px;font-weight:900;letter-spacing:-3px}
-          .titulo{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid #203957;border-radius:10px;background:linear-gradient(110deg,#101d32,#0b1526)}
-          .titulo-principal{display:flex;align-items:center;gap:11px;min-width:0}
-          .icono-titulo{display:flex;width:42px;height:42px;align-items:center;justify-content:center;border-radius:9px;background:#12366a;color:#4b91ff;font-size:22px;font-weight:900}
-          h1{margin:0;color:#fff;font-size:19px;letter-spacing:-.5px}
-          .subtitulo{margin:3px 0 0;color:#a9bddb;font-size:9px}
-          .periodo{padding:9px 12px;border:1px solid #203957;border-radius:8px;color:#b8c9e2;font-size:9px;white-space:nowrap}
-          .periodo strong{color:#fff;text-transform:capitalize}
-          .resumen{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:11px 0}
-          .indicador{display:flex;align-items:center;gap:9px;min-width:0;padding:10px;border:1px solid #203957;border-radius:9px;background:linear-gradient(145deg,#10213d,#0c1729)}
-          .indicador-icono{display:flex;width:29px;height:29px;flex:0 0 29px;align-items:center;justify-content:center;border-radius:7px;background:#12366a;color:#4b91ff;font-size:15px;font-weight:900}
-          .indicador span{display:block;margin-bottom:3px;color:#9eb2d0;font-size:7px}
-          .indicador strong{display:block;color:#f4f8ff;font-size:14px;line-height:1.1}
-          .tabla-wrap{margin-top:10px;border:1px solid #294361;border-radius:9px;overflow:hidden}
-          table{width:100%;border-collapse:collapse;table-layout:auto}
-          thead{display:table-header-group}
-          th{padding:7px 4px;background:#132b4e;color:#eaf2ff;font-size:6.6px;font-weight:700;text-align:left;white-space:normal;border-right:1px solid #294361;line-height:1.25}
-          td{padding:7px 4px;color:#e4edfb;font-size:7px;border-bottom:1px solid #1d3049;border-right:1px solid #1d3049;white-space:nowrap;line-height:1.2}
-          th:last-child,td:last-child{border-right:0}
-          tbody tr:nth-child(even){background:#0d192b}
-          tbody tr:nth-child(odd){background:#091424}
-          td:nth-child(1){text-align:center;color:#9eb2d0}
-          td:nth-child(2){font-weight:700;color:#fff;white-space:normal}
-          td:nth-child(9){color:#ffc45c;font-weight:700}
-          td:nth-child(10){color:#8fa8ff;font-weight:700}
-          tfoot td{padding:8px 4px;background:#102b50;color:#8dbaff;font-size:7.2px;font-weight:800;border-top:1px solid #347dff}
-          .nota{margin:9px 1px 0;color:#8ea4c2;font-size:7px;line-height:1.45}
-          footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:8px;border-top:1px solid #294361;color:#9eb2d0;font-size:7px}
-          footer strong{color:#eaf2ff}
-          .lema{font-style:italic;text-align:right}
-          @media print{
-            body{background:#07101f!important}
-            .tabla-wrap{break-inside:auto}
-            tr{break-inside:avoid;page-break-inside:avoid}
-            .resumen,.titulo,.marca-superior{break-inside:avoid;page-break-inside:avoid}
-            *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-          }
-        </style>
-      </head>
-      <body>
-        <main class="documento">
-          <header class="marca-superior">
-            <div class="identidad">
-              <svg class="escudo" viewBox="0 0 100 110" role="img" aria-label="Escudo GSP Security Pro">
-                <path d="M50 5 91 20v31c0 25-15 43-41 54C24 94 9 76 9 51V20L50 5Z" fill="#0d1b30" stroke="#347dff" stroke-width="5"/>
-                <path d="M50 17 80 28v23c0 19-10 33-30 42-20-9-30-23-30-42V28l30-11Z" fill="#123f70" stroke="#d8edff" stroke-width="2.5"/>
-                <path d="M50 29 68 39v14c0 12-7 22-18 29-11-7-18-17-18-29V39l18-10Z" fill="none" stroke="#e8f3ff" stroke-width="4"/>
-              </svg>
-              <div><div class="marca">GSP Security Pro</div><div class="descripcion-marca">Gestión de Seguridad Profesional</div></div>
-            </div>
-            <div class="emision">Fecha de generación<strong>${escaparHtml(fechaEmision)}</strong></div>
-            <div class="empresa"><span class="empresa-marca">W</span>Wall Security</div>
-          </header>
-          <section class="titulo">
-            <div class="titulo-principal"><div class="icono-titulo">▦</div><div><h1>Cómputos</h1><p class="subtitulo">Resumen de horas por vigilador y período · ${escaparHtml(nombreObjetivo)}</p></div></div>
-            <div class="periodo">Período: <strong>${escaparHtml(nombreMes(mes))}</strong></div>
-          </section>
-          <section class="resumen">
-            <div class="indicador"><div class="indicador-icono">♟</div><div><span>Total vigiladores</span><strong>${filas.length}</strong></div></div>
-            <div class="indicador"><div class="indicador-icono">◷</div><div><span>Horas totales</span><strong>${formatoHoras(totalHoras)} h</strong></div></div>
-            <div class="indicador"><div class="indicador-icono">★</div><div><span>Horas extras</span><strong>${formatoHoras(totalExtras)} h</strong></div></div>
-            <div class="indicador"><div class="indicador-icono">☾</div><div><span>Horas nocturnas</span><strong>${formatoHoras(totalNocturnas)} h</strong></div></div>
-            <div class="indicador"><div class="indicador-icono">F</div><div><span>Horas en feriados</span><strong>${formatoHoras(totalFeriadosDiurnos + totalFeriadosNocturnos)} h</strong></div></div>
-          </section>
-          <section class="tabla-wrap">
-            <table>
-              <thead>${renderFila(encabezados, true)}</thead>
-              <tbody>${cuerpo}</tbody>
-              <tfoot><tr><td colspan="2">Total general</td><td>${formatoHoras(totalHoras)}</td><td>${formatoHoras(totalExtras)}</td><td>${formatoHoras(totalNocturnas)}</td><td colspan="3">—</td><td>${formatoHoras(totalFeriadosDiurnos)}</td><td>${formatoHoras(totalFeriadosNocturnos)}</td><td colspan="4">—</td></tr></tfoot>
-            </table>
-          </section>
-          <p class="nota">Los guiones indican conceptos que todavía no tienen un registro estructurado en GSP. Las horas extras se calculan sobre las 200 horas mensuales. Los feriados corresponden a las fechas configuradas para este objetivo.</p>
-          <footer><div><strong>GSP Security Pro</strong> &nbsp;|&nbsp; Wall Security</div><div class="lema">Compromiso, Seguridad y Profesionalismo</div></footer>
-        </main>
-        <script>window.addEventListener("load",function(){window.focus();window.print()})</script>
-      </body>
-      </html>`)
+    ventana.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Cómputos - ' + escaparHtml(nombreObjetivo) + ' - ' + escaparHtml(nombreMes(mes)) + '</title><style>' +
+      '@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{margin:0;color:#172033;font-family:Arial,Helvetica,sans-serif;font-size:9px}' +
+      'header{display:flex;justify-content:space-between;gap:20px;padding-bottom:12px;border-bottom:2px solid #2563eb}.eyebrow{margin:0 0 5px;color:#2563eb;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}' +
+      'h1{margin:0;font-size:20px}.periodo{margin:5px 0 0;color:#64748b;font-size:11px;text-transform:capitalize}.meta{text-align:right;color:#64748b;line-height:1.6}.meta strong{display:block;color:#172033;font-size:11px}' +
+      '.tabla-wrap{margin-top:16px}table{width:100%;border-collapse:collapse}thead{display:table-header-group}th{padding:8px 5px;background:#172b4d;color:white;font-size:7.5px;text-align:left;white-space:nowrap}' +
+      'td{padding:8px 5px;border-bottom:1px solid #e2e8f0;white-space:nowrap}tbody tr:nth-child(even){background:#f8fafc}td:nth-child(2){font-weight:700}td:nth-child(9){color:#b45309;font-weight:700}td:nth-child(10){color:#4338ca;font-weight:700}' +
+      'tfoot td{background:#eaf0f8;font-weight:700;border-top:1px solid #cbd5e1}.totales{margin-top:18px}.totales h2{margin:0 0 9px;font-size:12px}.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}' +
+      '.indicador{padding:11px 12px;border:1px solid #dbe3ee;border-radius:7px;background:#f8fafc}.indicador span{display:block;margin-bottom:5px;color:#64748b;font-size:8px}.indicador strong{font-size:17px}' +
+      '.nota{margin-top:14px;color:#64748b;font-size:8px;line-height:1.5}footer{margin-top:18px;padding-top:7px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:8px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
+      '</style></head><body><header><div><p class="eyebrow">Gestión de Seguridad Profesional</p><h1>Cómputos mensuales</h1><p class="periodo">' + escaparHtml(nombreObjetivo) + ' · ' + escaparHtml(nombreMes(mes)) +
+      '</p></div><div class="meta"><strong>' + filas.length + ' vigiladores</strong>Reporte por objetivo<br>Emitido el ' + escaparHtml(fechaEmision) + '</div></header>' +
+      '<div class="tabla-wrap"><table><thead>' + renderFila(encabezados, true) + '</thead><tbody>' + cuerpo + '</tbody><tfoot>' +
+      '<tr><td colspan="2">Totales</td><td>' + formatoHoras(totalHoras) + '</td><td>' + formatoHoras(totalExtras) + '</td><td>' + formatoHoras(totalNocturnas) +
+      '</td><td colspan="3">—</td><td>' + formatoHoras(totalFeriadosDiurnos) + '</td><td>' + formatoHoras(totalFeriadosNocturnos) + '</td><td colspan="4">—</td></tr></tfoot></table></div>' +
+      '<section class="totales"><h2>Resumen del objetivo</h2><div class="resumen">' +
+      '<div class="indicador"><span>Vigiladores</span><strong>' + filas.length + '</strong></div><div class="indicador"><span>Horas totales</span><strong>' + formatoHoras(totalHoras) +
+      '</strong></div><div class="indicador"><span>Feriados diurnos</span><strong>' + formatoHoras(totalFeriadosDiurnos) + ' h</strong></div><div class="indicador"><span>Feriados nocturnos</span><strong>' +
+      formatoHoras(totalFeriadosNocturnos) + ' h</strong></div></div></section><p class="nota">Los guiones indican conceptos que todavía no tienen un registro estructurado en GSP. Las horas extras se calculan sobre las 200 horas mensuales. Los feriados corresponden a las fechas configuradas para este objetivo.</p>' +
+      '<footer>GSP Security Pro · Cómputos del objetivo: ' + escaparHtml(nombreObjetivo) + '</footer><script>window.addEventListener("load",function(){window.focus();window.print()})</script></body></html>')
     ventana.document.close()
     setError('')
   }
