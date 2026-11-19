@@ -5,6 +5,7 @@ import { Boton } from '@/componentes/ui/boton'
 import { Insignia } from '@/componentes/ui/insignia'
 import { Dialogo } from '@/componentes/ui/dialogo'
 import { Entrada } from '@/componentes/ui/entrada'
+import { SelectorFecha } from '@/componentes/ui/selector-fecha'
 import { Etiqueta } from '@/componentes/ui/etiqueta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
@@ -219,11 +220,11 @@ export const LibroNovedades: React.FC = () => {
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="min-w-0 w-full">
             <label htmlFor="novedades-desde" className="mb-1 block text-[11px] font-semibold text-slate-500">Desde</label>
-            <Entrada id="novedades-desde" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
+            <SelectorFecha id="novedades-desde"  value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
           </div>
           <div className="min-w-0 w-full">
             <label htmlFor="novedades-hasta" className="mb-1 block text-[11px] font-semibold text-slate-500">Hasta</label>
-            <Entrada id="novedades-hasta" type="date" value={fechaHasta} min={fechaDesde || undefined} onChange={(e) => setFechaHasta(e.target.value)} />
+            <SelectorFecha id="novedades-hasta"  value={fechaHasta} min={fechaDesde || undefined} onChange={(e) => setFechaHasta(e.target.value)} />
           </div>
         </div>
         {usuario?.rol !== 'vigilador' && (
@@ -383,7 +384,7 @@ export const LibroNovedades: React.FC = () => {
               <Etiqueta requerido>Fecha</Etiqueta>
               {usuario?.rol === 'vigilador' ? (
                 <div className="flex min-h-[46px] items-center rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100">{fecha || 'Se registra automáticamente'}</div>
-              ) : <Entrada type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}
+              ) : <SelectorFecha  value={fecha} onChange={e => setFecha(e.target.value)} />}
             </div>
             <div>
               <Etiqueta requerido>Hora</Etiqueta>
