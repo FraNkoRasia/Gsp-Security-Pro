@@ -201,7 +201,7 @@ export const CalculadoraSueldo: React.FC = () => {
         resultado[fila.id_objetivo] ||= {}
         for (const fecha of fila.fechas || []) {
           const fechaClave = String(fecha).trim().slice(0, 10)
-          if (/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaClave) &&
+          if (/^\d{4}-\d{2}-\d{2}$/.test(fechaClave) &&
             fechaClave.startsWith(`${mesDeLaFila}-`)) {
             resultado[fila.id_objetivo][fechaClave] = 'Feriado marcado por administrador'
           }
