@@ -94,3 +94,93 @@ export const obtenerMesesDeTurnos = (turnos: Turno[]) => {
   }
   return Array.from(meses).sort((a, b) => b.localeCompare(a))
 }
+
+
+export interface ResumenHorasDetalladoMes {
+  horasTurno: number
+  horasDiurnas: number
+  horasNocturnas: number
+  horasExtra: number
+  horasExtraDiurnas: number
+  horasExtraNocturnas: number
+  horasFeriadoDiurno: number
+  horasFeriadoNocturno: number
+  turnosFinalizados: Turno[]
+  horasExtraPorTurno: Record<string, { diurnas: number; nocturnas: number; total: number }>
+}
+
+/**
+ * Consolida horas reales del mes, distribuyendo las extras a partir de la
+ * hora 200 y clasificando cada minuto por franja horaria y fecha feriada.
+ */
+export const obtenerResumenDetalladoHorasMes = (
+  turnos: Turno[],
+  mes: string,
+  feriadosPorObjetivo: Record<string, Record<string, string>>,
+  ahora = new Date()
+): ResumenHorasDetalladoMes => {
+  const resumen: ResumenHorasDetalladoMes = {
+    horasTurno: 0,
+    horasDiurnas: 0,
+    horasNocturnas: 0,
+    horasExtra: 0,
+    horasExtraDiurnas: 0,
+    horasExtraNocturnas: 0,
+    horasFeriadoDiurno: 0,
+    horasFeriadoNocturno: 0,
+    turnosFinalizados: [],
+    horasExtraPorTurno: {},
+  }
+  let minutosAcumulados = 0
+  const turnosOrdenados = eliminarTurnosDuplicados(turnos)
+    .filter(turno =>
+      turno.tipo !== 'franco' &&
+      turno.estado !== 'reemplazado' &&
+      turno.estado !== 'ausente' &&
+      turno.horas_totales > 0 &&
+      turno.fecha.startsWith(mes) &&
+      turnoFinalizado(turno, ahora)
+    )
+    .sort((a, b) => {
+      const ia = obtenerIntervaloTurno(a).inicio.getTime()
+      const ib = obtenerIntervaloTurno(b).inicio.getTime()
+      return ia - ib
+    })
+
+  for (const turno of turnosOrdenados) {
+    const { inicio, fin } = obtenerIntervaloTurno(turno)
+    const extrasTurno = { diurnas: 0, nocturnas: 0, total: 0 }
+    for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
+      const fecha = new Date(cursor)
+      const esNocturna = fecha.getHours() >= 21 || fecha.getHours() < 6
+      const fechaClave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+      const esFeriado = Boolean(feriadosPorObjetivo[turno.id_objetivo]?.[fechaClave])
+      const esExtra = minutosAcumulados >= 200 * 60
+      minutosAcumulados++
+
+      if (esNocturna) {
+        resumen.horasNocturnas += 1 / 60
+        if (esExtra) {
+          resumen.horasExtraNocturnas += 1 / 60
+          extrasTurno.nocturnas += 1 / 60
+        }
+        if (esFeriado) resumen.horasFeriadoNocturno += 1 / 60
+      } else {
+        resumen.horasDiurnas += 1 / 60
+        if (esExtra) {
+          resumen.horasExtraDiurnas += 1 / 60
+          extrasTurno.diurnas += 1 / 60
+        }
+        if (esFeriado) resumen.horasFeriadoDiurno += 1 / 60
+      }
+    }
+    const horasTurno = (fin.getTime() - inicio.getTime()) / 3600000
+    resumen.horasTurno += horasTurno
+    extrasTurno.total = extrasTurno.diurnas + extrasTurno.nocturnas
+    resumen.horasExtraPorTurno[turno.id] = extrasTurno
+    resumen.turnosFinalizados.push(turno)
+  }
+
+  resumen.horasExtra = resumen.horasExtraDiurnas + resumen.horasExtraNocturnas
+  return resumen
+}
