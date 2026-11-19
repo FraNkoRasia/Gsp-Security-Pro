@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { CalendarDays, Settings2, Save } from 'lucide-react'
+import { CalendarDays, Settings2, Save, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
@@ -44,6 +44,8 @@ const fechaLocal = (fecha: Date) => `${fecha.getFullYear()}-${String(fecha.getMo
 export const ValoresSalariales: React.FC = () => {
  const { usuario } = useAutenticacion()
  const [mes,setMes]=useState(()=>fechaLocal(new Date()))
+ const [calendarioAbierto,setCalendarioAbierto]=useState(false)
+ const [anioCalendario,setAnioCalendario]=useState(()=>Number(fechaLocal(new Date()).slice(0,4)))
  const [config,setConfig]=useState<ConfiguracionSalarial>(CONFIG_INICIAL)
  const [cargando,setCargando]=useState(true)
  const [existe,setExiste]=useState(false)
@@ -77,10 +79,20 @@ export const ValoresSalariales: React.FC = () => {
   finally{setGuardando(false)}
  }
  const nombreMes=new Intl.DateTimeFormat('es-AR',{month:'long',year:'numeric'}).format(new Date(Number(mes.slice(0,4)),Number(mes.slice(5,7))-1,1))
+ const mesesCalendario=Array.from({length:12},(_,indice)=>{const valor=anioCalendario+'-'+String(indice+1).padStart(2,'0');return {valor,nombre:new Intl.DateTimeFormat('es-AR',{month:'long'}).format(new Date(anioCalendario,indice,1))}})
  return <div className="space-y-5">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
    <div><div className="flex items-center gap-2"><Settings2 className="h-5 w-5 text-blue-500"/><h2 className="text-xl font-black text-slate-900 dark:text-white">Valores salariales y parámetros</h2></div><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Configuración mensual compartida con todos los vigiladores de la empresa.</p></div>
-   <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300"><CalendarDays className="h-4 w-4"/><input type="month" value={mes} onChange={e=>setMes(e.target.value)} className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white"/></label>
+   <div className="relative w-full sm:w-64">
+    <button type="button" aria-expanded={calendarioAbierto} aria-haspopup="dialog" onClick={()=>{setAnioCalendario(Number(mes.slice(0,4)));setCalendarioAbierto(abierto=>!abierto)}} className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm font-semibold capitalize text-slate-900 shadow-sm outline-none transition hover:border-blue-400 hover:bg-slate-50 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
+     <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-blue-500"/><span className="truncate">{nombreMes}</span></span><ChevronRight className={"h-4 w-4 shrink-0 text-slate-400 transition-transform "+(calendarioAbierto?"rotate-90":"rotate-0")}/>
+    </button>
+    {calendarioAbierto&&<div role="dialog" aria-label="Seleccionar mes" className="absolute right-0 top-[calc(100%+8px)] z-40 w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]">
+     <div className="mb-4 flex items-center justify-between"><button type="button" aria-label="Año anterior" onClick={()=>setAnioCalendario(anio=>anio-1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronLeft className="h-4 w-4"/></button><span className="text-base font-black tabular-nums text-slate-900 dark:text-white">{anioCalendario}</span><button type="button" aria-label="Año siguiente" onClick={()=>setAnioCalendario(anio=>anio+1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronRight className="h-4 w-4"/></button></div>
+     <div className="grid grid-cols-3 gap-2">{mesesCalendario.map(opcion=><button key={opcion.valor} type="button" onClick={()=>{setMes(opcion.valor);setCalendarioAbierto(false)}} className={"min-h-10 rounded-xl px-2 text-xs font-bold capitalize transition "+(mes===opcion.valor?"bg-blue-600 text-white shadow-md shadow-blue-600/20":"text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-300")}>{opcion.nombre}</button>)}</div>
+     <button type="button" onClick={()=>{const actual=fechaLocal(new Date());setMes(actual);setAnioCalendario(Number(actual.slice(0,4)));setCalendarioAbierto(false)}} className="mt-3 w-full rounded-xl border border-slate-200 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Ir al mes actual</button>
+    </div>}
+   </div>
   </div>
   <Tarjeta><TarjetaContenido className="space-y-3 p-4 sm:p-5">
    <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold text-slate-900 dark:text-white">Parámetros de {nombreMes}</h3><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${existe?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}`}>{existe?'Configuración guardada':'Mes sin configurar'}</span></div>
