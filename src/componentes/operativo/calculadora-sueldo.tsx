@@ -48,11 +48,15 @@ function obtenerHorasPorFranja(turno: Turno, feriados: Record<string, string>) {
   return { diurnos: diurnos / 60, nocturnos: nocturnos / 60, feriadoDiurno: feriadoDiurno / 60, feriadoNocturno: feriadoNocturno / 60 }
 }
 
-export const CalculadoraSueldo: React.FC = () => {
+type CalculadoraSueldoProps = { vigiladorId?: string; mesInicial?: string; mostrarEncabezadoVigilador?: boolean }
+
+export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorId, mesInicial, mostrarEncabezadoVigilador = true }) => {
   const { turnos } = useOperativo()
   const { usuario } = useAutenticacion()
   const ahora = new Date()
-  const [mes, setMes] = useState(() => fechaLocal(new Date()))
+  const idVigilador = vigiladorId || usuario?.id
+  const [mes, setMes] = useState(() => mesInicial || fechaLocal(new Date()))
+  useEffect(() => { if (mesInicial) setMes(mesInicial) }, [mesInicial])
   const [config, setConfig] = useState<ConfiguracionSalarial | null>(null)
   const [configuracionDisponible, setConfiguracionDisponible] = useState(false)
   const [cargandoConfiguracion, setCargandoConfiguracion] = useState(true)
@@ -87,10 +91,10 @@ export const CalculadoraSueldo: React.FC = () => {
   }, [mes, usuario?.id_empresa])
 
   const mesesDisponibles = useMemo(() => {
-    const lista = new Set(turnos.filter(t => t.id_vigilador === usuario?.id).map(t => t.fecha.slice(0, 7)))
+    const lista = new Set(turnos.filter(t => t.id_vigilador === idVigilador).map(t => t.fecha.slice(0, 7)))
     lista.add(fechaLocal(ahora))
     return Array.from(lista).sort((a, b) => b.localeCompare(a))
-  }, [turnos, usuario?.id, ahora])
+  }, [turnos, idVigilador, ahora, mes])
 
   // Se incluyen todos los turnos asignados en el mes, también los futuros:
   // la calculadora estima el mes completo según la grilla y no solo lo ya trabajado.
@@ -98,7 +102,7 @@ export const CalculadoraSueldo: React.FC = () => {
     t.id_vigilador === usuario?.id && t.fecha.startsWith(mes) &&
     t.tipo !== 'franco' && t.estado !== 'reemplazado' && t.estado !== 'ausente' &&
     t.horas_totales > 0
-  )), [turnos, usuario?.id, mes])
+  )), [turnos, idVigilador, mes])
 
   // Lee las fechas activas compartidas por objetivo y mes desde Supabase.
   // No reconstruye feriados con el calendario del dispositivo: utiliza la
@@ -211,13 +215,13 @@ export const CalculadoraSueldo: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {mostrarEncabezadoVigilador && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-blue-500" />
             <h2 className="text-xl font-black text-slate-900 dark:text-white">Calculadora de sueldo</h2>
           </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Estimación basada en tus turnos registrados en la grilla.</p>
+          {mostrarEncabezadoVigilador && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Estimación basada en tus turnos registrados en la grilla.</p>}
         </div>
         <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
           <CalendarDays className="h-4 w-4" />
@@ -225,7 +229,7 @@ export const CalculadoraSueldo: React.FC = () => {
             {mesesDisponibles.map(m => <option key={m} value={m}>{new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1))}</option>)}
           </select>
         </label>
-      </div>
+      </div>}
 
       <Tarjeta className="border-emerald-500/30">
         <TarjetaContenido className="space-y-2 p-5">
