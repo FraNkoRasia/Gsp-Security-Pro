@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { FileDown, FileText, CalendarDays, Users, Clock3, ChevronLeft, ChevronRight, Calculator } from 'lucide-react'
 import { CalculadoraSueldo } from '@/componentes/operativo/calculadora-sueldo'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -36,6 +36,19 @@ export const ComputosMensuales: React.FC = () => {
   const [cargandoFeriados, setCargandoFeriados] = useState(false)
   const [error, setError] = useState('')
   const [calendarioAbierto, setCalendarioAbierto] = useState(false)
+  const [calendarioArriba, setCalendarioArriba] = useState(false)
+  const calendarioRef = useRef<HTMLDivElement>(null)
+  const botonCalendarioRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!calendarioAbierto) return
+    const cerrarFuera = (evento: PointerEvent) => { if (!calendarioRef.current?.contains(evento.target as Node)) setCalendarioAbierto(false) }
+    const cerrarEscape = (evento: KeyboardEvent) => { if (evento.key === 'Escape') setCalendarioAbierto(false) }
+    document.addEventListener('pointerdown', cerrarFuera)
+    document.addEventListener('keydown', cerrarEscape)
+    const rect = botonCalendarioRef.current?.getBoundingClientRect()
+    if (rect) setCalendarioArriba(window.innerHeight - rect.bottom < 290 && rect.top > 290)
+    return () => { document.removeEventListener('pointerdown', cerrarFuera); document.removeEventListener('keydown', cerrarEscape) }
+  }, [calendarioAbierto])
   const [anioCalendario, setAnioCalendario] = useState(() => Number(fechaLocal(new Date()).slice(0, 4)))
   const [vigiladorSeleccionadoId, setVigiladorSeleccionadoId] = useState('')
 
@@ -243,13 +256,13 @@ export const ComputosMensuales: React.FC = () => {
               {objetivosEmpresa.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
             </select>
           </label>
-          <div className="relative min-w-0 space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <div ref={calendarioRef} className="relative min-w-0 space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
             <span className="block">Mes</span>
-            <button type="button" aria-expanded={calendarioAbierto} aria-haspopup="dialog" onClick={() => { setAnioCalendario(Number(mes.slice(0, 4))); setCalendarioAbierto(abierto => !abierto) }} className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm font-semibold capitalize text-slate-900 shadow-sm outline-none transition hover:border-blue-400 hover:bg-slate-50 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
+            <button ref={botonCalendarioRef} type="button" aria-expanded={calendarioAbierto} aria-haspopup="dialog" onClick={() => { setAnioCalendario(Number(mes.slice(0, 4))); setCalendarioAbierto(abierto => !abierto) }} className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm font-semibold capitalize text-slate-900 shadow-sm outline-none transition hover:border-blue-400 hover:bg-slate-50 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
               <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-blue-500"/><span className="truncate">{mesSeleccionadoNombre}</span></span>
               <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${calendarioAbierto ? 'rotate-90' : 'rotate-0'}`}/>
             </button>
-            {calendarioAbierto && <div role="dialog" aria-label="Seleccionar mes" className="absolute right-0 top-[calc(100%+8px)] z-40 w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]">
+            {calendarioAbierto && <div role="dialog" aria-label="Seleccionar mes" className={"absolute right-0 "+(calendarioArriba?"bottom-[calc(100%+8px)]":"top-[calc(100%+8px)]")+" z-[70] w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]">
               <div className="mb-4 flex items-center justify-between">
                 <button type="button" aria-label="Año anterior" onClick={() => setAnioCalendario(anio => anio - 1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronLeft className="h-4 w-4"/></button>
                 <span className="text-base font-black tabular-nums text-slate-900 dark:text-white">{anioCalendario}</span>
