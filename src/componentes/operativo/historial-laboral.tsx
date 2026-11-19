@@ -5,7 +5,7 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
 import { supabase } from '@/servicios/supabase'
-import { eliminarTurnosDuplicados, obtenerMesesDeTurnos, obtenerResumenDetalladoHorasMes, turnoFinalizado, turnoSeSuperponeConMes } from '@/utilidades/calculo-horas-mes'
+import { eliminarTurnosDuplicados, obtenerMesesDeTurnos, obtenerResumenDetalladoHorasMes, obtenerIntervaloTurno, turnoFinalizado, turnoSeSuperponeConMes } from '@/utilidades/calculo-horas-mes'
 
 const formatearHoras = (horas: number) => {
   const minutos = Math.round(horas * 60)
@@ -120,7 +120,7 @@ export const HistorialLaboral: React.FC = () => {
         <Tarjeta><TarjetaContenido className="p-4"><p className="text-xs text-slate-500">Horas nocturnas</p><p className="mt-1 text-2xl font-black text-indigo-600">{formatearHoras(horasNocturnas)} h</p></TarjetaContenido></Tarjeta>
         <Tarjeta><TarjetaContenido className="space-y-2 p-4"><p className="text-xs text-slate-500">Feriados trabajados</p><div className="flex justify-between gap-2 text-sm"><span className="text-amber-600">Diurnas</span><strong>{formatearHoras(horasFeriadoDiurno)} h</strong></div><div className="flex justify-between gap-2 text-sm"><span className="text-indigo-600">Nocturnas</span><strong>{formatearHoras(horasFeriadoNocturno)} h</strong></div></TarjetaContenido></Tarjeta>
         <Tarjeta><TarjetaContenido className="space-y-2 p-4"><p className="text-xs text-slate-500">Horas extra (más de 200 hs)</p><div className="flex justify-between gap-2 text-sm"><span className="text-amber-600">Diurnas</span><strong className="text-emerald-600">{formatearHoras(horasExtraDiurnas)} h</strong></div><div className="flex justify-between gap-2 text-sm"><span className="text-indigo-600">Nocturnas</span><strong className="text-emerald-600">{formatearHoras(horasExtraNocturnas)} h</strong></div></TarjetaContenido></Tarjeta>
-        <Tarjeta><TarjetaContenido className="p-4"><p className="text-xs text-slate-500">Total del mes</p><p className="mt-1 text-2xl font-black text-blue-600">{formatearHoras(horasNormales + horasExtra)} h</p></TarjetaContenido></Tarjeta>
+        <Tarjeta><TarjetaContenido className="p-4"><p className="text-xs text-slate-500">Total del mes</p><p className="mt-1 text-2xl font-black text-blue-600">{formatearHoras(horasNormales)} h</p></TarjetaContenido></Tarjeta>
       </div>
 
       <Tarjeta className="overflow-hidden">
