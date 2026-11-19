@@ -102,7 +102,6 @@ export const MiMes: React.FC = () => {
   const horasFeriadoNocturnas = resumenHoras.horasFeriadoNocturno
   const horasExtraDiurnas = resumenHoras.horasExtraDiurnas
   const horasExtraNocturnas = resumenHoras.horasExtraNocturnas
-  const horasExtra = resumenHoras.horasExtra
   const francos = turnosContables.filter(t => t.tipo === 'franco' && t.fecha <= ahora.toISOString().slice(0, 10)).length
   const diasTrabajados = resumenHoras.turnosFinalizados.length
 
