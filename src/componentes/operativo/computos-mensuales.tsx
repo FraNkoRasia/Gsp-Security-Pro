@@ -11,7 +11,8 @@ type FilaComputo = {
   id: string
   nombre: string
   horas: number
-  extras: number
+  extrasDiurnas: number
+  extrasNocturnas: number
   nocturnas: number
   feriadoDiurno: number
   feriadoNocturno: number
@@ -147,15 +148,24 @@ export const ComputosMensuales: React.FC = () => {
     return vigiladoresObjetivo.map(vigilador => {
       const propios = turnosObjetivo.filter(t => t.id_vigilador === vigilador.id)
       let horas = 0, nocturnas = 0, feriadoDiurno = 0, feriadoNocturno = 0
-      for (const turno of propios) {
-        if (turno.estado === 'ausente') continue
+      let extrasDiurnas = 0, extrasNocturnas = 0
+      let minutosAcumulados = 0
+      const turnosOrdenados = propios
+        .filter(turno => turno.estado !== 'ausente')
+        .sort((a, b) => obtenerIntervaloTurno(a).inicio.getTime() - obtenerIntervaloTurno(b).inicio.getTime())
+      for (const turno of turnosOrdenados) {
         const { inicio, fin } = obtenerIntervaloTurno(turno)
         for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
           const fecha = new Date(cursor)
           const esNocturna = fecha.getHours() >= 21 || fecha.getHours() < 6
           const esFeriado = feriados.includes(claveFecha(fecha))
+          const esExtra = minutosAcumulados >= 200 * 60
+          minutosAcumulados++
           horas++
-          if (esNocturna) nocturnas++
+          if (esNocturna) {
+            nocturnas++
+            if (esExtra) extrasNocturnas++
+          } else if (esExtra) extrasDiurnas++
           if (esFeriado && esNocturna) feriadoNocturno++
           if (esFeriado && !esNocturna) feriadoDiurno++
         }
@@ -165,7 +175,8 @@ export const ComputosMensuales: React.FC = () => {
         id: vigilador.id,
         nombre: `${vigilador.apellido} ${vigilador.nombre}`.trim(),
         horas: totalHoras,
-        extras: Math.max(0, totalHoras - 200),
+        extrasDiurnas: extrasDiurnas / 60,
+        extrasNocturnas: extrasNocturnas / 60,
         nocturnas: nocturnas / 60,
         feriadoDiurno: feriadoDiurno / 60,
         feriadoNocturno: feriadoNocturno / 60,
@@ -194,9 +205,9 @@ export const ComputosMensuales: React.FC = () => {
   const exportarPdf = () => {
     const objetivo = objetivos.find(o => o.id === objetivoId)
     const nombreObjetivo = objetivo?.nombre || 'Objetivo'
-    const encabezados = ['N°','Vigilador','Hs. totales','Hs. extras','Hs. nocturnas','Básico','Presentismo','Viáticos','Feriados diurnos','Feriados nocturnos','Licencias','Ausencias','Suspensiones','Observaciones']
+    const encabezados = ['N°','Vigilador','Hs. totales','Extras diurnas','Extras nocturnas','Hs. nocturnas','Básico','Presentismo','Viáticos','Feriados diurnos','Feriados nocturnos','Licencias','Ausencias','Suspensiones','Observaciones']
     const celdas = filas.map((fila, indice) => [
-      indice + 1, fila.nombre, formatoHoras(fila.horas), formatoHoras(fila.extras), formatoHoras(fila.nocturnas),
+      indice + 1, fila.nombre, formatoHoras(fila.horas), formatoHoras(fila.extrasDiurnas), formatoHoras(fila.extrasNocturnas), formatoHoras(fila.nocturnas),
       '—', '—', '—', formatoHoras(fila.feriadoDiurno), formatoHoras(fila.feriadoNocturno),
       '—', fila.ausencias, '—', '—'
     ])
@@ -223,7 +234,7 @@ export const ComputosMensuales: React.FC = () => {
       '</style></head><body><header><div><p class="eyebrow">Gestión de Seguridad Profesional</p><h1>Cómputos mensuales</h1><p class="periodo">' + escaparHtml(nombreObjetivo) + ' · ' + escaparHtml(nombreMes(mes)) +
       '</p></div><div class="meta"><strong>' + filas.length + ' vigiladores</strong>Reporte por objetivo<br>Emitido el ' + escaparHtml(fechaEmision) + '</div></header>' +
       '<div class="tabla-wrap"><table><thead>' + renderFila(encabezados, true) + '</thead><tbody>' + cuerpo + '</tbody><tfoot>' +
-      '<tr><td colspan="2">Totales</td><td>' + formatoHoras(totalHoras) + '</td><td>' + formatoHoras(totalExtras) + '</td><td>' + formatoHoras(totalNocturnas) +
+      '<tr><td colspan="2">Totales</td><td>' + formatoHoras(totalHoras) + '</td><td>' + formatoHoras(totalExtrasDiurnas) + '</td><td>' + formatoHoras(totalExtrasNocturnas) + '</td><td>' + formatoHoras(totalNocturnas) +
       '</td><td colspan="3">—</td><td>' + formatoHoras(totalFeriadosDiurnos) + '</td><td>' + formatoHoras(totalFeriadosNocturnos) + '</td><td colspan="4">—</td></tr></tfoot></table></div>' +
       '<section class="totales"><h2>Resumen del objetivo</h2><div class="resumen">' +
       '<div class="indicador"><span>Vigiladores</span><strong>' + filas.length + '</strong></div><div class="indicador"><span>Horas totales</span><strong>' + formatoHoras(totalHoras) +
@@ -291,10 +302,10 @@ export const ComputosMensuales: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1250px] border-collapse text-left text-sm">
             <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-900/70 dark:text-slate-400">
-              <tr>{['N°','Vigilador','Hs. totales','Hs. extras','Hs. nocturnas','Básico','Presentismo','Viáticos','Feriados diurnos','Feriados nocturnos','Licencias','Ausencias','Suspensiones','Observaciones'].map(h=><th key={h} className="whitespace-nowrap px-3 py-3 font-bold">{h}</th>)}</tr>
+              <tr>{['N°','Vigilador','Hs. totales','Extras diurnas','Extras nocturnas','Hs. nocturnas','Básico','Presentismo','Viáticos','Feriados diurnos','Feriados nocturnos','Licencias','Ausencias','Suspensiones','Observaciones'].map(h=><th key={h} className="whitespace-nowrap px-3 py-3 font-bold">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filas.map((fila,i)=><tr key={fila.id} className="text-slate-700 dark:text-slate-200"><td className="px-3 py-3 text-slate-400">{i+1}</td><td className="whitespace-nowrap px-3 py-3 font-semibold">{fila.nombre}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.horas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.extras)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.nocturnas)}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 font-semibold text-amber-600 dark:text-amber-300 tabular-nums">{formatoHoras(fila.feriadoDiurno)}</td><td className="px-3 py-3 font-semibold text-indigo-600 dark:text-indigo-300 tabular-nums">{formatoHoras(fila.feriadoNocturno)}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 tabular-nums">{fila.ausencias}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td></tr>)}
+              {filas.map((fila,i)=><tr key={fila.id} className="text-slate-700 dark:text-slate-200"><td className="px-3 py-3 text-slate-400">{i+1}</td><td className="whitespace-nowrap px-3 py-3 font-semibold">{fila.nombre}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.horas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.extrasDiurnas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.extrasNocturnas)}</td><td className="px-3 py-3 tabular-nums">{formatoHoras(fila.nocturnas)}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 font-semibold text-amber-600 dark:text-amber-300 tabular-nums">{formatoHoras(fila.feriadoDiurno)}</td><td className="px-3 py-3 font-semibold text-indigo-600 dark:text-indigo-300 tabular-nums">{formatoHoras(fila.feriadoNocturno)}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 tabular-nums">{fila.ausencias}</td><td className="px-3 py-3 text-slate-400">—</td><td className="px-3 py-3 text-slate-400">—</td></tr>)}
               {!filas.length && <tr><td colSpan={14} className="px-4 py-10 text-center text-sm text-slate-500">{objetivoId ? 'No hay vigiladores asignados ni turnos para este objetivo en el período.' : 'Seleccioná un objetivo para consultar los cómputos.'}</td></tr>}
             </tbody>
             {filas.length > 0 && <tfoot className="bg-slate-50 font-bold text-slate-900 dark:bg-slate-900/70 dark:text-white"><tr><td colSpan={2} className="px-3 py-3">Totales</td><td className="px-3 py-3">{formatoHoras(totalHoras)}</td><td className="px-3 py-3">{formatoHoras(totalExtras)}</td><td className="px-3 py-3">{formatoHoras(filas.reduce((s,f)=>s+f.nocturnas,0))}</td><td colSpan={3}/><td className="px-3 py-3">{formatoHoras(totalFeriadosDiurnos)}</td><td className="px-3 py-3">{formatoHoras(totalFeriadosNocturnos)}</td><td colSpan={4}/></tr></tfoot>}
