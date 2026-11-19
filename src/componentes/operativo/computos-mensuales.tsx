@@ -148,26 +148,41 @@ export const ComputosMensuales: React.FC = () => {
     return vigiladoresObjetivo.map(vigilador => {
       const propios = turnosObjetivo.filter(t => t.id_vigilador === vigilador.id)
       let horas = 0, nocturnas = 0, feriadoDiurno = 0, feriadoNocturno = 0
-      let extrasDiurnas = 0, extrasNocturnas = 0
-      let minutosAcumulados = 0
-      const turnosOrdenados = propios
-        .filter(turno => turno.estado !== 'ausente')
-        .sort((a, b) => obtenerIntervaloTurno(a).inicio.getTime() - obtenerIntervaloTurno(b).inicio.getTime())
-      for (const turno of turnosOrdenados) {
+      for (const turno of propios) {
+        if (turno.estado === 'ausente') continue
         const { inicio, fin } = obtenerIntervaloTurno(turno)
         for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
           const fecha = new Date(cursor)
           const esNocturna = fecha.getHours() >= 21 || fecha.getHours() < 6
           const esFeriado = feriados.includes(claveFecha(fecha))
-          const esExtra = minutosAcumulados >= 200 * 60
-          minutosAcumulados++
           horas++
-          if (esNocturna) {
-            nocturnas++
-            if (esExtra) extrasNocturnas++
-          } else if (esExtra) extrasDiurnas++
+          if (esNocturna) nocturnas++
           if (esFeriado && esNocturna) feriadoNocturno++
           if (esFeriado && !esNocturna) feriadoDiurno++
+        }
+      }
+      // El límite de 200 hs es mensual por vigilador, aunque trabaje en varios objetivos.
+      // Luego se imputan a este objetivo solo las horas extra que se hicieron aquí.
+      let extrasDiurnas = 0, extrasNocturnas = 0
+      let minutosAcumulados = 0
+      const turnosDelVigiladorMes = eliminarTurnosDuplicados(turnos.filter(turno =>
+        turno.id_vigilador === vigilador.id &&
+        turno.fecha.startsWith(mes) &&
+        turno.tipo !== 'franco' &&
+        turno.estado !== 'reemplazado' &&
+        turno.estado !== 'ausente' &&
+        turno.horas_totales > 0
+      )).sort((a, b) => obtenerIntervaloTurno(a).inicio.getTime() - obtenerIntervaloTurno(b).inicio.getTime())
+      for (const turno of turnosDelVigiladorMes) {
+        const { inicio, fin } = obtenerIntervaloTurno(turno)
+        for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
+          const esExtra = minutosAcumulados >= 200 * 60
+          const esNocturna = new Date(cursor).getHours() >= 21 || new Date(cursor).getHours() < 6
+          minutosAcumulados++
+          if (esExtra && turno.id_objetivo === objetivoId) {
+            if (esNocturna) extrasNocturnas++
+            else extrasDiurnas++
+          }
         }
       }
       const totalHoras = horas / 60
