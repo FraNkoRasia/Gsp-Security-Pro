@@ -235,15 +235,15 @@ export const ComputosMensuales: React.FC = () => {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500"><FileText className="h-5 w-5" /></div>
           <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Cómputos mensuales</h2><p className="text-sm text-slate-500 dark:text-slate-400">Resumen de horas por objetivo y período</p></div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
-            Objetivo
+        <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+          <label className="block min-w-0 space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="block">Objetivo</span>
             <select value={objetivoId} onChange={e => setObjetivoId(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
               <option value="">Seleccionar objetivo</option>
               {objetivosEmpresa.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
             </select>
           </label>
-          <div className="relative space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <div className="relative min-w-0 space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
             <span className="block">Mes</span>
             <button type="button" aria-expanded={calendarioAbierto} aria-haspopup="dialog" onClick={() => { setAnioCalendario(Number(mes.slice(0, 4))); setCalendarioAbierto(abierto => !abierto) }} className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm font-semibold capitalize text-slate-900 shadow-sm outline-none transition hover:border-blue-400 hover:bg-slate-50 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
               <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-blue-500"/><span className="truncate">{mesSeleccionadoNombre}</span></span>
