@@ -135,11 +135,11 @@ export const VistaPanelControl: React.FC = () => {
     ? pestanaActiva
     : pestanas[0]?.id || ''
 
-  // El título principal se muestra únicamente en la vista inicial de cada rol.
+  // El encabezado identifica el panel y permanece visible en todas las secciones del administrador.
   const mostrarTituloPrincipal = esSuperAdmin
     ? !empresaSeleccionadaId
     : esAdmin
-    ? pestanaRenderizada === 'objetivos' && !objetivoGrillaId
+    ? true
     : esVigilador
     ? pestanaRenderizada === 'miTurno'
     : esEncargado
