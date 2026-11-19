@@ -194,11 +194,14 @@ export const CalculadoraSueldo: React.FC = () => {
       }
       const resultado: Record<string, Record<string, string>> = {}
       for (const fila of data || []) {
-        resultado[fila.id_objetivo] = {}
+        // Un objetivo puede tener una fila por cada mes consultado.
+        // No reiniciar el mapa: eso borraba las fechas del primer mes al leer el segundo.
+        resultado[fila.id_objetivo] ||= {}
         for (const fecha of fila.fechas || []) {
-          const fechaClave = String(fecha).slice(0, 10)
-          // Un turno puede cruzar al mes siguiente, pero no debe heredar fechas antiguas.
-          if (fechaClave.startsWith(`${mes}-`) || fechaClave.startsWith(`${mesSiguiente}-`)) {
+          const fechaClave = String(fecha).trim().slice(0, 10)
+          // Un turno puede cruzar al mes siguiente; se conservan ambos meses.
+          if (/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaClave) &&
+            (fechaClave.startsWith(`${mes}-`) || fechaClave.startsWith(`${mesSiguiente}-`))) {
             resultado[fila.id_objetivo][fechaClave] = 'Feriado marcado por administrador'
           }
         }
