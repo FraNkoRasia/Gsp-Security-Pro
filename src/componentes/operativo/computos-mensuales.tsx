@@ -262,7 +262,7 @@ export const ComputosMensuales: React.FC = () => {
               <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-blue-500"/><span className="truncate">{mesSeleccionadoNombre}</span></span>
               <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${calendarioAbierto ? 'rotate-90' : 'rotate-0'}`}/>
             </button>
-            {calendarioAbierto && <div role="dialog" aria-label="Seleccionar mes" className={"absolute right-0 "+(calendarioArriba?"bottom-[calc(100%+8px)]":"top-[calc(100%+8px)]")+" z-[70] w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]">
+            {calendarioAbierto && <div role="dialog" aria-label="Seleccionar mes" className={"absolute right-0 "+(calendarioArriba?"bottom-[calc(100%+8px)]":"top-[calc(100%+8px)]")+" z-[70] w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]"}>
               <div className="mb-4 flex items-center justify-between">
                 <button type="button" aria-label="Año anterior" onClick={() => setAnioCalendario(anio => anio - 1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronLeft className="h-4 w-4"/></button>
                 <span className="text-base font-black tabular-nums text-slate-900 dark:text-white">{anioCalendario}</span>
