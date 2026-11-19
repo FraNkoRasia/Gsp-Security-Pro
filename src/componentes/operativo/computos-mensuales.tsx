@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { FileDown, FileText, CalendarDays, Users, Clock3 } from 'lucide-react'
+import { FileDown, FileText, CalendarDays, Users, Clock3, ChevronLeft, ChevronRight, Calculator } from 'lucide-react'
+import { CalculadoraSueldo } from '@/componentes/operativo/calculadora-sueldo'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
@@ -34,6 +35,9 @@ export const ComputosMensuales: React.FC = () => {
   const [versionFeriados, setVersionFeriados] = useState(0)
   const [cargandoFeriados, setCargandoFeriados] = useState(false)
   const [error, setError] = useState('')
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false)
+  const [anioCalendario, setAnioCalendario] = useState(() => Number(fechaLocal(new Date()).slice(0, 4)))
+  const [vigiladorSeleccionadoId, setVigiladorSeleccionadoId] = useState('')
 
   const objetivosEmpresa = useMemo(
     () => objetivos.filter(o => o.id_empresa === usuario?.id_empresa && o.activo).sort((a,b) => a.nombre.localeCompare(b.nombre)),
@@ -158,6 +162,23 @@ export const ComputosMensuales: React.FC = () => {
       }
     }).sort((a,b) => a.nombre.localeCompare(b.nombre))
   }, [objetivoId, mes, vigiladores, asignaciones, turnos, feriados])
+  
+  useEffect(() => {
+    if (!filas.length) {
+      setVigiladorSeleccionadoId('')
+      return
+    }
+    if (!filas.some(fila => fila.id === vigiladorSeleccionadoId)) {
+      setVigiladorSeleccionadoId(filas[0].id)
+    }
+  }, [filas, vigiladorSeleccionadoId])
+
+  const mesesCalendario = Array.from({ length: 12 }, (_, indice) => {
+    const valor = `${anioCalendario}-${String(indice + 1).padStart(2, '0')}`
+    return { valor, nombre: new Intl.DateTimeFormat('es-AR', { month: 'long' }).format(new Date(anioCalendario, indice, 1)) }
+  })
+  const mesSeleccionadoNombre = nombreMes(mes)
+
 
   const exportarPdf = () => {
     const objetivo = objetivos.find(o => o.id === objetivoId)
@@ -222,10 +243,24 @@ export const ComputosMensuales: React.FC = () => {
               {objetivosEmpresa.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
             </select>
           </label>
-          <label className="space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
-            Mes
-            <input type="month" value={mes} onChange={e => e.target.value && setMes(e.target.value)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
-          </label>
+          <div className="relative space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="block">Mes</span>
+            <button type="button" aria-expanded={calendarioAbierto} aria-haspopup="dialog" onClick={() => { setAnioCalendario(Number(mes.slice(0, 4))); setCalendarioAbierto(abierto => !abierto) }} className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm font-semibold capitalize text-slate-900 shadow-sm outline-none transition hover:border-blue-400 hover:bg-slate-50 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800">
+              <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-blue-500"/><span className="truncate">{mesSeleccionadoNombre}</span></span>
+              <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${calendarioAbierto ? 'rotate-90' : 'rotate-0'}`}/>
+            </button>
+            {calendarioAbierto && <div role="dialog" aria-label="Seleccionar mes" className="absolute right-0 top-[calc(100%+8px)] z-40 w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]">
+              <div className="mb-4 flex items-center justify-between">
+                <button type="button" aria-label="Año anterior" onClick={() => setAnioCalendario(anio => anio - 1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronLeft className="h-4 w-4"/></button>
+                <span className="text-base font-black tabular-nums text-slate-900 dark:text-white">{anioCalendario}</span>
+                <button type="button" aria-label="Año siguiente" onClick={() => setAnioCalendario(anio => anio + 1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronRight className="h-4 w-4"/></button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {mesesCalendario.map(opcion => <button key={opcion.valor} type="button" onClick={() => { setMes(opcion.valor); setCalendarioAbierto(false) }} className={`min-h-10 rounded-xl px-2 text-xs font-bold capitalize transition ${mes === opcion.valor ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-300'}`}>{opcion.nombre}</button>)}
+              </div>
+              <button type="button" onClick={() => { const actual = fechaLocal(new Date()); setMes(actual); setAnioCalendario(Number(actual.slice(0,4))); setCalendarioAbierto(false) }} className="mt-3 w-full rounded-xl border border-slate-200 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Ir al mes actual</button>
+            </div>}
+          </div>
         </div>
       </section>
 
@@ -255,6 +290,14 @@ export const ComputosMensuales: React.FC = () => {
           </table>
         </div>
         <p className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">Los guiones indican conceptos que todavía no tienen un registro estructurado en GSP. Las horas extras se calculan sobre las 200 horas mensuales, igual que en la calculadora actual. Los feriados se leen de las marcas manuales de la grilla del objetivo.</p>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-[#0C121E] sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500"><Calculator className="h-5 w-5"/></div><div><h3 className="font-black text-slate-900 dark:text-white">Calculadora de sueldo por vigilador</h3><p className="text-xs text-slate-500 dark:text-slate-400">Consultá la estimación individual usando los turnos del período seleccionado.</p></div></div>
+          <label className="w-full space-y-1 text-xs font-bold text-slate-500 dark:text-slate-400 sm:max-w-xs"><span>Seleccionar vigilador</span><select value={vigiladorSeleccionadoId} onChange={e=>setVigiladorSeleccionadoId(e.target.value)} disabled={!filas.length} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white">{filas.map(f=><option key={f.id} value={f.id}>{f.nombre}</option>)}</select></label>
+        </div>
+        {vigiladorSeleccionadoId ? <CalculadoraSueldo vigiladorId={vigiladorSeleccionadoId} mesInicial={mes} mostrarEncabezadoVigilador={false}/> : <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-900/60">No hay vigiladores asignados a este objetivo y período.</p>}
       </section>
     </div>
   )
