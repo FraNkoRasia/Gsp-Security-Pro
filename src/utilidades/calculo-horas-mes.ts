@@ -107,6 +107,7 @@ export interface ResumenHorasDetalladoMes {
   horasFeriadoNocturno: number
   turnosFinalizados: Turno[]
   horasExtraPorTurno: Record<string, { diurnas: number; nocturnas: number; total: number }>
+  horasFeriadoPorTurno: Record<string, { diurnas: number; nocturnas: number; total: number }>
 }
 
 /**
@@ -130,6 +131,7 @@ export const obtenerResumenDetalladoHorasMes = (
     horasFeriadoNocturno: 0,
     turnosFinalizados: [],
     horasExtraPorTurno: {},
+    horasFeriadoPorTurno: {},
   }
   let minutosAcumulados = 0
   const turnosOrdenados = eliminarTurnosDuplicados(turnos)
@@ -150,6 +152,7 @@ export const obtenerResumenDetalladoHorasMes = (
   for (const turno of turnosOrdenados) {
     const { inicio, fin } = obtenerIntervaloTurno(turno)
     const extrasTurno = { diurnas: 0, nocturnas: 0, total: 0 }
+    const feriadosTurno = { diurnas: 0, nocturnas: 0, total: 0 }
     for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
       const fecha = new Date(cursor)
       const esNocturna = fecha.getHours() >= 21 || fecha.getHours() < 6
@@ -164,20 +167,28 @@ export const obtenerResumenDetalladoHorasMes = (
           resumen.horasExtraNocturnas += 1 / 60
           extrasTurno.nocturnas += 1 / 60
         }
-        if (esFeriado) resumen.horasFeriadoNocturno += 1 / 60
+        if (esFeriado) {
+          resumen.horasFeriadoNocturno += 1 / 60
+          feriadosTurno.nocturnas += 1 / 60
+        }
       } else {
         resumen.horasDiurnas += 1 / 60
         if (esExtra) {
           resumen.horasExtraDiurnas += 1 / 60
           extrasTurno.diurnas += 1 / 60
         }
-        if (esFeriado) resumen.horasFeriadoDiurno += 1 / 60
+        if (esFeriado) {
+          resumen.horasFeriadoDiurno += 1 / 60
+          feriadosTurno.diurnas += 1 / 60
+        }
       }
     }
     const horasTurno = (fin.getTime() - inicio.getTime()) / 3600000
     resumen.horasTurno += horasTurno
     extrasTurno.total = extrasTurno.diurnas + extrasTurno.nocturnas
+    feriadosTurno.total = feriadosTurno.diurnas + feriadosTurno.nocturnas
     resumen.horasExtraPorTurno[turno.id] = extrasTurno
+    resumen.horasFeriadoPorTurno[turno.id] = feriadosTurno
     resumen.turnosFinalizados.push(turno)
   }
 
