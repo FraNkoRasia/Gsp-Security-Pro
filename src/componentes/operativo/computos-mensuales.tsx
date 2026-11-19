@@ -235,7 +235,7 @@ export const ComputosMensuales: React.FC = () => {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#0C121E]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-800">
           <div><h3 className="font-bold text-slate-900 dark:text-white">{objetivos.find(o => o.id === objetivoId)?.nombre || 'Seleccioná un objetivo'}</h3><p className="text-xs capitalize text-slate-500 dark:text-slate-400">{nombreMes(mes)} · {filas.length} vigiladores</p></div>
-          <button type="button" onClick={exportarPdf} disabled={!filas.length || cargandoFeriados} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"><FileDown className="h-4 w-4"/>Exportar PDF</button>
+          <button type="button" onClick={exportarPdf} disabled={!filas.length || cargandoFeriados || Boolean(error)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"><FileDown className="h-4 w-4"/>Exportar PDF</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1250px] border-collapse text-left text-sm">
