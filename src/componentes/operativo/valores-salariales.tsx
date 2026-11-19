@@ -4,7 +4,7 @@ import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
 
-type ConfiguracionSalarial = {
+export type ConfiguracionSalarial = {
   basico: number
   presentismo: number
   viaticos: number
@@ -22,7 +22,7 @@ type ConfiguracionSalarial = {
   redondeo: number
 }
 
-const CONFIG_INICIAL: ConfiguracionSalarial = {
+export const CONFIG_INICIAL: ConfiguracionSalarial = {
   basico: 1053200,
   presentismo: 180000,
   viaticos: 534000,
