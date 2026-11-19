@@ -1,47 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Calculator, CalendarDays, Moon, Sun, Settings2, ChevronDown, Save } from 'lucide-react'
+import { Calculator, CalendarDays, Moon, Sun } from 'lucide-react'
 import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
 import type { Turno } from '@/tipos'
 import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
-
-type ConfiguracionSalarial = {
-  basico: number
-  presentismo: number
-  viaticos: number
-  noRemunerativo: number
-  divisorHora: number
-  porcentajeNocturno: number
-  recargoFeriado: number
-  recargoHorasExtras: number
-  descuentoJubilacion: number
-  descuentoLey19032: number
-  descuentoObraSocial: number
-  descuentoSindicato: number
-  descuentoObraSocialNoRemunerativo: number
-  descuentoSindicatoViaticos: number
-  redondeo: number
-}
-
-const CONFIG_INICIAL: ConfiguracionSalarial = {
-  basico: 1053200,
-  presentismo: 180000,
-  viaticos: 534000,
-  noRemunerativo: 60000,
-  divisorHora: 200,
-  porcentajeNocturno: 0.1,
-  recargoFeriado: 100,
-  recargoHorasExtras: 50,
-  descuentoJubilacion: 11,
-  descuentoLey19032: 3,
-  descuentoObraSocial: 3,
-  descuentoSindicato: 3,
-  descuentoObraSocialNoRemunerativo: 3,
-  descuentoSindicatoViaticos: 3,
-  redondeo: 0.45,
-}
 
 const formatoPesos = (valor: number) => valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const redondearImporte = (valor: number) => Math.round((valor + Number.EPSILON) * 100) / 100
@@ -88,68 +52,38 @@ export const CalculadoraSueldo: React.FC = () => {
   const { usuario } = useAutenticacion()
   const ahora = new Date()
   const [mes, setMes] = useState(() => fechaLocal(new Date()))
-  const [config, setConfig] = useState<ConfiguracionSalarial>(CONFIG_INICIAL)
-  const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false)
-  const [cambiosPendientes, setCambiosPendientes] = useState(false)
-  const [mostrarConfirmacionGuardado, setMostrarConfirmacionGuardado] = useState(false)
-  const [guardandoConfiguracion, setGuardandoConfiguracion] = useState(false)
+  const [config, setConfig] = useState<ConfiguracionSalarial | null>(null)
+  const [configuracionDisponible, setConfiguracionDisponible] = useState(false)
+  const [cargandoConfiguracion, setCargandoConfiguracion] = useState(true)
 
-  // La configuración salarial se consulta siempre en Supabase.
-  // Si el mes no tiene una fila propia, hereda la última configuración anterior.
+  // La configuración salarial es compartida por empresa y período.
+  // El vigilador solo consulta los valores que el administrador haya guardado.
   useEffect(() => {
     let cancelado = false
-    const clienteSupabase = supabase
     const cargarConfiguracion = async () => {
-      if (!usuario?.id || !clienteSupabase) {
-        setConfig(CONFIG_INICIAL)
-        setCambiosPendientes(false)
-        return
-      }
-
+      setCargandoConfiguracion(true)
+      setConfiguracionDisponible(false)
+      setConfig(null)
+      if (!usuario?.id_empresa || !supabase) { setCargandoConfiguracion(false); return }
       try {
-        const { data: configuracionMensual, error: errorMensual } = await clienteSupabase
-          .from('configuraciones_salariales_mensuales')
-          .select('valores')
-          .eq('id_usuario', usuario.id)
-          .eq('mes', `${mes}-01`)
-          .maybeSingle()
-
-        if (errorMensual) throw errorMensual
-
-        let valoresGuardados = configuracionMensual?.valores as Partial<ConfiguracionSalarial> | null
-
-        if (!valoresGuardados) {
-          const { data: configuracionAnterior, error: errorAnterior } = await clienteSupabase
-            .from('configuraciones_salariales_mensuales')
-            .select('valores')
-            .eq('id_usuario', usuario.id)
-            .lt('mes', `${mes}-01`)
-            .order('mes', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-
-          if (errorAnterior) throw errorAnterior
-          valoresGuardados = configuracionAnterior?.valores as Partial<ConfiguracionSalarial> | null
-        }
-
+        const { data, error } = await supabase.from('configuraciones_salariales_mensuales')
+          .select('valores').eq('id_empresa', usuario.id_empresa).eq('mes', `${mes}-01`).maybeSingle()
+        if (error) throw error
         if (cancelado) return
-        const valores = { ...CONFIG_INICIAL, ...(valoresGuardados || {}) }
-        if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
-        setConfig(valores)
-      } catch (error) {
-        console.error('No se pudo cargar la configuración salarial desde Supabase:', error)
-        if (!cancelado) {
-          setConfig(CONFIG_INICIAL)
-          window.alert('No se pudieron cargar los valores salariales desde la base de datos. Verificá tu conexión e intentá nuevamente.')
+        if (data?.valores) {
+          const valores = { ...CONFIG_INICIAL, ...(data.valores as Partial<ConfiguracionSalarial>) }
+          if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
+          setConfig(valores)
+          setConfiguracionDisponible(true)
         }
-      } finally {
-        if (!cancelado) setCambiosPendientes(false)
-      }
+      } catch (error) {
+        console.error('No se pudieron cargar los valores salariales:', error)
+        if (!cancelado) window.alert('No se pudieron cargar los valores salariales. Verificá tu conexión e intentá nuevamente.')
+      } finally { if (!cancelado) setCargandoConfiguracion(false) }
     }
-
     void cargarConfiguracion()
     return () => { cancelado = true }
-  }, [mes, usuario?.id])
+  }, [mes, usuario?.id_empresa])
 
   const mesesDisponibles = useMemo(() => {
     const lista = new Set(turnos.filter(t => t.id_vigilador === usuario?.id).map(t => t.fecha.slice(0, 7)))
@@ -239,6 +173,7 @@ export const CalculadoraSueldo: React.FC = () => {
   const horasFeriado = horas.feriadoDiurno + horas.feriadoNocturno
 
   const liquidacion = useMemo(() => {
+    if (!config) return null
     const valorHora = config.divisorHora > 0 ? config.basico / config.divisorHora : 0
     // El adicional nocturno es el 0,10% del sueldo básico por cada hora nocturna.
     // Las horas nocturnas feriadas también conservan su adicional nocturno.
@@ -269,41 +204,7 @@ export const CalculadoraSueldo: React.FC = () => {
     return { adicionalNocturno, adicionalFeriado, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
 
-  const actualizar = (campo: keyof ConfiguracionSalarial, valor: string) => {
-    setConfig(actual => ({ ...actual, [campo]: Math.max(0, Number(valor) || 0) }))
-    setCambiosPendientes(true)
-  }
 
-  const guardarConfiguracion = async () => {
-    const clienteSupabase = supabase
-    if (!usuario?.id || !clienteSupabase) {
-      window.alert('No se pudo identificar el usuario para guardar los valores salariales.')
-      return
-    }
-
-    setGuardandoConfiguracion(true)
-    try {
-      const { error } = await clienteSupabase
-        .from('configuraciones_salariales_mensuales')
-        .upsert({
-          id_usuario: usuario.id,
-          mes: `${mes}-01`,
-          valores: config,
-          actualizado_por: usuario.id,
-          actualizado_en: new Date().toISOString(),
-        }, { onConflict: 'id_usuario,mes' })
-
-      if (error) throw error
-
-      setCambiosPendientes(false)
-      setMostrarConfirmacionGuardado(false)
-    } catch (error) {
-      console.error('No se pudieron guardar los valores salariales:', error)
-      window.alert('No se pudieron guardar los valores salariales en la base de datos.')
-    } finally {
-      setGuardandoConfiguracion(false)
-    }
-  }
 
   const nombreMes = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)) - 1, 1))
 
@@ -328,11 +229,12 @@ export const CalculadoraSueldo: React.FC = () => {
       <Tarjeta className="border-emerald-500/30">
         <TarjetaContenido className="space-y-2 p-5">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Neto estimado a cobrar · {nombreMes}</p>
-          <p className="text-3xl font-black tabular-nums text-emerald-600 dark:text-emerald-400">{formatoPesos(liquidacion.neto)}</p>
+          <p className="text-3xl font-black tabular-nums text-emerald-600 dark:text-emerald-400">{liquidacion ? formatoPesos(liquidacion.neto) : '—'}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">Estimación orientativa, sujeta al convenio y a la liquidación de la empresa.</p>
         </TarjetaContenido>
       </Tarjeta>
 
+      {cargandoConfiguracion ? <p className="text-sm text-slate-500">Cargando valores salariales del período...</p> : !configuracionDisponible || !config || !liquidacion ? <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">El administrador todavía no configuró los valores salariales de este mes. La estimación estará disponible cuando los cargue.</div> : <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: 'Jornadas', value: String(turnosMes.length), icon: <CalendarDays className="h-4 w-4" /> },
@@ -381,67 +283,7 @@ export const CalculadoraSueldo: React.FC = () => {
         </TarjetaContenido>
       </Tarjeta>
 
-      <Tarjeta>
-        <TarjetaContenido className="space-y-3 p-4 sm:p-5">
-          <button type="button" onClick={() => setMostrarConfiguracion(v => !v)} aria-expanded={mostrarConfiguracion} className="flex w-full items-center justify-between gap-3 text-left font-bold text-slate-900 dark:text-white">
-            <span className="flex items-center gap-2"><Settings2 className="h-4 w-4 text-blue-500" /> Valores salariales y parámetros</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${mostrarConfiguracion ? 'rotate-180' : ''}`} />
-          </button>
-          {mostrarConfiguracion && <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
-            {([
-              ['basico', 'Sueldo básico'],
-              ['presentismo', 'Presentismo'],
-              ['viaticos', 'Viáticos'],
-              ['noRemunerativo', 'Suma no remunerativa'],
-              ['divisorHora', 'Divisor para valor hora'],
-              ['porcentajeNocturno', 'Plus nocturno (% del sueldo básico por hora)'],
-              ['recargoFeriado', 'Recargo feriado (%)'],
-              ['recargoHorasExtras', 'Recargo horas extras (%)'],
-              ['descuentoJubilacion', 'Jubilación (%)'],
-              ['descuentoLey19032', 'Ley 19.032 (%)'],
-              ['descuentoObraSocial', 'Obra social remunerativa (%)'],
-              ['descuentoSindicato', 'Sindicato remunerativo (%)'],
-              ['descuentoSindicatoViaticos', 'Sindicato sobre viáticos (%)'],
-              ['descuentoObraSocialNoRemunerativo', 'Obra social no remunerativa (%)'],
-              ['redondeo', 'Redondeo del recibo ($)'],
-            ] as [keyof ConfiguracionSalarial, string][]).map(([campo, etiqueta]) => <label key={campo} className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300"><span>{etiqueta}</span><input type="number" min="0" step="any" value={config[campo]} onChange={e => actualizar(campo, e.target.value)} className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-[#0A0F1A] dark:text-white" /></label>)}
-            <div className="sm:col-span-2 flex flex-col gap-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Configuración correspondiente a {nombreMes}. {cambiosPendientes ? 'Tenés cambios sin guardar.' : 'Todos los cambios están guardados.'}</p>
-              <button type="button" onClick={() => setMostrarConfirmacionGuardado(true)} disabled={!cambiosPendientes} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-4 w-4" />Guardar cambios</button>
-            </div>
-            <p className="sm:col-span-2 text-xs leading-5 text-amber-700 dark:text-amber-300">Los valores se guardan en la base de datos. Las horas extras se calculan automáticamente sobre el total mensual trabajado: toda hora que supere las 200 horas se liquida con el recargo configurado. La configuración es personal y no modifica la liquidación oficial ni los datos de otros vigiladores.</p>
-          </div>}
-        </TarjetaContenido>
-      </Tarjeta>
-
-      {mostrarConfirmacionGuardado && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !guardandoConfiguracion) setMostrarConfirmacionGuardado(false) }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="titulo-confirmar-guardado" className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-[#111827] sm:p-6">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
-                <Save className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 id="titulo-confirmar-guardado" className="text-lg font-bold text-slate-900 dark:text-white">Confirmar cambios</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  ¿Querés guardar los valores salariales y parámetros de <strong className="capitalize">{nombreMes}</strong>?
-                </p>
-                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  Se guardarán en la base de datos para este mes y reemplazarán la configuración que ya estuviera guardada para ese período. Los demás meses no se modificarán.
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setMostrarConfirmacionGuardado(false)} disabled={guardandoConfiguracion} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
-                Cancelar
-              </button>
-              <button type="button" onClick={guardarConfiguracion} disabled={guardandoConfiguracion} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60">
-                {guardandoConfiguracion ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />Guardando...</> : <><Save className="h-4 w-4" />Confirmar y guardar</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </>}
     </div>
   )
 }
