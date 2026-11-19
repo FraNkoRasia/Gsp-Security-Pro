@@ -257,7 +257,7 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
             ['Presentismo', config.presentismo],
             [`Horas nocturnas · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
             [`Horas extras diurnas al ${config.recargoHorasExtras}% · ${horas.extrasDiurnas.toFixed(2)} hs`, horas.extrasDiurnas * (config.basico / config.divisorHora) * (1 + config.recargoHorasExtras / 100)],
-            [`Horas extras nocturnas al ${config.recargoHorasExtras}% + ${proporcionNocturna * 100}% nocturno · ${horas.extrasNocturnas.toFixed(2)} hs`, horas.extrasNocturnas * (config.basico / config.divisorHora) * (1 + proporcionNocturna) * (1 + config.recargoHorasExtras / 100)],
+            [`Horas extras nocturnas al ${config.recargoHorasExtras}% + ${(config.porcentajeNocturno <= 1 ? config.porcentajeNocturno : config.porcentajeNocturno / 100) * 100}% nocturno · ${horas.extrasNocturnas.toFixed(2)} hs`, horas.extrasNocturnas * (config.basico / config.divisorHora) * (1 + (config.porcentajeNocturno <= 1 ? config.porcentajeNocturno : config.porcentajeNocturno / 100)) * (1 + config.recargoHorasExtras / 100)],
             [`Feriados · ${horasFeriado.toFixed(2)} hs`, liquidacion.adicionalFeriado],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
