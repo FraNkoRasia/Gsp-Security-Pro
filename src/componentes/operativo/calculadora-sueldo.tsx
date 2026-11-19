@@ -161,19 +161,39 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
     }
   }, [turnosMes, mes])
 
-  const horas = useMemo(() => turnosMes.reduce((total, turno) => {
-    const parte = obtenerHorasPorFranja(turno, feriadosPorObjetivo[turno.id_objetivo] || {})
-    total.diurnas += parte.diurnos
-    total.nocturnas += parte.nocturnos
-    total.feriadoDiurno += parte.feriadoDiurno
-    total.feriadoNocturno += parte.feriadoNocturno
-    total.totales += parte.diurnos + parte.nocturnos
+  const horas = useMemo(() => {
+    const total = { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, totales: 0, extrasDiurnas: 0, extrasNocturnas: 0, extras: 0 }
+    let minutosAcumulados = 0
+    const turnosOrdenados = [...turnosMes].sort((a, b) =>
+      obtenerIntervaloTurno(a).inicio.getTime() - obtenerIntervaloTurno(b).inicio.getTime()
+    )
+    for (const turno of turnosOrdenados) {
+      const feriados = feriadosPorObjetivo[turno.id_objetivo] || {}
+      const { inicio, fin } = obtenerIntervaloTurno(turno)
+      for (let cursor = inicio.getTime(); cursor < fin.getTime(); cursor += 60000) {
+        const fecha = new Date(cursor)
+        const esNocturna = fecha.getHours() >= 21 || fecha.getHours() < 6
+        const fechaDelMinuto = fechaClave(fecha)
+        const esFeriado = Object.prototype.hasOwnProperty.call(feriados, fechaDelMinuto)
+        const esExtra = minutosAcumulados >= HORAS_BASE_MENSUAL * 60
+        minutosAcumulados++
+        total.totales += 1 / 60
+        if (esNocturna) {
+          total.nocturnas += 1 / 60
+          if (esExtra) total.extrasNocturnas += 1 / 60
+          if (esFeriado) total.feriadoNocturno += 1 / 60
+        } else {
+          total.diurnas += 1 / 60
+          if (esExtra) total.extrasDiurnas += 1 / 60
+          if (esFeriado) total.feriadoDiurno += 1 / 60
+        }
+      }
+    }
+    total.extras = total.extrasDiurnas + total.extrasNocturnas
     return total
-  }, { diurnas: 0, nocturnas: 0, feriadoDiurno: 0, feriadoNocturno: 0, totales: 0, extras: 0 }), [turnosMes, feriadosPorObjetivo])
+  }, [turnosMes, feriadosPorObjetivo])
 
-  // El convenio liquida como extras las horas que superan las 200 horas mensuales.
-  // No dependemos del campo horas_extra de cada turno, que puede permanecer en cero.
-  horas.extras = Math.max(0, horas.totales - HORAS_BASE_MENSUAL)
+  // Las horas extras empiezan exactamente después de completar las primeras 200 hs.
 
   const horasFeriado = horas.feriadoDiurno + horas.feriadoNocturno
 
@@ -247,7 +267,8 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
           { label: 'Horas diurnas', value: formatoHoras(horas.diurnas), icon: <Sun className="h-4 w-4 text-amber-500" /> },
           { label: 'Horas nocturnas', value: formatoHoras(horas.nocturnas), icon: <Moon className="h-4 w-4 text-blue-500" /> },
           { label: 'Horas feriado', value: formatoHoras(horasFeriado), icon: <CalendarDays className="h-4 w-4 text-amber-600" /> },
-          { label: 'Horas extras', value: formatoHoras(horas.extras), icon: <CalendarDays className="h-4 w-4 text-rose-500" /> },
+          { label: 'Extras diurnas', value: formatoHoras(horas.extrasDiurnas), icon: <Sun className="h-4 w-4 text-amber-500" /> },
+          { label: 'Extras nocturnas', value: formatoHoras(horas.extrasNocturnas), icon: <Moon className="h-4 w-4 text-blue-500" /> },
         ].map(item => <Tarjeta key={item.label}><TarjetaContenido className="p-3"><div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">{item.icon}{item.label}</div><p className="mt-2 text-lg font-black tabular-nums text-slate-900 dark:text-white">{item.value}</p></TarjetaContenido></Tarjeta>)}
       </div>
 
@@ -258,7 +279,8 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
             ['Sueldo básico', config.basico],
             ['Presentismo', config.presentismo],
             [`Horas nocturnas · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
-            [`Horas extras al ${config.recargoHorasExtras}% · ${horas.extras.toFixed(2)} hs`, liquidacion.adicionalHorasExtras],
+            [`Horas extras diurnas al ${config.recargoHorasExtras}% · ${horas.extrasDiurnas.toFixed(2)} hs`, horas.extrasDiurnas * (config.basico / config.divisorHora) * (1 + config.recargoHorasExtras / 100)],
+            [`Horas extras nocturnas al ${config.recargoHorasExtras}% · ${horas.extrasNocturnas.toFixed(2)} hs`, horas.extrasNocturnas * (config.basico / config.divisorHora) * (1 + config.recargoHorasExtras / 100)],
             [`Feriados · ${horasFeriado.toFixed(2)} hs`, liquidacion.adicionalFeriado],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
