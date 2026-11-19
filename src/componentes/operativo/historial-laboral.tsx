@@ -133,21 +133,23 @@ export const HistorialLaboral: React.FC = () => {
             <p className="p-6 text-center text-sm text-slate-500">No hay turnos registrados para este mes.</p>
           ) : (
             <div className="max-w-full overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-sm">
+              <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-900/70">
                   <tr><th className="p-3">Fecha</th><th className="p-3">Turno</th><th className="p-3">Horario</th><th className="p-3 text-right">Hs turno</th><th className="p-3 text-right">Hs extra</th><th className="p-3 text-right">Total</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {turnosMes.map(t => {
                     const extrasTurno = resumen.horasExtraPorTurno[t.id] || { total: 0 }
+                    const intervaloTurno = obtenerIntervaloTurno(t)
+                    const horasTurno = (intervaloTurno.fin.getTime() - intervaloTurno.inicio.getTime()) / 3600000
                     return (
                     <tr key={t.id} className="text-slate-700 dark:text-slate-200">
                       <td className="whitespace-nowrap p-3">{new Intl.DateTimeFormat(idioma === 'en' ? 'en-US' : 'es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${t.fecha}T12:00:00Z`))}</td>
                       <td className="p-3 capitalize">{idioma === 'en' ? (t.tipo === 'diurno' ? 'Day Shift' : t.tipo === 'nocturno' ? 'Night Shift' : t.tipo === 'franco' ? 'Day Off' : t.tipo) : t.tipo}</td>
                       <td className="whitespace-nowrap p-3">{t.hora_inicio.slice(0, 5)} – {t.hora_fin.slice(0, 5)}</td>
-                      <td className="p-3 text-right tabular-nums">{formatearHoras(resumenTurno.horasTurno)} h</td>
+                      <td className="p-3 text-right tabular-nums">{formatearHoras(horasTurno)} h</td>
                       <td className="p-3 text-right tabular-nums text-emerald-600">{formatearHoras(extrasTurno.total)} h</td>
-                      <td className="p-3 text-right font-bold tabular-nums">{formatearHoras(resumenTurno.horasTurno + resumenTurno.horasExtra)} h</td>
+                      <td className="p-3 text-right font-bold tabular-nums">{formatearHoras(horasTurno)} h</td>
                     </tr>
                     )
                   })}
