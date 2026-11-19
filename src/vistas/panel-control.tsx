@@ -36,6 +36,7 @@ import { AvisosComunicacion } from '@/componentes/operativo/avisos-comunicacion'
 import { MiTurno } from '@/componentes/operativo/mi-turno'
 import { MiMes } from '@/componentes/operativo/mi-mes'
 import { CalculadoraSueldo } from '@/componentes/operativo/calculadora-sueldo'
+import { ValoresSalariales } from '@/componentes/operativo/valores-salariales'
 import { HistorialLaboral } from '@/componentes/operativo/historial-laboral'
 import { AsistenciaPersonal } from '@/componentes/operativo/asistencia-personal'
 import { GestionCategoriasPersonal } from '@/componentes/operativo/gestion-categorias-personal'
@@ -123,7 +124,8 @@ export const VistaPanelControl: React.FC = () => {
         { id: 'cambios', label: 'Cambios y Reemplazos', contador: solicitudesCambioNoLeidas, icono: <ArrowRightLeft className="w-4 h-4" /> },
         { id: 'avisos', label: 'Avisos', contador: avisosNoLeidos, icono: <Bell className="w-4 h-4" /> },
         { id: 'horasExtra', label: 'Horas Extra', contador: solicitudesHorasExtra.filter(s => s.estado === 'pendiente').length, icono: <Clock className="w-4 h-4" /> },
-        { id: 'computosMensuales', label: 'Cómputos', icono: <FileSpreadsheet className="w-4 h-4" /> }
+        { id: 'computosMensuales', label: 'Cómputos', icono: <FileSpreadsheet className="w-4 h-4" /> },
+        { id: 'valoresSalariales', label: 'Valores salariales', icono: <Calculator className="w-4 h-4" /> }
       ]
     : []
 
@@ -376,6 +378,7 @@ export const VistaPanelControl: React.FC = () => {
             {pestanaRenderizada === 'avisos' && (esAdmin || esVigilador) && <AvisosComunicacion />}
             {pestanaRenderizada === 'horasExtra' && esAdmin && <GestionHorasExtra />}
             {pestanaRenderizada === 'computosMensuales' && esAdmin && <ComputosMensuales />}
+            {pestanaRenderizada === 'valoresSalariales' && esAdmin && <ValoresSalariales />}
             {pestanaRenderizada === 'miTurno' && esVigilador && <MiTurno />}
             {pestanaRenderizada === 'grilla' && esVigilador && objetivoVigiladorId && <GrillaMensual objetivoInicial={objetivoVigiladorId} soloLectura />}
             {pestanaRenderizada === 'grilla' && esVigilador && !objetivoVigiladorId && <div className="rounded-2xl border border-slate-800 bg-[#0C121E] p-6 text-center text-sm text-slate-400">No tenés un objetivo activo asignado actualmente.</div>}
