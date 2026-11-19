@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FileDown, FileText, CalendarDays, Users, Clock3, ChevronLeft, ChevronRight, Calculator } from 'lucide-react'
 import { CalculadoraSueldo } from '@/componentes/operativo/calculadora-sueldo'
 import { useOperativo } from '@/contextos/contexto-operativo'
@@ -41,7 +42,7 @@ export const ComputosMensuales: React.FC = () => {
   const botonCalendarioRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!calendarioAbierto) return
-    const cerrarFuera = (evento: PointerEvent) => { if (!calendarioRef.current?.contains(evento.target as Node)) setCalendarioAbierto(false) }
+    const cerrarFuera = (evento: PointerEvent) => { if (!calendarioRef.current?.contains(evento.target as Node) && !(evento.target as HTMLElement).closest?.('[data-calendar-popup]')) setCalendarioAbierto(false) }
     const cerrarEscape = (evento: KeyboardEvent) => { if (evento.key === 'Escape') setCalendarioAbierto(false) }
     document.addEventListener('pointerdown', cerrarFuera)
     document.addEventListener('keydown', cerrarEscape)
@@ -262,7 +263,7 @@ export const ComputosMensuales: React.FC = () => {
               <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-blue-500"/><span className="truncate">{mesSeleccionadoNombre}</span></span>
               <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${calendarioAbierto ? 'rotate-90' : 'rotate-0'}`}/>
             </button>
-            {calendarioAbierto && <div role="dialog" aria-label="Seleccionar mes" className={"absolute right-0 "+(calendarioArriba?"bottom-[calc(100%+8px)]":"top-[calc(100%+8px)]")+" z-[70] w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]"}>
+            {calendarioAbierto && createPortal(<div data-calendar-popup role="dialog" aria-label="Seleccionar mes" style={{position:"fixed",left:Math.max(12,Math.min((botonCalendarioRef.current?.getBoundingClientRect().left||12),window.innerWidth-320)),top:(()=>{const r=botonCalendarioRef.current?.getBoundingClientRect();const h=270;return r&&window.innerHeight-r.bottom<h+16?Math.max(12,r.top-h-8):Math.min(window.innerHeight-h-12,(r?.bottom||12)+8)})(),zIndex:9999,maxHeight:"calc(100dvh - 24px)",overflowY:"auto",width:"min(320px, calc(100vw - 24px)"}} className={"absolute right-0 "+(calendarioArriba?"bottom-[calc(100%+8px)]":"top-[calc(100%+8px)]")+" z-[70] w-full min-w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-[#111827]"}>
               <div className="mb-4 flex items-center justify-between">
                 <button type="button" aria-label="Año anterior" onClick={() => setAnioCalendario(anio => anio - 1)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"><ChevronLeft className="h-4 w-4"/></button>
                 <span className="text-base font-black tabular-nums text-slate-900 dark:text-white">{anioCalendario}</span>
@@ -272,7 +273,7 @@ export const ComputosMensuales: React.FC = () => {
                 {mesesCalendario.map(opcion => <button key={opcion.valor} type="button" onClick={() => { setMes(opcion.valor); setCalendarioAbierto(false) }} className={`min-h-10 rounded-xl px-2 text-xs font-bold capitalize transition ${mes === opcion.valor ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-300'}`}>{opcion.nombre}</button>)}
               </div>
               <button type="button" onClick={() => { const actual = fechaLocal(new Date()); setMes(actual); setAnioCalendario(Number(actual.slice(0,4))); setCalendarioAbierto(false) }} className="mt-3 w-full rounded-xl border border-slate-200 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Ir al mes actual</button>
-            </div>}
+            </div>,document.body)}
           </div>
         </div>
       </section>
