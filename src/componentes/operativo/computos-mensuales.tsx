@@ -81,7 +81,7 @@ export const ComputosMensuales: React.FC = () => {
         const fechasVigentes = (data || []).flatMap((fila: { mes: string; fechas: string[] | null }) =>
           (Array.isArray(fila.fechas) ? fila.fechas : [])
             .map((fecha: string) => String(fecha).trim().slice(0, 10))
-            .filter((fecha: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(fecha))
+            .filter((fecha: string) => /^\d{4}-\d{2}-\d{2}$/.test(fecha))
             .filter((fecha: string) => fecha.startsWith(mes + '-') || fecha.startsWith(mesSiguiente + '-'))
         )
         setFeriados([...new Set(fechasVigentes)])
