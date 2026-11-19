@@ -175,18 +175,17 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
     // El porcentaje nocturno se expresa como porcentaje del sueldo básico por cada hora:
     // 0.1 equivale a 0.1% del básico (no al 10% del valor hora).
     const porcentajeNocturno = config.porcentajeNocturno / 100
-    const horasNocturnasNormales = Math.max(0, horas.nocturnas - horas.extrasNocturnas)
-    const adicionalNocturno = config.basico * porcentajeNocturno * horasNocturnasNormales
-    // Las horas extras nocturnas cobran el adicional nocturno con el recargo de hora extra.
-    const adicionalNocturnoExtras = config.basico * porcentajeNocturno * horas.extrasNocturnas * (1 + config.recargoHorasExtras / 100)
+    // El adicional nocturno base se muestra sobre todas las horas nocturnas, incluidas las extras.
+    const adicionalNocturno = config.basico * porcentajeNocturno * horas.nocturnas
+    // Se muestra por separado únicamente el 50% adicional del concepto nocturno correspondiente a las extras.
+    const recargoNocturnoExtras = config.basico * porcentajeNocturno * horas.extrasNocturnas * (config.recargoHorasExtras / 100)
     const adicionalFeriadoDiurno = horas.feriadoDiurno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriadoNocturno = horas.feriadoNocturno * valorHora * (config.recargoFeriado / 100)
     const adicionalFeriado = adicionalFeriadoDiurno + adicionalFeriadoNocturno
-    // El pago base de las extras se liquida al valor hora más el recargo.
-    // El adicional nocturno se calcula aparte sobre el básico, con su propio recargo.
+    // Todas las horas extra se agrupan en un solo concepto, sin distinguir diurnas y nocturnas.
     const adicionalHorasExtras =
       (horas.extrasDiurnas + horas.extrasNocturnas) * valorHora * (1 + config.recargoHorasExtras / 100)
-    const remunerativo = config.basico + config.presentismo + adicionalNocturno + adicionalNocturnoExtras + adicionalFeriado + adicionalHorasExtras
+    const remunerativo = config.basico + config.presentismo + adicionalNocturno + recargoNocturnoExtras + adicionalFeriado + adicionalHorasExtras
 
     // Cada concepto se redondea individualmente, como en el recibo oficial.
     const descuentoJubilacion = redondearImporte(remunerativo * config.descuentoJubilacion / 100)
@@ -201,7 +200,7 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
     const netoViaticos = config.viaticos - descuentoSindicatoViaticos
     const netoNoRem = config.noRemunerativo - descuentoNoRem
     const neto = netoRem + netoViaticos + netoNoRem + config.redondeo
-    return { adicionalNocturno, adicionalNocturnoExtras, adicionalFeriado, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
+    return { adicionalNocturno, recargoNocturnoExtras, adicionalFeriado, adicionalFeriadoDiurno, adicionalFeriadoNocturno, adicionalHorasExtras, remunerativo, descuentoJubilacion, descuentoLey19032, descuentoObraSocial, descuentoSindicato, descuentoRem, descuentoSindicatoViaticos, descuentoNoRem, netoRem, netoViaticos, netoNoRem, neto }
   }, [config, horas])
 
 
@@ -253,9 +252,9 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
           {[
             ['Sueldo básico', config.basico],
             ['Presentismo', config.presentismo],
-            [`Horas nocturnas normales · ${Math.max(0, horas.nocturnas - horas.extrasNocturnas).toFixed(2)} hs`, liquidacion.adicionalNocturno],
-            [`Horas extras diurnas al ${config.recargoHorasExtras}% · ${horas.extrasDiurnas.toFixed(2)} hs`, horas.extrasDiurnas * (config.basico / config.divisorHora) * (1 + config.recargoHorasExtras / 100)],
-            [`Horas extras nocturnas (valor hora + adicional nocturno + ${config.recargoHorasExtras}%) · ${horas.extrasNocturnas.toFixed(2)} hs`, redondearImporte(horas.extrasNocturnas * (config.basico / config.divisorHora) * (1 + config.recargoHorasExtras / 100) + liquidacion.adicionalNocturnoExtras)],
+            [`Horas nocturnas · ${horas.nocturnas.toFixed(2)} hs`, liquidacion.adicionalNocturno],
+            [`Horas extras al ${config.recargoHorasExtras}% · ${horas.extras.toFixed(2)} hs`, liquidacion.adicionalHorasExtras],
+            [`Recargo nocturno del ${config.recargoHorasExtras}% sobre extras · ${horas.extrasNocturnas.toFixed(2)} hs`, liquidacion.recargoNocturnoExtras],
             [`Feriados · ${horasFeriado.toFixed(2)} hs`, liquidacion.adicionalFeriado],
             ['Viáticos', config.viaticos],
             ['Suma no remunerativa', config.noRemunerativo],
