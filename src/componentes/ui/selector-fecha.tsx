@@ -17,7 +17,6 @@ const nombreMes = (anio: number, mes: number) => new Intl.DateTimeFormat('es-AR'
 export const SelectorFecha: React.FC<SelectorFechaProps> = ({id,value,min,max,onChange,className='',disabled=false}) => {
   const fechaActual = value ? new Date(Number(value.slice(0,4)),Number(value.slice(5,7))-1,Number(value.slice(8,10))) : new Date()
   const [abierto,setAbierto] = useState(false)
-  const [abrirArriba,setAbrirArriba] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
   const botonRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -26,8 +25,6 @@ export const SelectorFecha: React.FC<SelectorFechaProps> = ({id,value,min,max,on
     const cerrarEscape = (evento: KeyboardEvent) => { if (evento.key === 'Escape') setAbierto(false) }
     document.addEventListener('pointerdown', cerrarFuera)
     document.addEventListener('keydown', cerrarEscape)
-    const rect = botonRef.current?.getBoundingClientRect()
-    if (rect) setAbrirArriba(window.innerHeight - rect.bottom < 370 && rect.top > 370)
     return () => { document.removeEventListener('pointerdown', cerrarFuera); document.removeEventListener('keydown', cerrarEscape) }
   }, [abierto])
   const [vista,setVista] = useState(() => ({anio:fechaActual.getFullYear(),mes:fechaActual.getMonth()}))
