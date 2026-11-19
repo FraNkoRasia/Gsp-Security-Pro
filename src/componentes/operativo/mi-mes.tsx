@@ -4,7 +4,8 @@ import { Tarjeta, TarjetaContenido } from '@/componentes/ui/tarjeta'
 import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { useTraduccion } from '@/i18n'
-import { eliminarTurnosDuplicados, obtenerHorasProgramadasEnMes, obtenerResumenHorasMes, turnoSeSuperponeConMes } from '@/utilidades/calculo-horas-mes'
+import { supabase } from '@/servicios/supabase'
+import { eliminarTurnosDuplicados, obtenerHorasProgramadasEnMes, obtenerResumenDetalladoHorasMes, turnoSeSuperponeConMes } from '@/utilidades/calculo-horas-mes'
 
 const formatearHorasMinutos = (horas: number) => {
   const minutosTotales = Math.round(horas * 60)
@@ -37,12 +38,13 @@ export const MiMes: React.FC = () => {
     return Array.from(anios).sort((a, b) => b.localeCompare(a))
   }, [turnos, idVig, ahora.getFullYear()])
   const fechaMesSeleccionado = new Date(Number(mesSeleccionado.slice(0, 4)), Number(mesSeleccionado.slice(5, 7)) - 1, 1)
-  const nombreMesSeleccionado = new Intl.DateTimeFormat(idioma === 'en' ? 'en-US' : 'es-AR', { month: 'long', year: 'numeric' }).format(fechaMesSeleccionado)
+  const nombreMesSeleccionadoBase = new Intl.DateTimeFormat(idioma === 'en' ? 'en-US' : 'es-AR', { month: 'long', year: 'numeric' }).format(fechaMesSeleccionado)
+  const nombreMesSeleccionado = nombreMesSeleccionadoBase.charAt(0).toLocaleUpperCase(idioma === 'en' ? 'en-US' : 'es-AR') + nombreMesSeleccionadoBase.slice(1)
 
   // Turnos del mes seleccionado para este vigilador
-  const turnosMes = turnos.filter(
+  const turnosMes = useMemo(() => turnos.filter(
     (t) => t.id_vigilador === idVig && turnoSeSuperponeConMes(t, mesSeleccionado)
-  )
+  ), [turnos, idVig, mesSeleccionado])
 
   // Excluye reemplazos y evita duplicar registros antes de aplicar el cálculo compartido.
   const turnosContables = eliminarTurnosDuplicados(turnosMes.filter(t => t.estado !== 'reemplazado'))
@@ -53,16 +55,53 @@ export const MiMes: React.FC = () => {
     const extrasDelMes = t.fecha.startsWith(mesSeleccionado) ? t.horas_extra : 0
     return acc + horasProgramadas + extrasDelMes
   }, 0)
-  const resumenHoras = obtenerResumenHorasMes(turnosContables, mesSeleccionado, ahora)
-  const horasTrabajadasAlMomento = resumenHoras.horasTurno + resumenHoras.horasExtra
+  const idsObjetivos = useMemo(() => [...new Set(turnosContables
+    .filter(t => t.tipo !== 'franco' && t.estado !== 'reemplazado' && t.estado !== 'ausente' && t.horas_totales > 0)
+    .map(t => t.id_objetivo).filter(Boolean))], [turnosContables])
+  const claveObjetivos = idsObjetivos.join(',')
+  const [feriadosPorObjetivo, setFeriadosPorObjetivo] = useState<Record<string, Record<string, string>>>({})
+  useEffect(() => {
+    let cancelado = false
+    const cargar = async () => {
+      setFeriadosPorObjetivo({})
+      if (!supabase || !idsObjetivos.length) return
+      const [anio, numeroMes] = mesSeleccionado.split('-').map(Number)
+      const siguiente = new Date(anio, numeroMes, 1)
+      const mesSiguiente = `${siguiente.getFullYear()}-${String(siguiente.getMonth() + 1).padStart(2, '0')}`
+      const { data, error } = await supabase.from('feriados_grilla_objetivo')
+        .select('id_objetivo, mes, fechas').in('id_objetivo', idsObjetivos)
+        .in('mes', [`${mesSeleccionado}-01`, `${mesSiguiente}-01`])
+      if (cancelado) return
+      if (error) { console.error('No se pudieron cargar los feriados de Mi Mes:', error); return }
+      const resultado: Record<string, Record<string, string>> = {}
+      for (const fila of data || []) {
+        const mesFila = String(fila.mes).slice(0, 7)
+        if (mesFila !== mesSeleccionado && mesFila !== mesSiguiente) continue
+        resultado[fila.id_objetivo] ||= {}
+        for (const fecha of fila.fechas || []) {
+          const clave = String(fecha).trim().slice(0, 10)
+          if (/^\\d{4}-\\d{2}-\\d{2}$/.test(clave) && clave.startsWith(`${mesFila}-`)) resultado[fila.id_objetivo][clave] = 'Feriado marcado por administrador'
+        }
+      }
+      setFeriadosPorObjetivo(resultado)
+    }
+    void cargar()
+    return () => { cancelado = true }
+  }, [mesSeleccionado, claveObjetivos])
+  const resumenHoras = useMemo(
+    () => obtenerResumenDetalladoHorasMes(turnosContables, mesSeleccionado, feriadosPorObjetivo, ahora),
+    [turnosContables, mesSeleccionado, feriadosPorObjetivo, ahora]
+  )
+  const horasTrabajadasAlMomento = resumenHoras.horasTurno
   const horasDiurnas = resumenHoras.horasDiurnas
   const horasNocturnas = resumenHoras.horasNocturnas
   const horasDomingos = resumenHoras.turnosFinalizados
     .filter(t => t.es_domingo)
     .reduce((acc, t) => acc + t.horas_totales, 0)
-  const horasFeriados = resumenHoras.turnosFinalizados
-    .filter(t => t.es_feriado)
-    .reduce((acc, t) => acc + t.horas_totales, 0)
+  const horasFeriadoDiurnas = resumenHoras.horasFeriadoDiurno
+  const horasFeriadoNocturnas = resumenHoras.horasFeriadoNocturno
+  const horasExtraDiurnas = resumenHoras.horasExtraDiurnas
+  const horasExtraNocturnas = resumenHoras.horasExtraNocturnas
   const horasExtra = resumenHoras.horasExtra
   const francos = turnosContables.filter(t => t.tipo === 'franco' && t.fecha <= ahora.toISOString().slice(0, 10)).length
   const diasTrabajados = resumenHoras.turnosFinalizados.length
@@ -94,7 +133,8 @@ export const MiMes: React.FC = () => {
           >
             {mesesDisponibles.flatMap(anio => Array.from({ length: 12 }, (_, i) => {
               const valor = `${anio}-${String(i + 1).padStart(2, '0')}`
-              const etiqueta = new Intl.DateTimeFormat(idioma === 'en' ? 'en-US' : 'es-AR', { month: 'long', year: 'numeric' }).format(new Date(Number(anio), i, 1))
+              const etiquetaBase = new Intl.DateTimeFormat(idioma === 'en' ? 'en-US' : 'es-AR', { month: 'long', year: 'numeric' }).format(new Date(Number(anio), i, 1))
+              const etiqueta = etiquetaBase.charAt(0).toLocaleUpperCase(idioma === 'en' ? 'en-US' : 'es-AR') + etiquetaBase.slice(1)
               return { valor, etiqueta }
             }).filter(m => m.valor <= mesActual))
               .sort((a, b) => b.valor.localeCompare(a.valor))
@@ -195,22 +235,19 @@ export const MiMes: React.FC = () => {
         </Tarjeta>
 
         <Tarjeta>
-          <TarjetaContenido className="p-4">
-            <span className="text-slate-500 dark:text-slate-400 text-xs block">Feriados Trabajados</span>
-            <span className="text-xl font-bold text-slate-900 dark:text-white mt-1 block">
-              {horasFeriados} hs
-            </span>
-            <p className="text-[10px] text-slate-400 mt-0.5">Total de horas registradas en feriados</p>
+          <TarjetaContenido className="p-4 space-y-2">
+            <span className="text-slate-500 dark:text-slate-400 text-xs block">Feriados trabajados</span>
+            <div className="flex justify-between gap-2 text-sm"><span className="text-amber-600">Diurnas</span><strong>{formatearHorasMinutos(horasFeriadoDiurnas)} hs</strong></div>
+            <div className="flex justify-between gap-2 text-sm"><span className="text-blue-500">Nocturnas</span><strong>{formatearHorasMinutos(horasFeriadoNocturnas)} hs</strong></div>
           </TarjetaContenido>
         </Tarjeta>
 
         <Tarjeta>
-          <TarjetaContenido className="p-4">
-            <span className="text-slate-500 dark:text-slate-400 text-xs block">Horas Extra</span>
-            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 block">
-              {formatearHorasMinutos(horasExtra)} hs
-            </span>
-            <p className="text-[10px] text-slate-400 mt-0.5">Excedentes autorizados</p>
+          <TarjetaContenido className="p-4 space-y-2">
+            <span className="text-slate-500 dark:text-slate-400 text-xs block">Horas extra (más de 200 hs)</span>
+            <div className="flex justify-between gap-2 text-sm"><span className="text-amber-600">Diurnas</span><strong className="text-emerald-600">{formatearHorasMinutos(horasExtraDiurnas)} hs</strong></div>
+            <div className="flex justify-between gap-2 text-sm"><span className="text-blue-500">Nocturnas</span><strong className="text-emerald-600">{formatearHorasMinutos(horasExtraNocturnas)} hs</strong></div>
+            <p className="text-[10px] text-slate-400">Se calculan al superar las 200 horas mensuales.</p>
           </TarjetaContenido>
         </Tarjeta>
       </div>
