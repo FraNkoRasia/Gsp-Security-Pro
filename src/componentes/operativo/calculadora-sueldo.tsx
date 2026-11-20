@@ -182,8 +182,9 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
     const recargoNocturnoExtras = config.basico * porcentajeNocturno * horas.extrasNocturnas * (config.recargoHorasExtras / 100)
     const adicionalFeriadoDiurno = horas.feriadoDiurno * valorHora * (config.recargoFeriado / 100)
     // El adicional nocturno ya está contemplado sobre todas las horas nocturnas;
-    // aquí se suma únicamente el recargo propio del feriado.
-    const adicionalFeriadoNocturno = horas.feriadoNocturno * valorHora * (config.recargoFeriado / 100)
+    // En las horas nocturnas feriadas se liquida también el adicional nocturno
+    // dentro del concepto Feriados, además del adicional nocturno general.
+    const adicionalFeriadoNocturno = horas.feriadoNocturno * (valorHora * (config.recargoFeriado / 100) + config.basico * porcentajeNocturno)
     const adicionalFeriado = adicionalFeriadoDiurno + adicionalFeriadoNocturno
     // Todas las horas extra se agrupan en un solo concepto, sin distinguir diurnas y nocturnas.
     const adicionalHorasExtras =
