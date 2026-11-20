@@ -31,7 +31,7 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
 
 
   // Filtrar objetivos si es admin de empresa
-  const idEmpresaActiva = idEmpresaSeleccionada || usuario?.id_empresa || empresas[0]?.id || 'emp-wall-01'
+  const idEmpresaActiva = idEmpresaSeleccionada || usuario?.id_empresa || ''
   const objetivosDeEmpresa = usuario?.rol === 'super_administrador' && !idEmpresaSeleccionada
     ? objetivos
     : objetivos.filter((o) => o.id_empresa === idEmpresaActiva)
