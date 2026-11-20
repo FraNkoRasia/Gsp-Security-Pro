@@ -5,7 +5,7 @@ import { useOperativo } from '@/contextos/contexto-operativo'
 import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import { supabase } from '@/servicios/supabase'
 import { CONFIG_INICIAL, type ConfiguracionSalarial } from '@/componentes/operativo/valores-salariales'
-import { eliminarTurnosDuplicados, obtenerIntervaloTurno } from '@/utilidades/calculo-horas-mes'
+import { eliminarTurnosDuplicados, obtenerIntervaloTurno, turnoFinalizado } from '@/utilidades/calculo-horas-mes'
 
 const formatoPesos = (valor: number) => valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const redondearImporte = (valor: number) => Math.round((valor + Number.EPSILON) * 100) / 100
@@ -68,13 +68,13 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
     return Array.from(lista).sort((a, b) => b.localeCompare(a))
   }, [turnos, idVigilador, ahora])
 
-  // Se incluyen todos los turnos asignados en el mes, también los futuros:
-  // la calculadora estima el mes completo según la grilla y no solo lo ya trabajado.
+  // Usa exactamente el mismo criterio que Cómputos mensuales:
+  // solo turnos finalizados, sin ausentes/reemplazados ni duplicados.
   const turnosMes = useMemo(() => eliminarTurnosDuplicados(turnos.filter(t =>
     t.id_vigilador === idVigilador && t.fecha.startsWith(mes) &&
     t.tipo !== 'franco' && t.estado !== 'reemplazado' && t.estado !== 'ausente' &&
-    t.horas_totales > 0
-  )), [turnos, idVigilador, mes])
+    t.horas_totales > 0 && turnoFinalizado(t, ahora)
+  )), [turnos, idVigilador, mes, ahora])
 
   // Lee las fechas activas compartidas por objetivo y mes desde Supabase.
   // No reconstruye feriados con el calendario del dispositivo: utiliza la
