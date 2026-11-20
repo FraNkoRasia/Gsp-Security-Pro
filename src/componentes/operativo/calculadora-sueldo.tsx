@@ -57,7 +57,6 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
           if (!configuracionCompleta) return
 
           const valores = valoresGuardados as ConfiguracionSalarial
-          if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
           setConfig(valores)
           setConfiguracionDisponible(true)
         }
@@ -100,7 +99,11 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
       const fechaMesSiguiente = new Date(anioMes, numeroMes, 1)
       const mesSiguiente = `${fechaMesSiguiente.getFullYear()}-${String(fechaMesSiguiente.getMonth() + 1).padStart(2, '0')}`
       const mesesConsulta = [`${mes}-01`, `${mesSiguiente}-01`]
-      const { data, error } = await (supabase as any)
+      if (!supabase) {
+        setFeriadosPorObjetivo({})
+        return
+      }
+      const { data, error } = await supabase
         .from('feriados_grilla_objetivo')
         .select('id_objetivo, mes, fechas')
         .in('id_objetivo', idsObjetivos)
