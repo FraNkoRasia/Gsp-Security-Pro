@@ -71,7 +71,7 @@ export const ValoresSalariales: React.FC = () => {
    const {data,error}=await supabase.from('configuraciones_salariales_mensuales').select('valores').eq('id_empresa',usuario.id_empresa).eq('mes',`${mes}-01`).maybeSingle()
    if(error)throw error
    if(cancelado)return
-   if(data?.valores){const valores={...CONFIG_INICIAL,...data.valores as Partial<ConfiguracionSalarial>};if(valores.porcentajeNocturno===20)valores.porcentajeNocturno=.1;setConfig(valores);setExiste(true)}
+   if(data?.valores){const guardados=data.valores as Partial<ConfiguracionSalarial>;const valores={...CONFIG_INICIAL,...guardados};if(valores.porcentajeNocturno===20)valores.porcentajeNocturno=.1;const camposRequeridos=Object.keys(CONFIG_INICIAL) as (keyof ConfiguracionSalarial)[];const configuracionCompleta=camposRequeridos.every(campo=>typeof guardados[campo]==='number'&&Number.isFinite(guardados[campo]));setConfig(valores);setExiste(configuracionCompleta)}
    else{setConfig(CONFIG_INICIAL);setExiste(false)}
    setPendiente(false)
   }catch(error){console.error('Error cargando valores salariales',error);if(!cancelado)window.alert('No se pudieron cargar los valores salariales.')}
