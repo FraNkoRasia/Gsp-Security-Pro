@@ -48,7 +48,15 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
         if (error) throw error
         if (cancelado) return
         if (data?.valores) {
-          const valores = { ...CONFIG_INICIAL, ...(data.valores as Partial<ConfiguracionSalarial>) }
+          const valoresGuardados = data.valores as Partial<ConfiguracionSalarial>
+          const camposRequeridos = Object.keys(CONFIG_INICIAL) as (keyof ConfiguracionSalarial)[]
+          const configuracionCompleta = camposRequeridos.every(campo =>
+            typeof valoresGuardados[campo] === 'number' && Number.isFinite(valoresGuardados[campo])
+          )
+
+          if (!configuracionCompleta) return
+
+          const valores = valoresGuardados as ConfiguracionSalarial
           if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
           setConfig(valores)
           setConfiguracionDisponible(true)
