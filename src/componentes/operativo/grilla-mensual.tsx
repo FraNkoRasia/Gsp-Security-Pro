@@ -366,7 +366,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     const horasNocturnas = turnosVig.reduce((acc, t) => acc + t.horas_nocturnas, 0)
     const francos = turnosVig.filter((t) => t.tipo === 'franco').length
 
-    const metaHoras = 204
+    const metaHoras = 200
     let estadoMeta: 'verde' | 'amarillo' | 'rojo' = 'amarillo'
     if (horasTotales >= metaHoras && horasTotales <= 220) {
       estadoMeta = 'verde'
