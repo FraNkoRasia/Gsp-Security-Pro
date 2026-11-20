@@ -25,7 +25,7 @@ La presencia de un módulo en el código no garantiza que todos sus escenarios f
 
 ## Roles
 
-El sistema declara cuatro roles: **Super Administrador**, **Administrador**, **Supervisor** y **Vigilador**. Sus permisos concretos dependen de los controles de la interfaz, las operaciones de backend y las políticas RLS de Supabase. Esta descripción no sustituye una matriz de permisos completa; ocultar un botón no reemplaza la autorización en el servidor o la base de datos.
+El sistema declara cinco roles: **Super Administrador**, **Administrador**, **Supervisor**, **Encargado de Empresa** y **Vigilador**. Sus permisos concretos dependen de los controles de la interfaz, las operaciones de backend y las políticas RLS de Supabase. Esta descripción no sustituye una matriz de permisos completa; ocultar un botón no reemplaza la autorización en el servidor o la base de datos.
 
 ## Módulos
 
