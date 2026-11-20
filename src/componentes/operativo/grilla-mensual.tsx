@@ -207,10 +207,10 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
     setFeriadosActivos([])
     setFeriadosGuardados([])
     const cargar = async () => {
-      if (!objetivoSeleccionado || !objetivoActual?.id_empresa) {
+      if (!objetivoSeleccionado || !objetivoActual?.id_empresa || !supabase) {
         return
       }
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('feriados_grilla_objetivo')
         .select('fechas')
         .eq('id_objetivo', objetivoSeleccionado)
@@ -326,7 +326,7 @@ export const GrillaMensual: React.FC<{ objetivoInicial?: string; soloLectura?: b
 
       if (hayCambiosFeriadosPendientes) {
         if (!supabase || !objetivoActual?.id_empresa) throw new Error('No se pudo identificar el objetivo para guardar los feriados.')
-        const { error } = await (supabase as any).from('feriados_grilla_objetivo').upsert({
+        const { error } = await supabase.from('feriados_grilla_objetivo').upsert({
           id_objetivo: objetivoSeleccionado,
           id_empresa: objetivoActual.id_empresa,
           mes: `${mesSeleccionado}-01`,
