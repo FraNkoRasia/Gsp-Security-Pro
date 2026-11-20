@@ -25,8 +25,8 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
   const [elementosACargo, setElementosACargo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [direccion, setDireccion] = useState('')
-  const [localidad, setLocalidad] = useState('Río Cuarto')
-  const [provincia, setProvincia] = useState('Córdoba')
+  const [localidad, setLocalidad] = useState('')
+  const [provincia, setProvincia] = useState('')
   const [error, setError] = useState<string | null>(null)
 
 
@@ -79,6 +79,11 @@ export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) =
   const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (!objetivoEditando && !idEmpresaActiva) {
+      setError('No se pudo identificar la empresa. Seleccioná una empresa antes de crear el objetivo.')
+      return
+    }
 
     if (!nombre.trim() || !direccion.trim()) {
       setError('El nombre y la dirección son obligatorios.')
