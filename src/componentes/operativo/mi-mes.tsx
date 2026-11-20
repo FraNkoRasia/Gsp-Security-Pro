@@ -20,7 +20,7 @@ export const MiMes: React.FC = () => {
   const { usuario } = useAutenticacion()
   const { idioma } = useTraduccion()
 
-  const idVig = usuario?.id || 'usr-vig-01'
+  const idVig = usuario?.id
   const [ahora, setAhora] = useState(() => new Date())
   useEffect(() => {
     const intervalo = window.setInterval(() => setAhora(new Date()), 60_000)
