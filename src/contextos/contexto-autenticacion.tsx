@@ -49,7 +49,7 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
     if (perfil.id_empresa) {
       const { data: empresa, error: errorEmpresa } = await supabase
         .from('empresas')
-        .select('nombre')
+        .select('nombre, activa')
         .eq('id', perfil.id_empresa)
         .maybeSingle()
 
@@ -58,15 +58,7 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
         throw new Error('Cuenta suspendida. La empresa asociada no está disponible.')
       }
 
-      const { data: empresaCompleta, error: errorEstadoEmpresa } = await supabase
-        .from('empresas')
-        .select('activa')
-        .eq('id', perfil.id_empresa)
-        .maybeSingle()
-
-      if (errorEstadoEmpresa) throw errorEstadoEmpresa
-
-      if (!empresaCompleta?.activa) {
+      if (!empresa.activa) {
         throw new Error('Cuenta suspendida. La empresa asociada está dada de baja.')
       }
 
@@ -123,35 +115,20 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
     const { data: listener } = clienteSupabase.auth.onAuthStateChange((evento, session) => {
       if (!activo) return
 
-      // Solo un cierre de sesión explícito debe quitar inmediatamente al usuario.
-      // La inicialización/renovación puede emitir eventos sin sesión durante una
-      // transición breve; no debemos confundirlos con un logout real.
-      if (!session?.user) {
-        if (evento === 'SIGNED_OUT') setUsuario(null)
-        return
-      }
-
-      // No ejecutar consultas de perfil dentro del callback de Auth.
-      // Se difiere el trabajo para no bloquear el procesamiento de eventos/token refresh.
-      window.setTimeout(() => {
-        void cargarPerfil(session.user).then(perfil => {
-          if (activo) {
-            setUsuario(perfil)
-            setErrorAuth(null)
-          }
-        }).catch(err => {
-          console.error('Error al actualizar el perfil de sesión:', err)
-          // Mantener la sesión visual actual ante errores temporales de red/Auth.
-          // Los errores definitivos de perfil se informan, pero no se simula un logout.
-          if (activo) setErrorAuth(err instanceof Error ? err.message : 'No se pudo cargar el perfil.')
-        })
-      }, 0)
+      // La sesión inicial ya se procesa mediante getSession() y el inicio
+      // de sesión carga su perfil explícitamente. Consultarlo también ante
+      // INITIAL_SESSION / SIGNED_IN duplicaba la lectura del perfil.
+      // Los cambios del perfil se revalidan al volver a la app y periódicamente.
+      if (evento === 'SIGNED_OUT') setUsuario(null)
     })
 
     // Revalidar el perfil al volver a la pestaña y periódicamente. Esto permite
     // reflejar un restablecimiento de contraseña hecho por administración sin
     // depender de que el vigilador cierre sesión manualmente.
+    let revalidacionEnCurso = false
     const refrescarPerfilActual = async () => {
+      if (revalidacionEnCurso) return
+      revalidacionEnCurso = true
       try {
         // La revalidación periódica debe usar la sesión persistida localmente.
         // getUser() fuerza una consulta remota y puede devolver "Auth session missing"
@@ -207,6 +184,8 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
           // El cierre real se procesa mediante el evento SIGNED_OUT.
           setErrorAuth(mensaje)
         }
+      } finally {
+        revalidacionEnCurso = false
       }
     }
 
