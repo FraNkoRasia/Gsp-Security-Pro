@@ -112,7 +112,7 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
 
     inicializarSesion()
 
-    const { data: listener } = clienteSupabase.auth.onAuthStateChange((evento, session) => {
+    const { data: listener } = clienteSupabase.auth.onAuthStateChange((evento) => {
       if (!activo) return
 
       // La sesión inicial ya se procesa mediante getSession() y el inicio
