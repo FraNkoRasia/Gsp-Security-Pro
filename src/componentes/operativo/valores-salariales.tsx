@@ -66,6 +66,9 @@ export const ValoresSalariales: React.FC = () => {
 
  useEffect(()=>{let cancelado=false;const cargar=async()=>{
   setCargando(true)
+  setExiste(false)
+  setConfig(CONFIG_INICIAL)
+  setPendiente(false)
   if(!usuario?.id_empresa||!supabase){setCargando(false);return}
   try{
    const {data,error}=await supabase.from('configuraciones_salariales_mensuales').select('valores').eq('id_empresa',usuario.id_empresa).eq('mes',`${mes}-01`).maybeSingle()
@@ -74,7 +77,7 @@ export const ValoresSalariales: React.FC = () => {
    if(data?.valores){const guardados=data.valores as Partial<ConfiguracionSalarial>;const valores={...CONFIG_INICIAL,...guardados};if(valores.porcentajeNocturno===20)valores.porcentajeNocturno=.1;const camposRequeridos=Object.keys(CONFIG_INICIAL) as (keyof ConfiguracionSalarial)[];const configuracionCompleta=camposRequeridos.every(campo=>typeof guardados[campo]==='number'&&Number.isFinite(guardados[campo]));setConfig(valores);setExiste(configuracionCompleta)}
    else{setConfig(CONFIG_INICIAL);setExiste(false)}
    setPendiente(false)
-  }catch(error){console.error('Error cargando valores salariales',error);if(!cancelado)window.alert('No se pudieron cargar los valores salariales.')}
+  }catch(error){console.error('Error cargando valores salariales',error);if(!cancelado){setConfig(CONFIG_INICIAL);setExiste(false);setPendiente(false);window.alert('No se pudieron cargar los valores salariales.')}}
   finally{if(!cancelado)setCargando(false)}
  };void cargar();return()=>{cancelado=true}},[mes,usuario?.id_empresa])
 
