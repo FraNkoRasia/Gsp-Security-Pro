@@ -11,7 +11,7 @@ import { useAutenticacion } from '@/contextos/contexto-autenticacion'
 import type { Objetivo } from '@/tipos'
 
 export const GestionObjetivos: React.FC<{ onSeleccionarObjetivo?: (id: string) => void; idEmpresaSeleccionada?: string; modoConsulta?: boolean }> = ({ onSeleccionarObjetivo, idEmpresaSeleccionada, modoConsulta = false }) => {
-  const { objetivos, asignaciones, empresas, crearObjetivo, editarObjetivo, cambiarEstadoObjetivo } = useOperativo()
+  const { objetivos, asignaciones, crearObjetivo, editarObjetivo, cambiarEstadoObjetivo } = useOperativo()
   const { usuario } = useAutenticacion()
 
   const [modalAbierto, setModalAbierto] = useState(false)
