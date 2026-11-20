@@ -56,7 +56,10 @@ export const CalculadoraSueldo: React.FC<CalculadoraSueldoProps> = ({ vigiladorI
 
           if (!configuracionCompleta) return
 
-          const valores = valoresGuardados as ConfiguracionSalarial
+          const valores = { ...valoresGuardados } as ConfiguracionSalarial
+          // Compatibilidad: la versión anterior guardaba 20% del valor hora;
+          // con el divisor 200 equivale al 0,10% del sueldo básico por hora.
+          if (valores.porcentajeNocturno === 20) valores.porcentajeNocturno = 0.1
           setConfig(valores)
           setConfiguracionDisponible(true)
         }
